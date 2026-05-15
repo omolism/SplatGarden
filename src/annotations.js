@@ -1,0 +1,239 @@
+import * as THREE from "three";
+
+// ---------------------------------------------------------------------------
+// Sketchfab-style annotation system.
+// Each viewpoint = a saved camera pose (position + target) anchored to a 3D
+// point in world space. The world point gets a numbered hotspot rendered in
+// HTML, projected to screen every frame. Clicking it (or the sidebar row)
+// smoothly tweens the camera over to that pose.
+// ---------------------------------------------------------------------------
+
+let _id = 0;
+const nextId = () => ++_id;
+
+export class AnnotationManager {
+  constructor({ camera, controls, layerEl, listEl, addBtnEl, statusEl }) {
+    this.camera = camera;
+    this.controls = controls;
+    this.layerEl = layerEl;
+    this.listEl = listEl;
+    this.statusEl = statusEl;
+
+    this.viewpoints = []; // { id, name, anchor:Vec3, position:Vec3, target:Vec3, el:HTMLElement }
+    this.activeId = null;
+    this.tween = null;
+
+    // Pending "click on splat to anchor" mode triggered by + Add
+    this.pendingAdd = false;
+    this.onArmedChange = null;
+
+    addBtnEl.addEventListener("click", () => {
+      this.armAddViewpoint();
+    });
+
+    // Hidden world-position scratch buffer
+    this._v = new THREE.Vector3();
+    this._raycaster = null; // set externally
+  }
+
+  setRaycaster(raycaster, splatMesh) {
+    this._raycaster = raycaster;
+    this._splat = splatMesh;
+  }
+
+  armAddViewpoint() {
+    this.pendingAdd = !this.pendingAdd;
+    this._setStatus(this.pendingAdd ? "Click on the splat to anchor a new viewpoint…" : "");
+    if (this.onArmedChange) this.onArmedChange(this.pendingAdd);
+  }
+
+  // Called from the canvas click handler. Returns true if it consumed the click.
+  handleCanvasClick(worldHitPoint) {
+    if (!this.pendingAdd) return false;
+    this.pendingAdd = false;
+    if (this.onArmedChange) this.onArmedChange(false);
+    this._setStatus("");
+    if (worldHitPoint) {
+      this.addViewpoint({
+        anchor: worldHitPoint.clone(),
+        position: this.camera.position.clone(),
+        target: this.controls.target.clone(),
+      });
+    }
+    return true;
+  }
+
+  addViewpoint({ anchor, position, target, name }) {
+    const id = nextId();
+    const vp = {
+      id,
+      name: name ?? `View ${this.viewpoints.length + 1}`,
+      anchor,
+      position,
+      target,
+      el: null,
+    };
+
+    // DOM marker
+    const dot = document.createElement("div");
+    dot.className = "annotation";
+    dot.textContent = String(this.viewpoints.length + 1);
+    dot.addEventListener("click", (ev) => {
+      ev.stopPropagation();
+      this.flyTo(id);
+    });
+    this.layerEl.appendChild(dot);
+    vp.el = dot;
+
+    this.viewpoints.push(vp);
+    this._rebuildList();
+    return vp;
+  }
+
+  removeViewpoint(id) {
+    const idx = this.viewpoints.findIndex((v) => v.id === id);
+    if (idx < 0) return;
+    const vp = this.viewpoints[idx];
+    vp.el?.remove();
+    this.viewpoints.splice(idx, 1);
+    // Renumber labels
+    this.viewpoints.forEach((v, i) => {
+      v.el.textContent = String(i + 1);
+    });
+    if (this.activeId === id) this.activeId = null;
+    this._rebuildList();
+  }
+
+  _rebuildList() {
+    this.listEl.innerHTML = "";
+    this.viewpoints.forEach((vp, i) => {
+      const li = document.createElement("li");
+      if (vp.id === this.activeId) li.classList.add("active");
+
+      const badge = document.createElement("span");
+      badge.className = "badge";
+      badge.textContent = String(i + 1);
+
+      const name = document.createElement("span");
+      name.className = "name";
+      name.textContent = vp.name;
+      name.title = "Double-click to rename";
+      name.addEventListener("dblclick", () => {
+        const nv = prompt("Rename viewpoint", vp.name);
+        if (nv && nv.trim()) {
+          vp.name = nv.trim();
+          this._rebuildList();
+        }
+      });
+
+      const del = document.createElement("button");
+      del.className = "del";
+      del.textContent = "×";
+      del.title = "Delete";
+      del.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.removeViewpoint(vp.id);
+      });
+
+      li.append(badge, name, del);
+      li.addEventListener("click", () => this.flyTo(vp.id));
+      this.listEl.appendChild(li);
+    });
+  }
+
+  flyTo(id) {
+    const vp = this.viewpoints.find((v) => v.id === id);
+    if (!vp) return;
+
+    this.activeId = id;
+    this._rebuildList();
+
+    // Disable controls during tween
+    this.controls.enabled = false;
+    const fromPos = this.camera.position.clone();
+    const fromTarget = this.controls.target.clone();
+    const dur = 0.9; // seconds
+    this.tween = {
+      t: 0,
+      duration: dur,
+      fromPos, fromTarget,
+      toPos: vp.position.clone(),
+      toTarget: vp.target.clone(),
+    };
+  }
+
+  // Number-key shortcut
+  flyToIndex(i /* 0-based */) {
+    const vp = this.viewpoints[i];
+    if (vp) this.flyTo(vp.id);
+  }
+
+  // Smoothstep easing
+  _ease(x) { return x * x * (3 - 2 * x); }
+
+  updateTween(dt) {
+    if (!this.tween) return;
+    this.tween.t += dt;
+    const a = Math.min(1, this.tween.t / this.tween.duration);
+    const e = this._ease(a);
+    this.camera.position.lerpVectors(this.tween.fromPos, this.tween.toPos, e);
+    this.controls.target.lerpVectors(this.tween.fromTarget, this.tween.toTarget, e);
+    this.controls.update();
+    if (a >= 1) {
+      this.tween = null;
+      this.controls.enabled = true;
+    }
+  }
+
+  // Project anchors to screen each frame
+  updateMarkers(width, height) {
+    if (!this.viewpoints.length) return;
+    const camDir = new THREE.Vector3();
+    this.camera.getWorldDirection(camDir);
+    const camPos = this.camera.position;
+
+    for (const vp of this.viewpoints) {
+      this._v.copy(vp.anchor);
+      // Vector from camera to anchor
+      const dx = this._v.x - camPos.x;
+      const dy = this._v.y - camPos.y;
+      const dz = this._v.z - camPos.z;
+      const behind = dx * camDir.x + dy * camDir.y + dz * camDir.z <= 0;
+
+      this._v.project(this.camera);
+      const x = (this._v.x * 0.5 + 0.5) * width;
+      const y = (-this._v.y * 0.5 + 0.5) * height;
+
+      if (behind || this._v.x < -1.2 || this._v.x > 1.2 || this._v.y < -1.2 || this._v.y > 1.2) {
+        vp.el.style.display = "none";
+      } else {
+        vp.el.style.display = "flex";
+        vp.el.style.transform = `translate(${x}px, ${y}px)`;
+      }
+    }
+  }
+
+  _setStatus(msg) {
+    if (this.statusEl) this.statusEl.textContent = msg || "--";
+  }
+
+  // Seed a handful of default viewpoints around the model
+  seedDefaults(boundsCenter, boundsRadius) {
+    const r = boundsRadius * 1.6;
+    const presets = [
+      { name: "Front",  pos: new THREE.Vector3( 0, boundsRadius * 0.3,  r) },
+      { name: "Right",  pos: new THREE.Vector3( r, boundsRadius * 0.3,  0) },
+      { name: "Back",   pos: new THREE.Vector3( 0, boundsRadius * 0.3, -r) },
+      { name: "Left",   pos: new THREE.Vector3(-r, boundsRadius * 0.3,  0) },
+      { name: "Top",    pos: new THREE.Vector3( 0,  r * 1.1,  0.001) },
+    ];
+    for (const p of presets) {
+      this.addViewpoint({
+        name: p.name,
+        anchor: boundsCenter.clone().add(p.pos.clone().normalize().multiplyScalar(boundsRadius * 0.6)),
+        position: boundsCenter.clone().add(p.pos),
+        target: boundsCenter.clone(),
+      });
+    }
+  }
+}
