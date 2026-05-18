@@ -54,9 +54,22 @@ if %errorlevel% neq 0 (
     pause
     exit /b 1
   )
-  echo   Node.js installed. You may need to close and re-open this window
-  echo   so the PATH update is picked up. If 'node' isn't found below,
-  echo   open a fresh Command Prompt and run setup.bat again.
+  echo   Node.js installed. Adding it to this session's PATH...
+  REM winget writes PATH at machine level, but the current cmd session
+  REM inherited the old value at startup. Inject the canonical install
+  REM dir so `npm install` below works WITHOUT closing the window.
+  if exist "C:\Program Files\nodejs\npm.cmd" (
+    set "PATH=!PATH!;C:\Program Files\nodejs"
+  )
+  where node >nul 2>nul
+  if !errorlevel! neq 0 (
+    echo [ERROR] Node installed but still not reachable from this shell.
+    echo         Close this window and re-run setup.bat from a fresh
+    echo         Command Prompt to pick up the PATH update.
+    pause
+    exit /b 1
+  )
+  for /f "tokens=*" %%v in ('node --version') do echo   Node now active: %%v
 ) else (
   for /f "tokens=*" %%v in ('node --version') do echo   Found Node %%v
 )
@@ -76,6 +89,16 @@ if %errorlevel% neq 0 (
     echo   [WARN] winget could not install Git. You can still build the
     echo          project, but `git pull` / `git push` won't work until
     echo          Git is installed manually from https://git-scm.com/
+  ) else (
+    REM Same PATH-refresh trick as Node — make the freshly-installed
+    REM git reachable in this session without restarting cmd.
+    if exist "C:\Program Files\Git\cmd\git.exe" (
+      set "PATH=!PATH!;C:\Program Files\Git\cmd"
+    )
+    where git >nul 2>nul
+    if !errorlevel! equ 0 (
+      for /f "tokens=*" %%v in ('git --version') do echo   Git now active: %%v
+    )
   )
 ) else (
   for /f "tokens=*" %%v in ('git --version') do echo   Found %%v
