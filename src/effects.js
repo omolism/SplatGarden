@@ -41,7 +41,9 @@ export const uniforms = {
   //   splatVis     : 0..1 fade for SplatMesh (Gaussian or Point — whichever sub-form)
   //   quadVis      : 0..1 fade for Quadizer billboards
   //   voxelVis     : 0..1 fade for Voxelizer cubes
-  splatSubform: dyno.dynoInt(0),
+  // splatSubform lerps continuously between 0 (Gaussian) and 1 (Point) so the
+  // segmented toggle animates instead of snapping.
+  splatSubform: dyno.dynoFloat(0.0),
   splatVis:    dyno.dynoFloat(1.0),
   quadVis:     dyno.dynoFloat(0.0),
   voxelVis:    dyno.dynoFloat(0.0),
@@ -146,7 +148,7 @@ export function createScanModifier() {
           uNoiseScale: "float",
           uEdgeWidth:  "float",
           uEmissive:   "float",
-          uSplatSubform: "int",
+          uSplatSubform: "float",
           uSplatVis:     "float",
           uPointSize:    "float",
           uEffectStrength: "float",
@@ -446,7 +448,7 @@ export function createScanModifier() {
             // Effective sub-form per splat: invert inside the mask.
             //   Gaussian (0) inverted → Point (1), and vice-versa.
             //   Smooth blend: subform value in [0, 1] for soft mask edges.
-            float baseSubform = float(${inputs.uSplatSubform});
+            float baseSubform = clamp(${inputs.uSplatSubform}, 0.0, 1.0);
             float effSubform  = mix(baseSubform, 1.0 - baseSubform, maskMix);
 
             // Apply Point shrink proportional to effSubform
@@ -529,6 +531,12 @@ export class EffectController {
       quad:  params.quadLayer  ? 1.0 : 0.0,
       voxel: params.voxelLayer ? 1.0 : 0.0,
     };
+
+    // Gaussian ↔ Point sub-form lerp. Toggling sets targetSubform to 0 or 1;
+    // update() exp-decays the uniform toward it for a smooth shape morph.
+    this.targetSubform     = SUBFORM_INDEX[params.splatSubform] ?? 0;
+    this.subformLerpRate   = 6.0;
+    uniforms.splatSubform.value = this.targetSubform;
     // Seed uniforms to match targets so we don't fade in unnecessarily on load.
     uniforms.splatVis.value = this.targetVis.splat;
     uniforms.quadVis.value  = this.targetVis.quad;
@@ -546,7 +554,8 @@ export class EffectController {
     uniforms.noiseScale.value = params.noiseScale;
     uniforms.edgeWidth.value  = params.edgeWidth;
     uniforms.emissive.value   = params.emissive;
-    uniforms.splatSubform.value = SUBFORM_INDEX[params.splatSubform] ?? 0;
+    // Just retarget; the per-frame lerp in update() handles the morph.
+    this.targetSubform = SUBFORM_INDEX[params.splatSubform] ?? 0;
     uniforms.pointSize.value  = params.pointSize;
     // Mirror size values into uniforms so downstream consumers (Voxelizer /
     // Quadizer construction) have a single source of truth.
@@ -644,6 +653,16 @@ export class EffectController {
         }
       }
       if (dirty) this.mesh.updateVersion();
+    }
+
+    // ---- Gaussian ↔ Point sub-form lerp (independent of FX state) -------
+    {
+      const u = uniforms.splatSubform;
+      if (Math.abs(u.value - this.targetSubform) > 1e-4) {
+        const k = 1 - Math.exp(-this.subformLerpRate * dt);
+        u.value += (this.targetSubform - u.value) * k;
+        this.mesh?.updateVersion();
+      }
     }
 
     if (uniforms.active.value < 0.5) return;

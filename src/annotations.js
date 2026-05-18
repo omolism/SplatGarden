@@ -12,12 +12,14 @@ let _id = 0;
 const nextId = () => ++_id;
 
 export class AnnotationManager {
-  constructor({ camera, controls, layerEl, listEl, addBtnEl, statusEl }) {
+  constructor({ camera, controls, layerEl, listEl, addBtnEl, statusEl, storageKey = null }) {
     this.camera = camera;
     this.controls = controls;
     this.layerEl = layerEl;
     this.listEl = listEl;
     this.statusEl = statusEl;
+    this.storageKey = storageKey;
+    this._suspendSave = false;
 
     this.viewpoints = []; // { id, name, anchor:Vec3, position:Vec3, target:Vec3, el:HTMLElement }
     this.activeId = null;
@@ -34,6 +36,56 @@ export class AnnotationManager {
     // Hidden world-position scratch buffer
     this._v = new THREE.Vector3();
     this._raycaster = null; // set externally
+  }
+
+  setStorageKey(key) {
+    this.storageKey = key;
+  }
+
+  _save() {
+    if (this._suspendSave || !this.storageKey) return;
+    try {
+      const data = this.viewpoints.map(v => ({
+        name: v.name,
+        anchor:   [v.anchor.x,   v.anchor.y,   v.anchor.z],
+        position: [v.position.x, v.position.y, v.position.z],
+        target:   [v.target.x,   v.target.y,   v.target.z],
+        createdAt: v.createdAt,
+      }));
+      localStorage.setItem(this.storageKey, JSON.stringify(data));
+    } catch (_) { /* quota / disabled — silent */ }
+  }
+
+  /**
+   * Replace current viewpoints with whatever is in localStorage under storageKey.
+   * @returns {boolean} true if at least one viewpoint was restored.
+   */
+  restoreFromStorage() {
+    if (!this.storageKey) return false;
+    let raw;
+    try { raw = localStorage.getItem(this.storageKey); } catch { return false; }
+    if (!raw) return false;
+    let data;
+    try { data = JSON.parse(raw); } catch { return false; }
+    if (!Array.isArray(data) || data.length === 0) return false;
+
+    // Wipe any existing viewpoints, then bulk-restore without saving on each step.
+    this.viewpoints.slice().forEach(vp => this.removeViewpoint(vp.id));
+    this._suspendSave = true;
+    try {
+      for (const d of data) {
+        this.addViewpoint({
+          name: d.name,
+          anchor:   new THREE.Vector3(d.anchor[0],   d.anchor[1],   d.anchor[2]),
+          position: new THREE.Vector3(d.position[0], d.position[1], d.position[2]),
+          target:   new THREE.Vector3(d.target[0],   d.target[1],   d.target[2]),
+          createdAt: d.createdAt,
+        });
+      }
+    } finally {
+      this._suspendSave = false;
+    }
+    return true;
   }
 
   setRaycaster(raycaster, splatMesh) {
@@ -226,14 +278,26 @@ export class AnnotationManager {
       { name: "Back",   pos: new THREE.Vector3( 0, boundsRadius * 0.3, -r) },
       { name: "Left",   pos: new THREE.Vector3(-r, boundsRadius * 0.3,  0) },
       { name: "Top",    pos: new THREE.Vector3( 0,  r * 1.1,  0.001) },
+      // Center = immersive ground-level view looking into the scene
+      { name: "Center", pos: new THREE.Vector3( 0, -boundsRadius * 0.15, boundsRadius * 0.35),
+                        targetOffset: new THREE.Vector3(0, boundsRadius * 0.05, -boundsRadius * 0.05) },
     ];
+    let centerVp = null;
     for (const p of presets) {
-      this.addViewpoint({
+      const vp = this.addViewpoint({
         name: p.name,
         anchor: boundsCenter.clone().add(p.pos.clone().normalize().multiplyScalar(boundsRadius * 0.6)),
         position: boundsCenter.clone().add(p.pos),
-        target: boundsCenter.clone(),
+        target: boundsCenter.clone().add(p.targetOffset ?? new THREE.Vector3()),
       });
+      if (p.name === "Center") centerVp = vp;
     }
+    // Center = the default startup pose. Mark it active in the sidebar so it
+    // matches the camera the loader places after seeding.
+    if (centerVp) {
+      this.activeId = centerVp.id;
+      this._rebuildList();
+    }
+    return centerVp;
   }
 }

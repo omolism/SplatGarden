@@ -95,3 +95,85 @@ export function colmapCameraPosition(image) {
   const qConj = new THREE.Quaternion(-qx, -qy, -qz, qw);     // q⁻¹  for unit q
   return new THREE.Vector3(-tx, -ty, -tz).applyQuaternion(qConj);
 }
+
+/**
+ * Camera→world rotation for a COLMAP image record (the conjugate of stored q).
+ *
+ * @param {{q:[number,number,number,number]}} image
+ * @returns {THREE.Quaternion}
+ */
+export function colmapCameraRotation(image) {
+  const [qw, qx, qy, qz] = image.q;
+  return new THREE.Quaternion(-qx, -qy, -qz, qw);            // q⁻¹  for unit q
+}
+
+/**
+ * Build one merged LineSegments mesh holding a wireframe pyramid frustum for
+ * every COLMAP camera (Postshot-style capture marker).
+ *
+ *   apex = camera center
+ *   base = 4 corners at +Z (COLMAP camera looks down +Z in camera space)
+ *
+ * The optional `flipX180` flag mirrors the same 180°-around-X correction the
+ * splat mesh uses (Postshot/Inria Y-down → Three.js Y-up).
+ *
+ * @param {Array} images        — output of loadColmapImages()
+ * @param {object} opts
+ * @param {number} opts.size    — half-width of the pyramid base (world units)
+ * @param {number} opts.aspect  — base width / height
+ * @param {number} opts.depth   — distance from apex to base (world units)
+ * @param {boolean} opts.flipX180
+ * @param {number}  opts.color
+ * @param {number}  opts.opacity
+ * @returns {THREE.LineSegments}
+ */
+export function buildColmapFrustums(images, {
+  size      = 0.12,
+  aspect    = 1.5,
+  depth     = 0.22,
+  flipX180  = true,
+  color     = 0xffffff,
+  opacity   = 0.85,
+} = {}) {
+  const w = size * aspect;
+  const h = size;
+  const d = depth;
+  const apex = new THREE.Vector3(0, 0, 0);
+  const c0 = new THREE.Vector3(-w, -h, d);
+  const c1 = new THREE.Vector3( w, -h, d);
+  const c2 = new THREE.Vector3( w,  h, d);
+  const c3 = new THREE.Vector3(-w,  h, d);
+  const edges = [
+    [apex, c0], [apex, c1], [apex, c2], [apex, c3],   // apex → corners
+    [c0, c1], [c1, c2], [c2, c3], [c3, c0],           // base loop
+  ];
+
+  const flip = flipX180 ? new THREE.Quaternion(1, 0, 0, 0) : null;  // 180° around X
+  const positions = new Float32Array(images.length * edges.length * 2 * 3);
+  const tmp = new THREE.Vector3();
+  let off = 0;
+
+  for (const im of images) {
+    const pos = colmapCameraPosition(im);
+    const rot = colmapCameraRotation(im);
+    if (flip) {
+      pos.y = -pos.y; pos.z = -pos.z;
+      rot.premultiply(flip);
+    }
+    for (const [a, b] of edges) {
+      tmp.copy(a).applyQuaternion(rot).add(pos);
+      positions[off++] = tmp.x; positions[off++] = tmp.y; positions[off++] = tmp.z;
+      tmp.copy(b).applyQuaternion(rot).add(pos);
+      positions[off++] = tmp.x; positions[off++] = tmp.y; positions[off++] = tmp.z;
+    }
+  }
+
+  const geom = new THREE.BufferGeometry();
+  geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  const mat = new THREE.LineBasicMaterial({
+    color, transparent: opacity < 1, opacity, depthWrite: false,
+  });
+  const mesh = new THREE.LineSegments(geom, mat);
+  mesh.frustumCulled = false;
+  return mesh;
+}

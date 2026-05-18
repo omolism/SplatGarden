@@ -9,7 +9,7 @@ import { DataLabelLayer } from "./datalabels.js";
 import { Voxelizer } from "./voxelizer.js";
 import { Quadizer }  from "./quadizer.js";
 import { uniforms as effectUniforms } from "./effects.js";
-import { loadColmapImages, colmapCameraPosition } from "./colmap-loader.js";
+import { loadColmapImages, buildColmapFrustums } from "./colmap-loader.js";
 
 const SPLAT_URL = "/Whole_With_Statue.splat";
 
@@ -50,7 +50,9 @@ const camera = new THREE.PerspectiveCamera(
 camera.position.set(0, 1.5, 4);
 scene.add(camera);
 
+window.__cam = { camera };
 const controls = new OrbitControls(camera, canvas);
+window.__cam.controls = controls;
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
 controls.rotateSpeed = 0.7;
@@ -94,6 +96,7 @@ let annotations = null;
 let dataLabels = null;
 let voxelizer = null;
 let quadizer = null;
+let cameraFrustums = null;
 
 // Build a SplatMesh (either from URL or fileBytes), wait for init, and
 // return its world-space bounds so the caller can reframe the camera.
@@ -167,7 +170,12 @@ async function loadSplat() {
     addBtnEl: addBtn,
     statusEl,
   });
-  annotations.seedDefaults(center, radius);
+  const centerVp = annotations.seedDefaults(center, radius);
+  if (centerVp) {
+    camera.position.copy(centerVp.position);
+    controls.target.copy(centerVp.target);
+    controls.update();
+  }
 
   // ---- Data-label surveillance overlay (sits over the canvas) ----
   dataLabels = new DataLabelLayer({
@@ -189,21 +197,34 @@ async function loadSplat() {
   // mirror to the COLMAP positions so they sit in the same world frame.
   loadColmapImages("/colmap/images.bin")
     .then(images => {
-      const poses = images.map(im => {
-        const pos = colmapCameraPosition(im);
-        pos.y = -pos.y; pos.z = -pos.z;          // 180° around X
-        return { pos, name: im.name, imageId: im.imageId };
+      cameraFrustums = buildColmapFrustums(images, {
+        size: Math.max(0.06, radius * 0.012),
+        depth: Math.max(0.10, radius * 0.022),
       });
-      dataLabels.setColmapPoses(poses);
-      console.info(`[COLMAP] loaded ${poses.length} capture poses`);
+      cameraFrustums.visible = false;
+      scene.add(cameraFrustums);
+      console.info(`[COLMAP] loaded ${images.length} capture poses`);
     })
     .catch(err => {
-      console.warn("[COLMAP] failed to load — falling back to random ticks:", err?.message ?? err);
+      console.warn("[COLMAP] failed to load:", err?.message ?? err);
     });
 
   const dataParams = { enabled: false };
   const fOverlay = gui.addFolder("Overlays");
-  fOverlay.add(dataParams, "enabled").name("Data Labels").onChange(v => dataLabels.setEnabled(v));
+  const camCtrl = fOverlay.add(dataParams, "enabled").name("Training Cameras").onChange(v => {
+    dataLabels.setEnabled(v);
+    if (cameraFrustums) cameraFrustums.visible = v;
+  });
+  // Postshot-style: small wireframe pyramid icon next to the label.
+  const camIcon = `<svg class="ctrl-icon" viewBox="0 0 24 16" aria-hidden="true">
+    <polygon points="2,8 18,2 18,14" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>
+    <polygon points="18,2 22,4 22,12 18,14" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>
+    <line x1="2" y1="8" x2="22" y2="4" stroke="currentColor" stroke-width="1.1"/>
+    <line x1="2" y1="8" x2="22" y2="12" stroke="currentColor" stroke-width="1.1"/>
+  </svg>`;
+  const nameEl = camCtrl.domElement.querySelector(".name");
+  if (nameEl) nameEl.insertAdjacentHTML("afterbegin", camIcon);
+  camCtrl.domElement.title = "Lets you toggle whether training camera poses are shown in the viewport.";
 
   // ---- Raycaster ----
   const raycaster = new THREE.Raycaster();
@@ -252,6 +273,14 @@ async function loadSplat() {
       annotations.flyToIndex(parseInt(e.key, 10) - 1);
     } else if (e.key === "v" || e.key === "V") {
       annotations.armAddViewpoint();
+    } else if (e.key === "c" || e.key === "C") {
+      // Overwrite the "Center" viewpoint with the current camera pose.
+      const cvp = annotations.viewpoints.find(v => v.name === "Center");
+      if (cvp) {
+        cvp.position.copy(camera.position);
+        cvp.target.copy(controls.target);
+        statusEl.textContent = "Center viewpoint updated";
+      }
     } else if (e.key === "r" || e.key === "R") {
       camera.position.copy(center).add(new THREE.Vector3(0, radius * 0.4, radius * 1.8));
       controls.target.copy(center);

@@ -696,6 +696,15 @@ kbd {
   font-weight: 400 !important;
   letter-spacing: 0.01em !important;
 }
+.lil-gui .controller .name .ctrl-icon {
+  display: inline-block;
+  width: 18px;
+  height: 12px;
+  margin-right: 6px;
+  vertical-align: -2px;
+  color: var(--text-mid);
+  opacity: 0.85;
+}
 .lil-gui input[type="text"],
 .lil-gui input[type="number"] {
   background: transparent !important;
