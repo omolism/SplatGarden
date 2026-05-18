@@ -278,9 +278,12 @@ export class AnnotationManager {
       { name: "Back",   pos: new THREE.Vector3( 0, boundsRadius * 0.3, -r) },
       { name: "Left",   pos: new THREE.Vector3(-r, boundsRadius * 0.3,  0) },
       { name: "Top",    pos: new THREE.Vector3( 0,  r * 1.1,  0.001) },
-      // Center = immersive ground-level view looking into the scene
-      { name: "Center", pos: new THREE.Vector3( 0, -boundsRadius * 0.15, boundsRadius * 0.35),
-                        targetOffset: new THREE.Vector3(0, boundsRadius * 0.05, -boundsRadius * 0.05) },
+      // Center = camera placed at the geometric center of the splat bounds,
+      // looking forward into the scene. OrbitControls treats the offset
+      // between pos and target as the orbit radius, so we keep target ahead
+      // by half the bounds radius — a sane distance to scroll-zoom from.
+      { name: "Center", pos: new THREE.Vector3(0, 0, 0),
+                        targetOffset: new THREE.Vector3(0, 0, -boundsRadius * 0.5) },
     ];
     let centerVp = null;
     for (const p of presets) {

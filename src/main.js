@@ -1,5 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
+import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
 import { createScanModifier, EffectController, buildGUI } from "./effects.js";
 import { AnnotationManager } from "./annotations.js";
@@ -297,6 +299,158 @@ async function loadSplat() {
   const nameEl = camCtrl.domElement.querySelector(".name");
   if (nameEl) nameEl.insertAdjacentHTML("afterbegin", camIcon);
   camCtrl.domElement.title = "Lets you toggle whether training camera poses are shown in the viewport.";
+
+  // ---- HDR sky toggle (visible behind the splat when in Point sub-form) ----
+  // Loads /Skybox.hdr lazily on first activation, applies as scene.background
+  // + scene.environment. Most visible when the splat is rendered as points
+  // so the sky shows through; available in Gaussian mode too.
+  let hdrTex = null;
+  let hdrLoading = false;
+  const hdrParams = { hdr: false };
+  const hdrCtrl = fOverlay.add(hdrParams, "hdr").name("HDR Sky").onChange(async (v) => {
+    if (v) {
+      if (!hdrTex && !hdrLoading) {
+        hdrLoading = true;
+        try {
+          const tex = await new RGBELoader().loadAsync("/Skybox.hdr");
+          tex.mapping = THREE.EquirectangularReflectionMapping;
+          hdrTex = tex;
+        } catch (err) {
+          console.warn("[HDR] failed to load:", err?.message ?? err);
+          hdrParams.hdr = false;
+          hdrCtrl.updateDisplay();
+          hdrLoading = false;
+          return;
+        }
+        hdrLoading = false;
+      }
+      if (hdrTex) {
+        scene.background = hdrTex;
+        scene.environment = hdrTex;
+      }
+    } else {
+      scene.background = null;
+      scene.environment = null;
+    }
+  });
+  hdrCtrl.domElement.title = "Show the HDR environment behind the splat — most visible in Point mode.";
+
+  // ---- Pre-authored FBX camera move (Play / Pause / Stop) ------------------
+  // Drives the scene camera off the animated FBX node every frame. Three
+  // states: IDLE (time=0, controls enabled), PLAYING, PAUSED.
+  let camFbxRoot = null, camMixer = null, camAction = null, camAnimNode = null;
+  let camMoveLoading = false;
+  let camMoveState = "idle";   // "idle" | "playing" | "paused"
+  const _camFwd = new THREE.Vector3();
+
+  // Live-tunable transform on the FBX root so the user can frame the gazebo.
+  // Defaults: 90° around -Y (correction confirmed earlier), small Y lift,
+  // scale 0.5 (the raw FBX path overshoots; scaling shortens it). All four
+  // are wired to GUI sliders below.
+  const camMoveXf = { ox: 0, oy: 0, oz: 0, scale: 0.5 };
+  function applyCamFbxXf() {
+    if (!camFbxRoot) return;
+    camFbxRoot.rotation.set(0, -Math.PI / 2, 0);
+    camFbxRoot.position.set(camMoveXf.ox, camMoveXf.oy, camMoveXf.oz);
+    camFbxRoot.scale.set(camMoveXf.scale, camMoveXf.scale, camMoveXf.scale);
+  }
+
+  async function loadCameraMove() {
+    if (camFbxRoot || camMoveLoading) return;
+    camMoveLoading = true;
+    try {
+      const fbx = await new FBXLoader().loadAsync("/Shot4B_GS-FX_Camera_V01.fbx");
+      fbx.visible = false;
+      scene.add(fbx);
+      camFbxRoot = fbx;
+      applyCamFbxXf();
+
+      // Prefer a Camera node; fall back to the first non-root child.
+      camAnimNode = null;
+      fbx.traverse(o => { if (!camAnimNode && o.isCamera) camAnimNode = o; });
+      if (!camAnimNode) fbx.traverse(o => { if (!camAnimNode && o !== fbx) camAnimNode = o; });
+      if (!fbx.animations?.length) throw new Error("FBX has no animation");
+
+      camMixer = new THREE.AnimationMixer(fbx);
+      camAction = camMixer.clipAction(fbx.animations[0]);
+      camAction.setLoop(THREE.LoopOnce);
+      camAction.clampWhenFinished = true;
+      camMixer.addEventListener("finished", () => {
+        camMoveState = "idle";
+        controls.enabled = true;
+        playCtrl.name("▶ Play Camera Move");
+        statusEl.textContent = "Camera move complete";
+      });
+    } catch (err) {
+      console.warn("[CameraMove] failed:", err?.message ?? err);
+      statusEl.textContent = "Camera move failed: " + (err?.message ?? err);
+    } finally {
+      camMoveLoading = false;
+    }
+  }
+
+  async function playPauseCameraMove() {
+    if (!camMixer) {
+      statusEl.textContent = "Loading camera move…";
+      await loadCameraMove();
+      if (!camMixer) return;
+    }
+    if (camMoveState === "playing") {
+      // → pause
+      camAction.paused = true;
+      camMoveState = "paused";
+      playCtrl.name("▶ Resume Camera Move");
+      statusEl.textContent = "Camera move paused";
+    } else {
+      // idle or paused → play
+      if (camMoveState === "idle") {
+        camAction.reset();
+        camAction.play();
+        if (annotations) annotations.tween = null;       // cancel any flyTo tween
+      }
+      camAction.paused = false;
+      camMoveState = "playing";
+      controls.enabled = false;
+      playCtrl.name("⏸ Pause Camera Move");
+      statusEl.textContent = "Playing camera move…";
+    }
+  }
+
+  function stopCameraMove() {
+    if (!camMixer) return;
+    camAction.stop();
+    camMoveState = "idle";
+    controls.enabled = true;
+    playCtrl.name("▶ Play Camera Move");
+    statusEl.textContent = "Camera move stopped";
+  }
+
+  const camMoveParams = { play: () => playPauseCameraMove(), stop: () => stopCameraMove() };
+  const playCtrl = fOverlay.add(camMoveParams, "play").name("▶ Play Camera Move");
+  playCtrl.domElement.title = "Play / pause the pre-authored camera move (Shot4B_GS-FX_Camera_V01.fbx).";
+  const stopCtrl = fOverlay.add(camMoveParams, "stop").name("■ Stop Camera Move");
+  stopCtrl.domElement.title = "Reset the camera move to the beginning and return control to the user.";
+  // Live tuning so you can frame the gazebo while the move plays.
+  const fCamTune = fOverlay.addFolder("Camera Move Tuning").close();
+  fCamTune.add(camMoveXf, "ox",    -30, 30, 0.1).name("Offset X").onChange(applyCamFbxXf);
+  fCamTune.add(camMoveXf, "oy",    -10, 20, 0.1).name("Offset Y").onChange(applyCamFbxXf);
+  fCamTune.add(camMoveXf, "oz",    -30, 30, 0.1).name("Offset Z").onChange(applyCamFbxXf);
+  fCamTune.add(camMoveXf, "scale", 0.05, 3.0, 0.05).name("Scale").onChange(applyCamFbxXf);
+
+  // Per-frame sync: copy the animated FBX node's world transform to the scene
+  // camera. When PAUSED the mixer's deltaTime is 0 so the camera holds still
+  // but the scene continues to render normally.
+  window.__camMoveTick = (dt) => {
+    if (!camMixer || !camAnimNode) return;
+    if (camMoveState === "idle") return;
+    camMixer.update(camMoveState === "paused" ? 0 : dt);
+    camAnimNode.updateWorldMatrix(true, false);
+    camAnimNode.getWorldPosition(camera.position);
+    camAnimNode.getWorldQuaternion(camera.quaternion);
+    _camFwd.set(0, 0, -1).applyQuaternion(camera.quaternion);
+    controls.target.copy(camera.position).add(_camFwd);
+  };
+
 
   // ---- Raycaster ----
   const raycaster = new THREE.Raycaster();
@@ -766,6 +920,9 @@ renderer.setAnimationLoop(() => {
 
   // WASD / QE flythrough
   if (window.__wasdStep) window.__wasdStep(dt);
+
+  // Pre-authored FBX camera move (drives camera while playing / paused)
+  if (window.__camMoveTick) window.__camMoveTick(dt);
 
   controls.update();
   postfx.render(dt);

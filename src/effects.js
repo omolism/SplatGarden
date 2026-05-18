@@ -791,15 +791,31 @@ export function buildGUI(controller) {
   fLayers.add(params, "pointSize",  0.0005, 0.05,  0.0005).name("Point Size")
     .onChange(() => controller.applyParams());
 
-  fLayers.add(params, "quadLayer").name("Quad")
+  const quadCtrl = fLayers.add(params, "quadLayer").name("Quad")
     .onChange((v) => controller.setLayerVis("quad", v));
   fLayers.add(params, "quadSize",   0.0001, 0.05,  0.0001).name("Quad Size")
     .onChange(() => controller.applyParams());
 
-  fLayers.add(params, "voxelLayer").name("Voxel")
+  const voxelCtrl = fLayers.add(params, "voxelLayer").name("Voxel")
     .onChange((v) => controller.setLayerVis("voxel", v));
   fLayers.add(params, "voxelSize",  0.0005, 0.40,  0.0005).name("Voxel Size")
     .onChange(() => controller.applyParams());
+
+  // ---- USD spec badges on the Quad / Voxel rows ---------------------------
+  // Both layers are conceptually USD PointInstancer overlays — one prototype
+  // per layer (Plane for Quad, Cube for Voxel). The badge is a small inline
+  // tag next to the label, hinting at how the data would round-trip into USD.
+  const attachUsdBadge = (ctrl, proto) => {
+    const nameEl = ctrl.domElement.querySelector(".name");
+    if (!nameEl) return;
+    const span = document.createElement("span");
+    span.className = "usd-spec";
+    span.textContent = `PointInstancer › ${proto}`;
+    span.title = `UsdGeomPointInstancer (prototype: UsdGeom${proto})`;
+    nameEl.appendChild(span);
+  };
+  attachUsdBadge(quadCtrl,  "Plane");
+  attachUsdBadge(voxelCtrl, "Cube");
 
   // ---- Reveal Mask (driven by palm or body tracker) -----------------------
   const fMask = gui.addFolder("Reveal Mask");

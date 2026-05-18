@@ -241,6 +241,12 @@ export class DataLabelLayer {
     }
 
     // Viewpoint cards + connectors
+    //
+    // Layout strategy: the left-side UI (sidebar 18+240px, hand-panel 18+224px)
+    // occupies x < ~280px, so we keep the cards inside [LEFT_PAD .. w-CARD_W].
+    // Cards are also measured to clamp the bottom edge against their real size
+    // (the USD prim blocks are taller than the original key/value cards).
+    const LEFT_PAD = 280;
     for (const entry of this.cardMap.values()) {
       v.copy(entry.vp.anchor).project(this.camera);
       if (v.z > 1) {
@@ -250,10 +256,15 @@ export class DataLabelLayer {
       }
       const ax = (v.x * 0.5 + 0.5) * w;
       const ay = (-v.y * 0.5 + 0.5) * h;
-      const cx = Math.max(10, Math.min(w - 200, ax + entry.offset.x));
-      const cy = Math.max(10, Math.min(h - 110, ay + entry.offset.y));
 
-      entry.card.style.display   = "block";
+      // Show the card briefly so offsetWidth/Height are valid for clamping
+      if (entry.card.style.display !== "block") entry.card.style.display = "block";
+      const cw = entry.card.offsetWidth  || 280;
+      const ch = entry.card.offsetHeight || 160;
+
+      const cx = Math.max(LEFT_PAD, Math.min(w - cw - 10, ax + entry.offset.x));
+      const cy = Math.max(10,        Math.min(h - ch - 10, ay + entry.offset.y));
+
       entry.card.style.transform = `translate(${cx}px, ${cy}px)`;
 
       entry.connector.style.display = "";

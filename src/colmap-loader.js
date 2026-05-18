@@ -184,11 +184,18 @@ export function buildColmapFrustums(images, {
 
   const geom = new THREE.BufferGeometry();
   geom.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  // Always-on-top overlay: skip depth test/write and force last in draw order
+  // so the frustums stay visible behind Quad / Voxel layers too.
   const mat = new THREE.LineBasicMaterial({
-    color, transparent: opacity < 1, opacity, depthWrite: false,
+    color,
+    transparent: true,
+    opacity,
+    depthTest:  false,
+    depthWrite: false,
   });
   const mesh = new THREE.LineSegments(geom, mat);
   mesh.frustumCulled = false;
+  mesh.renderOrder   = 999;
   mesh.userData.frustums    = frustums;
   mesh.userData.pickRadius  = size * 2.5;   // hover hit radius in world units
   return mesh;
