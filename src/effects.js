@@ -322,10 +322,9 @@ export function createScanModifier() {
                 float w_b = sin(phase - 0.6 + nSigned * 1.2) * exp(-t * 0.7) * ringMask;
                 vec3 chroma = vec3(pow(abs(w_r), 2.0), pow(abs(w_g), 2.0), pow(abs(w_b), 2.0));
 
-                // Hot crest tint
-                vec3 hot = mix(${inputs.uColor}, vec3(1.0), 0.4); // bias toward white at peak
-                rgba.rgb = mix(rgba.rgb, ${inputs.uColor}, clamp(chroma.g * 1.4, 0.0, 0.85));
-                rgba.rgb += hot * chroma * ${inputs.uEmissive} * 0.45;
+                // Per-splat colour is intentionally NOT modified — Wave & Tint
+                // now acts purely as a positional ripple so the underlying
+                // splat RGB stays clean. (Originally tinted with uColor here.)
 
                 // Subtle "pop" in size on the wave crest
                 float pop = clamp(pow(abs(wave), 3.0), 0.0, 1.0);
@@ -382,12 +381,9 @@ export function createScanModifier() {
                 center += fly * gone;
                 center += jitter * onEdge * 0.04 * ${inputs.uIntensity};
 
-                // ----- Color / emission -----
-                vec3 emit = ${inputs.uColor};
-                vec3 edgeColor = mix(emit, vec3(1.0, 0.95, 0.85), 0.35);
-                rgba.rgb = mix(rgba.rgb, edgeColor, onEdge);
-                rgba.rgb += edgeColor * onEdge * ${inputs.uEmissive};
-                rgba.rgb = mix(rgba.rgb, emit, gone * 0.55);
+                // Per-splat colour is intentionally NOT modified — Dissolve
+                // now acts purely as a positional explode/reform with no
+                // tint or emissive overlay. (Originally tinted with uColor.)
 
                 // ----- Alpha — wispy fbm gives smoke-like density variation
                 float wispNoise01 = fbm(seed * 14.0 + vec3(t * 0.4, t * 0.6, 0.0));

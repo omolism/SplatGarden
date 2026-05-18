@@ -69,10 +69,11 @@ export class AnnotationManager {
     try { data = JSON.parse(raw); } catch { return false; }
     if (!Array.isArray(data) || data.length === 0) return false;
 
-    // Wipe any existing viewpoints, then bulk-restore without saving on each step.
-    this.viewpoints.slice().forEach(vp => this.removeViewpoint(vp.id));
+    // Wipe + bulk-restore. Suspend save BEFORE removes so the shrinking
+    // viewpoints array never gets written back to storage as `[]` mid-way.
     this._suspendSave = true;
     try {
+      this.viewpoints.slice().forEach(vp => this.removeViewpoint(vp.id));
       for (const d of data) {
         this.addViewpoint({
           name: d.name,
@@ -85,6 +86,8 @@ export class AnnotationManager {
     } finally {
       this._suspendSave = false;
     }
+    // Save once at the end so storage reflects the final restored state.
+    this._save();
     return true;
   }
 
@@ -139,6 +142,7 @@ export class AnnotationManager {
 
     this.viewpoints.push(vp);
     this._rebuildList();
+    this._save();
     return vp;
   }
 
@@ -154,6 +158,7 @@ export class AnnotationManager {
     });
     if (this.activeId === id) this.activeId = null;
     this._rebuildList();
+    this._save();
   }
 
   _rebuildList() {
@@ -175,6 +180,7 @@ export class AnnotationManager {
         if (nv && nv.trim()) {
           vp.name = nv.trim();
           this._rebuildList();
+          this._save();
         }
       });
 

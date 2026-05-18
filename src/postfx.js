@@ -4,6 +4,7 @@ import { RenderPass }       from "three/addons/postprocessing/RenderPass.js";
 import { ShaderPass }       from "three/addons/postprocessing/ShaderPass.js";
 import { UnrealBloomPass }  from "three/addons/postprocessing/UnrealBloomPass.js";
 import { Pass, FullScreenQuad } from "three/addons/postprocessing/Pass.js";
+import { uniforms as effectUniforms } from "./effects.js";
 
 // ---------------------------------------------------------------------------
 // EchoPass — Notch-style motion trails.
@@ -272,6 +273,172 @@ const PolishShader = {
   `,
 };
 
+// ---------------------------------------------------------------------------
+// PainterlyShader — three NPR looks branched on a single uStyle int:
+//   1  Monet      — Kuwahara filter (oil-painting brushstrokes)
+//   2  Matisse    — posterize + Sobel black outline + super-saturated
+//   3  Van Gogh   — flow-aligned directional brushstrokes
+// 0 (None) returns the source unchanged — cheap fallback when the user
+// hasn't picked a style.
+// ---------------------------------------------------------------------------
+const PainterlyShader = {
+  uniforms: {
+    tDiffuse:             { value: null },
+    uStyle:               { value: 0 },
+    uResolution:          { value: new THREE.Vector2(1, 1) },
+    uTime:                { value: 0.0 },
+    uMonetRadius:         { value: 4.0 },   // Kuwahara neighbourhood radius (px)
+    uMatissePosterize:    { value: 5.0 },   // colour quantization steps per channel
+    uMatisseEdgeThresh:   { value: 0.15 },  // Sobel threshold above which we draw outline
+    uMatisseSaturation:   { value: 1.6 },
+    uVanGoghStroke:       { value: 6.0 },   // brushstroke length in pixels
+    uVanGoghTurb:         { value: 8.0 },   // flow-field turbulence scale
+    uVanGoghSat:          { value: 1.5 },   // saturation boost
+    uSeuratDotSize:       { value: 14.0 },  // grid cell size in px
+    uSeuratSat:           { value: 1.6 },   // dot colour saturation boost
+    uSeuratPaper:         { value: 0.92 },  // background tint (paper luminance)
+  },
+  vertexShader: /* glsl */ `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse;
+    uniform int   uStyle;
+    uniform vec2  uResolution;
+    uniform float uTime;
+    uniform float uMonetRadius;
+    uniform float uMatissePosterize, uMatisseEdgeThresh, uMatisseSaturation;
+    uniform float uVanGoghStroke, uVanGoghTurb, uVanGoghSat;
+    uniform float uSeuratDotSize, uSeuratSat, uSeuratPaper;
+    varying vec2 vUv;
+
+    float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+    float hash21(vec2 p) {
+      p = fract(p * vec2(123.34, 456.21));
+      p += dot(p, p + 45.32);
+      return fract(p.x * p.y);
+    }
+
+    // ---- Kuwahara (Monet) -------------------------------------------------
+    // Samples 4 overlapping (radius+1)² quadrants around the pixel, picks
+    // the mean of the lowest-variance one. Edges stay sharp; smooth regions
+    // get smoothed → oil-paint brushstroke look.
+    vec3 kuwahara(vec2 uv) {
+      vec2 px = 1.0 / uResolution;
+      float r = uMonetRadius;
+      vec3  bestMean = vec3(0.0);
+      float bestVar  = 1e9;
+      const int R = 4;     // hard-coded radius for loop unroll
+      for (int q = 0; q < 4; q++) {
+        int dx = (q == 1 || q == 3) ?  1 : -1;
+        int dy = (q == 2 || q == 3) ?  1 : -1;
+        vec3 sum   = vec3(0.0);
+        vec3 sumSq = vec3(0.0);
+        float n    = 0.0;
+        for (int i = 0; i <= R; i++) {
+          for (int j = 0; j <= R; j++) {
+            vec2 o = vec2(float(i * dx), float(j * dy)) * px * (r / float(R));
+            vec3 c = texture2D(tDiffuse, uv + o).rgb;
+            sum   += c;
+            sumSq += c * c;
+            n     += 1.0;
+          }
+        }
+        vec3 mean = sum / n;
+        vec3 v    = sumSq / n - mean * mean;
+        float vv  = max(0.0, v.r + v.g + v.b);
+        if (vv < bestVar) { bestVar = vv; bestMean = mean; }
+      }
+      return bestMean;
+    }
+
+    void main() {
+      if (uStyle == 0) {
+        gl_FragColor = texture2D(tDiffuse, vUv);
+        return;
+      }
+
+      vec3 col;
+      vec2 px = 1.0 / uResolution;
+
+      // ---- 1. Monet — Kuwahara -------------------------------------------
+      if (uStyle == 1) {
+        col = kuwahara(vUv);
+        col *= 1.04;                                 // slight brightness lift
+        col.r += 0.015; col.g += 0.005;              // warm bias
+      }
+      // ---- 2. Matisse — posterize + Sobel + saturate ---------------------
+      else if (uStyle == 2) {
+        col = texture2D(tDiffuse, vUv).rgb;
+        // Sobel edge detection on luma
+        float l00 = luma(texture2D(tDiffuse, vUv + px * vec2(-1.0, -1.0)).rgb);
+        float l01 = luma(texture2D(tDiffuse, vUv + px * vec2( 0.0, -1.0)).rgb);
+        float l02 = luma(texture2D(tDiffuse, vUv + px * vec2( 1.0, -1.0)).rgb);
+        float l10 = luma(texture2D(tDiffuse, vUv + px * vec2(-1.0,  0.0)).rgb);
+        float l12 = luma(texture2D(tDiffuse, vUv + px * vec2( 1.0,  0.0)).rgb);
+        float l20 = luma(texture2D(tDiffuse, vUv + px * vec2(-1.0,  1.0)).rgb);
+        float l21 = luma(texture2D(tDiffuse, vUv + px * vec2( 0.0,  1.0)).rgb);
+        float l22 = luma(texture2D(tDiffuse, vUv + px * vec2( 1.0,  1.0)).rgb);
+        float gx = -l00 - 2.0 * l10 - l20 + l02 + 2.0 * l12 + l22;
+        float gy = -l00 - 2.0 * l01 - l02 + l20 + 2.0 * l21 + l22;
+        float edge = sqrt(gx * gx + gy * gy);
+        // Posterize colour
+        col = floor(col * uMatissePosterize + 0.5) / uMatissePosterize;
+        // Boost saturation
+        float lum = luma(col);
+        col = mix(vec3(lum), col, uMatisseSaturation);
+        // Black outline on strong edges
+        float edgeMask = smoothstep(uMatisseEdgeThresh, uMatisseEdgeThresh + 0.08, edge);
+        col *= 1.0 - edgeMask * 0.9;
+      }
+      // ---- 4. Seurat — pointillism ---------------------------------------
+      // Snap to a dot-grid, sample the cell-centre colour, and render each
+      // pixel either as a saturated coloured dot (inside the grid radius)
+      // or as a paper-tone background. Reads like tiny brush-points across
+      // a paper canvas, the way Seurat's dot painting builds up tone.
+      else if (uStyle == 4) {
+        vec2 grid = px * uSeuratDotSize;
+        vec2 cell = floor(vUv / grid) * grid + grid * 0.5;
+        vec3 cc = texture2D(tDiffuse, cell).rgb;
+        float lum = luma(cc);
+        cc = mix(vec3(lum), cc, uSeuratSat);
+        vec2 frac = (vUv - cell) / grid;
+        float d = length(frac);
+        float mask = smoothstep(0.5, 0.40, d);
+        vec3 paper = vec3(uSeuratPaper);
+        col = mix(paper, cc, mask);
+      }
+      // ---- 3. Van Gogh — flow-aligned directional brushstrokes ----------
+      // Samples N taps along a noise-driven direction → each pixel becomes
+      // an averaged smear that follows the underlying flow field, like
+      // Starry Night's swirling strokes.
+      else if (uStyle == 3) {
+        // Build a smooth flow direction from a noisy "angle field"
+        float ang = (hash21(floor(vUv * uVanGoghTurb)) +
+                     hash21(floor(vUv * uVanGoghTurb * 1.7) + 7.3)) * 6.28318;
+        vec2  dir = vec2(cos(ang), sin(ang));
+        vec3 sum  = vec3(0.0);
+        float n   = 0.0;
+        for (int i = -6; i <= 6; i++) {
+          vec2 off = dir * float(i) * px * uVanGoghStroke;
+          sum += texture2D(tDiffuse, vUv + off).rgb;
+          n   += 1.0;
+        }
+        col = sum / n;
+        // Boost saturation — Van Gogh palette runs hot
+        float lum = luma(col);
+        col = mix(vec3(lum), col, uVanGoghSat);
+      }
+
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `,
+};
+
 const KaleidoscopeShader = {
   uniforms: {
     tDiffuse:  { value: null },
@@ -353,6 +520,10 @@ export function setupPostFX(renderer, scene, camera) {
   const polishPass = new ShaderPass(PolishShader);
   composer.addPass(polishPass);
 
+  // Painterly — Monet (Kuwahara) / Matisse (posterize + Sobel) / Pollock
+  const painterlyPass = new ShaderPass(PainterlyShader);
+  composer.addPass(painterlyPass);
+
   // Echo / Trails — Notch-style motion smear via feedback texture
   const echoPass = new EchoPass();
   composer.addPass(echoPass);
@@ -386,8 +557,20 @@ export function setupPostFX(renderer, scene, camera) {
     bloomThreshold: 0.82,
 
     echoOn:        false,
-    echoPersist:   0.90,
+    echoPersist:   0.97,    // 0.90 → 0.97 = much longer trails before they fade
     echoMix:       1.00,
+
+    painterly:           "None",   // None | Monet | Matisse | Van Gogh | Seurat
+    monetRadius:         4.0,
+    matissePosterize:    5.0,
+    matisseEdge:         0.6,      // bumped from 0.15
+    matisseSaturation:   1.6,
+    vanGoghStroke:       6.0,
+    vanGoghTurb:         8.0,
+    vanGoghSat:          1.5,
+    seuratDotSize:       14.0,
+    seuratSat:           1.6,
+    seuratPaper:         0.92,
 
     lensOn:        false,
     lensAmt:       0.20,
@@ -412,6 +595,7 @@ export function setupPostFX(renderer, scene, camera) {
   };
 
   const TONEMAP_INDEX = { None: 0, Reinhard: 1, Cineon: 2, ACES: 3 };
+  const PAINTERLY_INDEX = { None: 0, Monet: 1, Matisse: 2, "Van Gogh": 3, Seurat: 4 };
 
   let rotation = 0.0;
 
@@ -420,6 +604,7 @@ export function setupPostFX(renderer, scene, camera) {
     kaleidoPass.uniforms.uAspect.value = w / h;
     bloomPass.setSize(w, h);
     echoPass.setSize(w, h);
+    painterlyPass.uniforms.uResolution.value.set(w, h);
   }
 
   let polishTime = 0;
@@ -440,6 +625,27 @@ export function setupPostFX(renderer, scene, camera) {
     echoPass.enabled = params.postEnable && params.echoOn;
     echoPass.uniforms.uPersistence.value = params.echoPersist;
     echoPass.uniforms.uMix.value         = params.echoMix;
+
+    const styleIdx = PAINTERLY_INDEX[params.painterly] ?? 0;
+    // Painterly is a 2D post-process — operates on every pixel of the framebuffer.
+    // It would smear Quad / Voxel overlays alongside the splat. Auto-disable
+    // when either overlay layer is visible so the effect stays splat-only.
+    const quadShown  = (effectUniforms?.quadVis?.value  ?? 0) > 0.05;
+    const voxelShown = (effectUniforms?.voxelVis?.value ?? 0) > 0.05;
+    painterlyPass.enabled = params.postEnable && styleIdx !== 0 && !quadShown && !voxelShown;
+    const pu = painterlyPass.uniforms;
+    pu.uStyle.value             = styleIdx;
+    pu.uTime.value              = polishTime;
+    pu.uMonetRadius.value       = params.monetRadius;
+    pu.uMatissePosterize.value  = params.matissePosterize;
+    pu.uMatisseEdgeThresh.value = params.matisseEdge;
+    pu.uMatisseSaturation.value = params.matisseSaturation;
+    pu.uVanGoghStroke.value     = params.vanGoghStroke;
+    pu.uVanGoghTurb.value       = params.vanGoghTurb;
+    pu.uVanGoghSat.value        = params.vanGoghSat;
+    pu.uSeuratDotSize.value     = params.seuratDotSize;
+    pu.uSeuratSat.value         = params.seuratSat;
+    pu.uSeuratPaper.value       = params.seuratPaper;
 
     polishTime += dt;
     const u = polishPass.uniforms;
@@ -497,6 +703,37 @@ export function setupPostFX(renderer, scene, camera) {
     fPost.add(params, "exposure",   0.0, 3.0, 0.01).name("Exposure");
     fPost.add(params, "contrast",   0.5, 2.0, 0.01).name("Contrast");
     fPost.add(params, "saturation", 0.0, 2.0, 0.01).name("Saturation");
+
+    // Painterly is a NPR finishing pass. Style selector at the top; each
+    // style's tunables live inside their own sub-folder so the user only
+    // sees the knobs that matter for the current look. Folders auto-open
+    // when their style is selected (and the others auto-close).
+    // Painterly: Style picker AT THE TOP, per-style detail folders below.
+    // Switching style auto-opens only the relevant detail folder.
+    const fPaint = fPost.addFolder("Painterly").close();
+    let fMonet, fMatisse, fVanGogh, fSeurat;
+    fPaint.add(params, "painterly", Object.keys(PAINTERLY_INDEX)).name("Style")
+      .onChange((v) => {
+        [fMonet, fMatisse, fVanGogh, fSeurat].forEach(f => f?.close());
+        if (v === "Monet")    fMonet.open();
+        if (v === "Matisse")  fMatisse.open();
+        if (v === "Van Gogh") fVanGogh.open();
+        if (v === "Seurat")   fSeurat.open();
+      });
+    fMonet   = fPaint.addFolder("Monet").close();
+    fMatisse = fPaint.addFolder("Matisse").close();
+    fVanGogh = fPaint.addFolder("Van Gogh").close();
+    fSeurat  = fPaint.addFolder("Seurat").close();
+    fMonet.add(params, "monetRadius",         1,   8,  0.5 ).name("Radius");
+    fMatisse.add(params, "matissePosterize",  2,  12,  1   ).name("Posterize");
+    fMatisse.add(params, "matisseEdge",       0.0, 1.0, 0.01).name("Edge");
+    fMatisse.add(params, "matisseSaturation", 0.5, 3.0, 0.05).name("Saturation");
+    fVanGogh.add(params, "vanGoghStroke",     2,  16,  0.5 ).name("Stroke Length");
+    fVanGogh.add(params, "vanGoghTurb",       2,  24,  0.5 ).name("Turbulence");
+    fVanGogh.add(params, "vanGoghSat",        0.5, 2.5, 0.05).name("Saturation");
+    fSeurat.add(params, "seuratDotSize",      4,   40, 0.5 ).name("Dot Size");
+    fSeurat.add(params, "seuratSat",          0.5, 3.0, 0.05).name("Saturation");
+    fSeurat.add(params, "seuratPaper",        0.0, 1.0, 0.01).name("Paper Tint");
 
     const fEcho = fPost.addFolder("Echo Trails").close();
     fEcho.add(params, "echoOn").name("Enable");

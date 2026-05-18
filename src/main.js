@@ -197,11 +197,34 @@ async function loadSplat() {
     listEl: viewList,
     addBtnEl: addBtn,
     statusEl,
+    // localStorage key scoped to the splat URL so swapping splats doesn't
+    // bring along the wrong viewpoints.
+    storageKey: "splatgarden:viewpoints:" + SPLAT_URL,
   });
+  // Seed defaults silently — without this guard, each seeded add() would
+  // write to localStorage and wipe any saved user-added viewpoints (e.g.
+  // "Gazebo") before we get a chance to read them.
+  annotations._suspendSave = true;
   const centerVp = annotations.seedDefaults(center, radius);
-  if (centerVp) {
-    camera.position.copy(centerVp.position);
-    controls.target.copy(centerVp.target);
+  annotations._suspendSave = false;
+  // If localStorage has saved viewpoints (e.g. the user's custom "Gazebo"
+  // viewpoint added in a previous session), replace the seeded defaults
+  // with them. Auto-save on add/remove/rename keeps storage in sync going
+  // forward, so any new viewpoint persists automatically.
+  const restored = annotations.restoreFromStorage();
+  if (!restored) annotations._save();   // first run: persist the defaults
+  // Prefer Gazebo (user-added) → Center → first available. Gazebo only
+  // exists in storage if a previous session saved it via the GUI.
+  const activeVp = restored
+    ? annotations.viewpoints.find(v => v.name === "Gazebo")
+      || annotations.viewpoints.find(v => v.name === "Center")
+      || annotations.viewpoints[0]
+    : centerVp;
+  if (activeVp) {
+    annotations.activeId = activeVp.id;
+    annotations._rebuildList();
+    camera.position.copy(activeVp.position);
+    controls.target.copy(activeVp.target);
     controls.update();
   }
 
@@ -813,8 +836,38 @@ async function loadSplat() {
 
     // Otherwise → trigger scan effect at hit point (in object space)
     effects.triggerAt(r.local);
+    autoEnableEchoForClick();
     statusEl.textContent = `Hit (${r.hit.point.x.toFixed(2)}, ${r.hit.point.y.toFixed(2)}, ${r.hit.point.z.toFixed(2)})`;
   });
+
+  // ---- Auto-enable Echo Trails for click FX --------------------------------
+  // Each mouse-click flips Echo on, then auto-fades off after the effect's
+  // duration + fadeTail completes so trails dissipate naturally. Re-clicking
+  // resets the timer so consecutive clicks chain smoothly.
+  let _echoAutoTimer = null;
+  function refreshEchoGui() {
+    gui.controllersRecursive().forEach(c => {
+      if (c._name === "Enable" && c.object === postfx.params) c.updateDisplay();
+    });
+  }
+  function autoEnableEchoForClick() {
+    if (!postfx?.params) return;
+    postfx.params.echoOn = true;
+    refreshEchoGui();
+    if (_echoAutoTimer) clearTimeout(_echoAutoTimer);
+    // Read LIVE values so changing FX Duration in the GUI extends the trail
+    // window automatically. uniforms.duration is the effect's animation life
+    // in seconds; effects.fadeTailS is the smooth ramp-down tail. Add 1.5 s
+    // of safety pad so trails finish fading after the FX itself ends.
+    const fxDur   = effectUniforms?.duration?.value ?? 2.5;
+    const fadeTail = effects?.fadeTailS ?? 0.9;
+    const durMs   = (fxDur + fadeTail + 1.5) * 1000;
+    _echoAutoTimer = setTimeout(() => {
+      postfx.params.echoOn = false;
+      refreshEchoGui();
+      _echoAutoTimer = null;
+    }, durMs);
+  }
   // Expose for the hand-tracking block below to share the same logic
   window.__brushParams = brushParams;
 
