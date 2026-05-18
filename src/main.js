@@ -186,6 +186,73 @@ async function loadSplat() {
   });
   dataLabels.setBounds(center, size);
 
+  // ---- Hover tooltip for camera frustums -----------------------------------
+  // Manual ray-vs-point pick (cheap for ~150 cameras) — projects each frustum
+  // origin to NDC and picks the closest within the line-segment hit radius.
+  function installFrustumHover(frustumMesh) {
+    const data       = frustumMesh.userData.frustums || [];
+    const pickRadius = frustumMesh.userData.pickRadius ?? 0.05;
+
+    const tip = document.createElement("div");
+    tip.className = "frustum-tip";
+    tip.style.display = "none";
+    document.getElementById("app").appendChild(tip);
+
+    const _pv = new THREE.Vector3();
+    let lastHover = -1;
+
+    canvas.addEventListener("pointermove", (e) => {
+      if (!frustumMesh.visible) {
+        if (tip.style.display !== "none") tip.style.display = "none";
+        return;
+      }
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+
+      // Pick the frustum whose origin projects closest to the cursor in screen
+      // space (within the per-frustum hit radius converted to px).
+      let bestI = -1, bestPx = Infinity;
+      const w = rect.width, h = rect.height;
+      for (let i = 0; i < data.length; i++) {
+        _pv.copy(data[i].pos).project(camera);
+        if (_pv.z > 1) continue;                 // behind camera
+        const sx = ( _pv.x * 0.5 + 0.5) * w;
+        const sy = (-_pv.y * 0.5 + 0.5) * h;
+        const dx = sx - mx, dy = sy - my;
+        const d  = Math.hypot(dx, dy);
+        if (d < bestPx) { bestPx = d; bestI = i; }
+      }
+
+      // Convert pickRadius (world units) at the picked depth → px so the hit
+      // area scales with distance (close frustums easier to hit than far).
+      const HIT_PX = 14;
+      if (bestI >= 0 && bestPx < HIT_PX) {
+        if (bestI !== lastHover) {
+          const d = data[bestI];
+          const f = (n, p = 3) => Number(n).toFixed(p);
+          const [qw, qx, qy, qz] = d.qRaw;
+
+          tip.innerHTML =
+            `<div class="k">CAM_ID</div><div class="v">#${d.cameraId}</div>` +
+            `<div class="k">POS</div><div class="v">${f(d.pos.x, 2)}, ${f(d.pos.y, 2)}, ${f(d.pos.z, 2)}</div>` +
+            `<div class="k">QUAT</div><div class="v">${f(qw)}, ${f(qx)}, ${f(qy)}, ${f(qz)}</div>`;
+          lastHover = bestI;
+        }
+        tip.style.display = "block";
+        tip.style.transform = `translate(${e.clientX + 14}px, ${e.clientY + 14}px)`;
+      } else {
+        if (tip.style.display !== "none") tip.style.display = "none";
+        lastHover = -1;
+      }
+    });
+
+    canvas.addEventListener("pointerleave", () => {
+      tip.style.display = "none";
+      lastHover = -1;
+    });
+  }
+
   // ---- COLMAP capture poses → data-label ticks -----------------------------
   // The .bin files in public/colmap/ are the COLMAP reconstruction the splat
   // was trained from. Each entry in images.bin gives a real camera world
@@ -197,13 +264,18 @@ async function loadSplat() {
   // mirror to the COLMAP positions so they sit in the same world frame.
   loadColmapImages("/colmap/images.bin")
     .then(images => {
-      cameraFrustums = buildColmapFrustums(images, {
-        size: Math.max(0.06, radius * 0.012),
-        depth: Math.max(0.10, radius * 0.022),
+      // Subsample for a less-cluttered overlay (target ~150 frustums).
+      const TARGET = 150;
+      const stride = Math.max(1, Math.floor(images.length / TARGET));
+      const sampled = images.filter((_, i) => i % stride === 0);
+      cameraFrustums = buildColmapFrustums(sampled, {
+        size:  Math.max(0.015, radius * 0.0018),
+        depth: Math.max(0.03,  radius * 0.0035),
       });
       cameraFrustums.visible = false;
       scene.add(cameraFrustums);
-      console.info(`[COLMAP] loaded ${images.length} capture poses`);
+      installFrustumHover(cameraFrustums);
+      console.info(`[COLMAP] ${images.length} poses → ${sampled.length} frustums`);
     })
     .catch(err => {
       console.warn("[COLMAP] failed to load:", err?.message ?? err);

@@ -152,6 +152,9 @@ export function buildColmapFrustums(images, {
   const positions = new Float32Array(images.length * edges.length * 2 * 3);
   const tmp = new THREE.Vector3();
   let off = 0;
+  // Parallel metadata array — same index space as `images`, used by the
+  // hover-pick code to identify which frustum the cursor is over.
+  const frustums = [];
 
   for (const im of images) {
     const pos = colmapCameraPosition(im);
@@ -166,6 +169,17 @@ export function buildColmapFrustums(images, {
       tmp.copy(b).applyQuaternion(rot).add(pos);
       positions[off++] = tmp.x; positions[off++] = tmp.y; positions[off++] = tmp.z;
     }
+    frustums.push({
+      pos:      pos.clone(),
+      // Final camera→world rotation in Three.js conventions (after flipX180).
+      rot:      rot.clone(),
+      // Raw COLMAP fields exposed for technical inspection.
+      name:     im.name,
+      imageId:  im.imageId,
+      cameraId: im.cameraId,
+      qRaw:     im.q.slice(),                            // [qw, qx, qy, qz]
+      tRaw:     im.t.slice(),                            // [tx, ty, tz]
+    });
   }
 
   const geom = new THREE.BufferGeometry();
@@ -175,5 +189,7 @@ export function buildColmapFrustums(images, {
   });
   const mesh = new THREE.LineSegments(geom, mat);
   mesh.frustumCulled = false;
+  mesh.userData.frustums    = frustums;
+  mesh.userData.pickRadius  = size * 2.5;   // hover hit radius in world units
   return mesh;
 }
