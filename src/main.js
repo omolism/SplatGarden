@@ -32,10 +32,23 @@ const handCursor2  = document.getElementById("hand-cursor-2");
 const handModeEl   = document.getElementById("hand-mode");
 
 // ---------------------------------------------------------------------------
+// Mobile detection — applied ONLY when the user is on a touch device.
+// Desktop behaviour is untouched. Mobile flips a body class for CSS overrides,
+// caps the pixel ratio harder (mobile GPUs choke on full retina at 2.6 M
+// splats), disables expensive post-fx by default, auto-collapses the GUI so
+// it doesn't eat half the screen, and hides hand-tracking (front-cam +
+// MediaPipe is battery murder on phones).
+// ---------------------------------------------------------------------------
+const IS_MOBILE =
+  /Mobi|Android|iPhone|iPad|iPod|Tablet/i.test(navigator.userAgent) ||
+  (window.matchMedia?.("(pointer: coarse)").matches && window.innerWidth < 900);
+document.body.classList.toggle("mobile", IS_MOBILE);
+
+// ---------------------------------------------------------------------------
 // Renderer / scene / camera
 // ---------------------------------------------------------------------------
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, IS_MOBILE ? 1.5 : 2));
 renderer.setSize(window.innerWidth, window.innerHeight, false);
 renderer.setClearColor(0x0b0f14, 1);
 
@@ -71,6 +84,14 @@ controls.maxDistance = 200;
 // ---------------------------------------------------------------------------
 const postfx = setupPostFX(renderer, scene, camera);
 postfx.setSize(window.innerWidth, window.innerHeight);
+// Mobile: kill post-processing by default — Bloom is the biggest GPU tax,
+// and the Polish pass is fill-rate heavy on mobile GPUs.
+if (IS_MOBILE) {
+  postfx.params.postEnable = false;
+  postfx.params.bloomEnable = false;
+  const handPanel = document.getElementById("hand-panel");
+  if (handPanel) handPanel.style.display = "none";
+}
 
 function onResize() {
   const w = window.innerWidth;
@@ -138,6 +159,11 @@ async function loadSplat() {
   splat.updateGenerator();
   const gui = buildGUI(effects);
   postfx.attachGUI(gui);
+  // Mobile: auto-collapse every folder so the panel doesn't eat the viewport.
+  if (IS_MOBILE) {
+    gui.foldersRecursive().forEach(f => f.close());
+    gui.close();
+  }
 
   // ---- Voxelizer + Quadizer (USD PointInstancer-style overlays) -----------
   // Voxelizer: instanced cubes (BoxGeometry) aggregating splats into a grid.

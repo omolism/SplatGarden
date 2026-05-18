@@ -26,12 +26,23 @@ const PolishShader = {
     tDiffuse:        { value: null },
     uTime:           { value: 0.0 },
 
+    // Lens distortion (After-Effects "Optics Compensation" style)
+    uLensOn:         { value: 0.0 },
+    uLensAmt:        { value: 0.20 },   // + barrel, - pincushion
+    uLensZoom:       { value: 1.00 },   // re-zoom to compensate for shrink
+    uLensDispersion: { value: 0.0 },    // per-channel warp = lens chromatic
+    uLensCenterX:    { value: 0.5 },    // optical centre (0..1 screen UV)
+    uLensCenterY:    { value: 0.5 },
+    uLensSqueeze:    { value: 1.0 },    // anamorphic Y scale (>1 = horiz-stretch)
+    uLensFisheye:    { value: 0.0 },    // 0 = polynomial, 1 = sphere-projection
+    uLensFOV:        { value: 1.0 },    // strength of the sphere warp (fisheye mode)
+
     // Vignette
     uVignetteOn:     { value: 0.0 },
     uVignetteAmt:    { value: 1.0 },
     uVignetteSoft:   { value: 0.6 },
 
-    // Chromatic aberration
+    // Chromatic aberration (screen-space radial RGB split)
     uChromaOn:       { value: 0.0 },
     uChromaAmt:      { value: 0.0035 },
 
@@ -57,12 +68,47 @@ const PolishShader = {
   fragmentShader: /* glsl */ `
     uniform sampler2D tDiffuse;
     uniform float uTime;
+    uniform float uLensOn, uLensAmt, uLensZoom, uLensDispersion;
+    uniform float uLensCenterX, uLensCenterY, uLensSqueeze, uLensFisheye, uLensFOV;
     uniform float uVignetteOn, uVignetteAmt, uVignetteSoft;
     uniform float uChromaOn,   uChromaAmt;
     uniform float uGrainOn,    uGrainAmt;
     uniform float uExposure, uContrast, uSaturation;
     uniform int   uTonemap;
     varying vec2 vUv;
+
+    // Lens warp with two modes:
+    //   • Polynomial (default) — barrel/pincushion via k * r² + k·0.35 * r⁴
+    //   • Fisheye (uLensFisheye > 0) — blend in a sphere-projection curve so
+    //     the corners bend like a real fisheye lens at high FOV.
+    // 'extra' tweaks curvature per RGB channel (prism FX).
+    // 'uLensCenterX/Y' move the optical centre; 'uLensSqueeze' Y-scales pre-warp
+    // for anamorphic stretch.
+    vec2 lensWarp(vec2 uv, float extra) {
+      vec2 centre = vec2(uLensCenterX, uLensCenterY);
+      vec2 c = uv - centre;
+      // Anamorphic squeeze: scale Y before warping
+      c.y *= uLensSqueeze;
+
+      float r2 = dot(c, c);
+      float r  = sqrt(r2);
+      float k  = uLensAmt + extra;
+
+      // Polynomial warp factor (always applied)
+      float polyW = 1.0 + k * r2 + k * 0.35 * r2 * r2;
+
+      // Fisheye warp factor: r' = tan(r * fov) / fov — sphere projection
+      // (degrades to identity at fov=0). Blend by uLensFisheye.
+      float fov = max(uLensFOV, 0.01);
+      float fishR = tan(r * fov) / fov;
+      float fishW = (r > 1e-4) ? fishR / r : 1.0;
+
+      float warp = mix(polyW, fishW, clamp(uLensFisheye, 0.0, 1.0));
+      c *= warp;
+      c.y /= uLensSqueeze;                       // undo squeeze post-warp
+      c /= max(uLensZoom, 1e-3);
+      return c + centre;
+    }
 
     // Hash for grain
     float hash(vec2 p) {
@@ -86,8 +132,19 @@ const PolishShader = {
       vec2 uv = vUv;
       vec3 col;
 
-      // Chromatic aberration: separate RGB channels along radial vector
-      if (uChromaOn > 0.5) {
+      // Lens distortion (barrel/pincushion + per-channel dispersion).
+      // Outside [0,1] returns black so the corners don't sample garbage.
+      if (uLensOn > 0.5) {
+        vec2 uvR = lensWarp(uv,  uLensDispersion);
+        vec2 uvG = lensWarp(uv,  0.0);
+        vec2 uvB = lensWarp(uv, -uLensDispersion);
+        bool inB = (uvG.x > 0.0 && uvG.x < 1.0 && uvG.y > 0.0 && uvG.y < 1.0);
+        col.r = inB ? texture2D(tDiffuse, uvR).r : 0.0;
+        col.g = inB ? texture2D(tDiffuse, uvG).g : 0.0;
+        col.b = inB ? texture2D(tDiffuse, uvB).b : 0.0;
+        uv = uvG;                                  // downstream samples use warped uv
+      } else if (uChromaOn > 0.5) {
+        // Chromatic aberration (screen-space radial RGB split)
         vec2 dir = uv - 0.5;
         col.r = texture2D(tDiffuse, uv + dir *  uChromaAmt      ).r;
         col.g = texture2D(tDiffuse, uv                          ).g;
@@ -239,6 +296,15 @@ export function setupPostFX(renderer, scene, camera) {
     bloomRadius:    0.84,
     bloomThreshold: 0.82,
 
+    lensOn:        false,
+    lensAmt:       0.20,
+    lensZoom:      1.00,
+    lensDispersion: 0.0,
+    lensCenterX:   0.5,
+    lensCenterY:   0.5,
+    lensSqueeze:   1.0,
+    lensFisheye:   0.0,
+    lensFOV:       1.0,
     vignetteOn:    false,
     vignetteAmt:   0.4,
     vignetteSoft:  0.8,
@@ -279,7 +345,16 @@ export function setupPostFX(renderer, scene, camera) {
 
     polishTime += dt;
     const u = polishPass.uniforms;
-    u.uTime.value          = polishTime;
+    u.uTime.value           = polishTime;
+    u.uLensOn.value         = params.lensOn ? 1.0 : 0.0;
+    u.uLensAmt.value        = params.lensAmt;
+    u.uLensZoom.value       = params.lensZoom;
+    u.uLensDispersion.value = params.lensDispersion;
+    u.uLensCenterX.value    = params.lensCenterX;
+    u.uLensCenterY.value    = params.lensCenterY;
+    u.uLensSqueeze.value    = params.lensSqueeze;
+    u.uLensFisheye.value    = params.lensFisheye;
+    u.uLensFOV.value        = params.lensFOV;
     u.uVignetteOn.value    = params.vignetteOn ? 1.0 : 0.0;
     u.uVignetteAmt.value   = params.vignetteAmt;
     u.uVignetteSoft.value  = params.vignetteSoft;
@@ -292,7 +367,7 @@ export function setupPostFX(renderer, scene, camera) {
     u.uSaturation.value    = params.saturation;
     u.uTonemap.value       = TONEMAP_INDEX[params.tonemap] ?? 0;
     polishPass.enabled = params.postEnable && (
-      params.vignetteOn || params.chromaOn || params.grainOn ||
+      params.lensOn || params.vignetteOn || params.chromaOn || params.grainOn ||
       params.exposure !== 1.0 || params.contrast !== 1.0 ||
       params.saturation !== 1.0 || params.tonemap !== "None"
     );
@@ -324,6 +399,17 @@ export function setupPostFX(renderer, scene, camera) {
     fPost.add(params, "exposure",   0.0, 3.0, 0.01).name("Exposure");
     fPost.add(params, "contrast",   0.5, 2.0, 0.01).name("Contrast");
     fPost.add(params, "saturation", 0.0, 2.0, 0.01).name("Saturation");
+
+    const fLens = fPost.addFolder("Lens Distortion").close();
+    fLens.add(params, "lensOn").name("Enable");
+    fLens.add(params, "lensFisheye",     0.0, 1.0, 0.01 ).name("Fisheye Blend");
+    fLens.add(params, "lensFOV",         0.1, 2.5, 0.01 ).name("Fisheye FOV");
+    fLens.add(params, "lensAmt",        -1.0, 2.0, 0.01 ).name("Distortion");
+    fLens.add(params, "lensZoom",        0.5, 2.0, 0.01 ).name("Zoom");
+    fLens.add(params, "lensDispersion", -0.15, 0.15, 0.005).name("Dispersion");
+    fLens.add(params, "lensCenterX",     0.0, 1.0, 0.005).name("Center X");
+    fLens.add(params, "lensCenterY",     0.0, 1.0, 0.005).name("Center Y");
+    fLens.add(params, "lensSqueeze",     0.5, 2.0, 0.01 ).name("Anamorphic Squeeze");
 
     const fVig = fPost.addFolder("Vignette").close();
     fVig.add(params, "vignetteOn").name("Enable");

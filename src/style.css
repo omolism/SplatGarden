@@ -822,6 +822,41 @@ kbd {
   border-bottom-color: #fff;
 }
 
+/* =========================================================================
+   Mobile adaptations — applied only when JS adds `body.mobile`.
+   Desktop styling stays untouched.
+   ========================================================================= */
+body.mobile #sidebar {
+  width: auto;
+  left: 10px;
+  right: 10px;
+  max-height: 36vh;
+  font-size: 12px;
+}
+body.mobile #sidebar header { padding: 10px 12px 8px; }
+body.mobile #sidebar button {
+  min-height: 36px;
+  font-size: 12px;
+}
+body.mobile #hand-panel { display: none !important; }
+body.mobile .lil-gui.root {
+  font-size: 12px;
+  width: min(280px, 92vw);
+}
+body.mobile .lil-gui .title { padding: 10px 12px; }
+body.mobile .lil-gui .controller {
+  min-height: 32px;
+}
+body.mobile .lil-gui input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+body.mobile #status { font-size: 10px; }
+body.mobile .cam-timeline { width: min(280px, 92vw); }
+/* Tap-to-close all popovers when the user taps outside the trigger */
+body.mobile .usd-tooltip,
+body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
+
 /* HDRI drag-drop overlay */
 .hdri-drop {
   position: fixed;
