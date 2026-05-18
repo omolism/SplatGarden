@@ -15,6 +15,121 @@ import { UnrealBloomPass }  from "three/addons/postprocessing/UnrealBloomPass.js
 //   5. Sample coords outside [0,1] use mirrored-repeat for endless tiling.
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// "Polish" pass — Sketchfab-style finishing effects all in one shader so we
+// don't pay the cost of N composer passes. Vignette + chromatic aberration +
+// film grain + colour (exposure/contrast/saturation) + tone mapping.
+// Each effect has its own enable / amount uniform.
+// ---------------------------------------------------------------------------
+const PolishShader = {
+  uniforms: {
+    tDiffuse:        { value: null },
+    uTime:           { value: 0.0 },
+
+    // Vignette
+    uVignetteOn:     { value: 0.0 },
+    uVignetteAmt:    { value: 1.0 },
+    uVignetteSoft:   { value: 0.6 },
+
+    // Chromatic aberration
+    uChromaOn:       { value: 0.0 },
+    uChromaAmt:      { value: 0.0035 },
+
+    // Film grain
+    uGrainOn:        { value: 0.0 },
+    uGrainAmt:       { value: 0.08 },
+
+    // Colour
+    uExposure:       { value: 1.0 },
+    uContrast:       { value: 1.0 },
+    uSaturation:     { value: 1.0 },
+
+    // Tone-mapping: 0 None, 1 Reinhard, 2 Cineon, 3 ACES
+    uTonemap:        { value: 0 },
+  },
+  vertexShader: /* glsl */ `
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: /* glsl */ `
+    uniform sampler2D tDiffuse;
+    uniform float uTime;
+    uniform float uVignetteOn, uVignetteAmt, uVignetteSoft;
+    uniform float uChromaOn,   uChromaAmt;
+    uniform float uGrainOn,    uGrainAmt;
+    uniform float uExposure, uContrast, uSaturation;
+    uniform int   uTonemap;
+    varying vec2 vUv;
+
+    // Hash for grain
+    float hash(vec2 p) {
+      p = fract(p * vec2(123.34, 456.21));
+      p += dot(p, p + 45.32);
+      return fract(p.x * p.y);
+    }
+
+    // Tone-mapping operators
+    vec3 reinhard(vec3 c) { return c / (1.0 + c); }
+    vec3 cineon(vec3 c) {
+      c = max(vec3(0.0), c - 0.004);
+      return (c * (6.2 * c + 0.5)) / (c * (6.2 * c + 1.7) + 0.06);
+    }
+    vec3 aces(vec3 c) {
+      const float a = 2.51, b = 0.03, d = 2.43, e = 0.59, f = 0.14;
+      return clamp((c * (a * c + b)) / (c * (d * c + e) + f), 0.0, 1.0);
+    }
+
+    void main() {
+      vec2 uv = vUv;
+      vec3 col;
+
+      // Chromatic aberration: separate RGB channels along radial vector
+      if (uChromaOn > 0.5) {
+        vec2 dir = uv - 0.5;
+        col.r = texture2D(tDiffuse, uv + dir *  uChromaAmt      ).r;
+        col.g = texture2D(tDiffuse, uv                          ).g;
+        col.b = texture2D(tDiffuse, uv - dir *  uChromaAmt      ).b;
+      } else {
+        col = texture2D(tDiffuse, uv).rgb;
+      }
+
+      // Exposure (linear scale of HDR-ish values prior to tone-map)
+      col *= uExposure;
+
+      // Tone-mapping
+      if      (uTonemap == 1) col = reinhard(col);
+      else if (uTonemap == 2) col = cineon(col);
+      else if (uTonemap == 3) col = aces(col);
+
+      // Saturation
+      float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
+      col = mix(vec3(luma), col, uSaturation);
+
+      // Contrast around 0.5
+      col = (col - 0.5) * uContrast + 0.5;
+
+      // Vignette
+      if (uVignetteOn > 0.5) {
+        vec2 vd = uv - 0.5;
+        float d = length(vd);
+        float v = smoothstep(0.75, 0.25, d / max(uVignetteSoft, 1e-3));
+        col *= mix(1.0, v, uVignetteAmt);
+      }
+
+      // Film grain — small luminance noise
+      if (uGrainOn > 0.5) {
+        float n = hash(uv * vec2(640.0, 360.0) + uTime * 17.0) - 0.5;
+        col += n * uGrainAmt;
+      }
+
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `,
+};
+
 const KaleidoscopeShader = {
   uniforms: {
     tDiffuse:  { value: null },
@@ -92,6 +207,10 @@ export function setupPostFX(renderer, scene, camera) {
   );
   composer.addPass(bloomPass);
 
+  // Polish pass — vignette / chromatic aberration / grain / colour / tonemap
+  const polishPass = new ShaderPass(PolishShader);
+  composer.addPass(polishPass);
+
   const kaleidoPass = new ShaderPass(KaleidoscopeShader);
   composer.addPass(kaleidoPass);
 
@@ -107,10 +226,33 @@ export function setupPostFX(renderer, scene, camera) {
     centerX:       0.5,
     centerY:       0.5,
 
-    bloomStrength:  0.0,
-    bloomRadius:    0.6,
-    bloomThreshold: 0.85,
+    // Master switch for ALL post-processing (Bloom + Polish pass). When off,
+    // both passes are disabled in one click regardless of individual settings.
+    postEnable:    true,
+
+    // 3DGS-tuned defaults: ACES tonemap + subtle exposure / contrast /
+    // saturation bumps give splats a polished cinema look without crushing
+    // detail or oversaturating. Bloom on, vignette/chroma/grain off so the
+    // baseline is clean and the user adds them in only when they want them.
+    bloomEnable:    true,
+    bloomStrength:  0.3,
+    bloomRadius:    0.84,
+    bloomThreshold: 0.82,
+
+    vignetteOn:    false,
+    vignetteAmt:   0.4,
+    vignetteSoft:  0.8,
+    chromaOn:      false,
+    chromaAmt:     0.0025,
+    grainOn:       false,
+    grainAmt:      0.05,
+    exposure:      1.10,
+    contrast:      1.08,
+    saturation:    1.15,
+    tonemap:       "None",     // None | Reinhard | Cineon | ACES
   };
+
+  const TONEMAP_INDEX = { None: 0, Reinhard: 1, Cineon: 2, ACES: 3 };
 
   let rotation = 0.0;
 
@@ -120,6 +262,7 @@ export function setupPostFX(renderer, scene, camera) {
     bloomPass.setSize(w, h);
   }
 
+  let polishTime = 0;
   function update(dt) {
     rotation += params.rotationSpeed * dt;
     kaleidoPass.uniforms.uEnable.value   = params.enable ? 1.0 : 0.0;
@@ -132,7 +275,27 @@ export function setupPostFX(renderer, scene, camera) {
     bloomPass.strength  = params.bloomStrength;
     bloomPass.radius    = params.bloomRadius;
     bloomPass.threshold = params.bloomThreshold;
-    bloomPass.enabled   = params.bloomStrength > 0.001;
+    bloomPass.enabled   = params.postEnable && params.bloomEnable && params.bloomStrength > 0.001;
+
+    polishTime += dt;
+    const u = polishPass.uniforms;
+    u.uTime.value          = polishTime;
+    u.uVignetteOn.value    = params.vignetteOn ? 1.0 : 0.0;
+    u.uVignetteAmt.value   = params.vignetteAmt;
+    u.uVignetteSoft.value  = params.vignetteSoft;
+    u.uChromaOn.value      = params.chromaOn ? 1.0 : 0.0;
+    u.uChromaAmt.value     = params.chromaAmt;
+    u.uGrainOn.value       = params.grainOn ? 1.0 : 0.0;
+    u.uGrainAmt.value      = params.grainAmt;
+    u.uExposure.value      = params.exposure;
+    u.uContrast.value      = params.contrast;
+    u.uSaturation.value    = params.saturation;
+    u.uTonemap.value       = TONEMAP_INDEX[params.tonemap] ?? 0;
+    polishPass.enabled = params.postEnable && (
+      params.vignetteOn || params.chromaOn || params.grainOn ||
+      params.exposure !== 1.0 || params.contrast !== 1.0 ||
+      params.saturation !== 1.0 || params.tonemap !== "None"
+    );
   }
 
   function render(dt) {
@@ -141,12 +304,39 @@ export function setupPostFX(renderer, scene, camera) {
   }
 
   function attachGUI(parentGui) {
-    const fBloom = parentGui.addFolder("Bloom");
+    // Post-Process lives under Customize, Kaleidoscope under FX. Fall back to
+    // the parent if those refs aren't exposed (older buildGUI shape).
+    const customizeParent = parentGui.fCustomize || parentGui;
+    const fxParent        = parentGui.fFX        || parentGui;
+
+    // Post-Process — Sketchfab-style finishing effects, all under one folder.
+    // The master "Enable" checkbox at the top kills every pass at once.
+    const fPost = customizeParent.addFolder("Post-Process").close();
+    fPost.add(params, "postEnable").name("Enable");
+
+    const fBloom = fPost.addFolder("Bloom");
+    fBloom.add(params, "bloomEnable").name("Enable");
     fBloom.add(params, "bloomStrength",  0.0,  2.5, 0.02).name("Strength");
     fBloom.add(params, "bloomRadius",    0.0,  1.5, 0.02).name("Radius");
     fBloom.add(params, "bloomThreshold", 0.0,  1.5, 0.01).name("Threshold");
 
-    const f = parentGui.addFolder("Kaleidoscope");
+    fPost.add(params, "tonemap", Object.keys(TONEMAP_INDEX)).name("Tonemap");
+    fPost.add(params, "exposure",   0.0, 3.0, 0.01).name("Exposure");
+    fPost.add(params, "contrast",   0.5, 2.0, 0.01).name("Contrast");
+    fPost.add(params, "saturation", 0.0, 2.0, 0.01).name("Saturation");
+
+    const fVig = fPost.addFolder("Vignette").close();
+    fVig.add(params, "vignetteOn").name("Enable");
+    fVig.add(params, "vignetteAmt",  0.0, 1.5, 0.02).name("Amount");
+    fVig.add(params, "vignetteSoft", 0.1, 1.5, 0.02).name("Softness");
+    const fChroma = fPost.addFolder("Chromatic Aberration").close();
+    fChroma.add(params, "chromaOn").name("Enable");
+    fChroma.add(params, "chromaAmt", 0.0, 0.02, 0.0005).name("Amount");
+    const fGrain = fPost.addFolder("Film Grain").close();
+    fGrain.add(params, "grainOn").name("Enable");
+    fGrain.add(params, "grainAmt", 0.0, 0.4, 0.005).name("Amount");
+
+    const f = fxParent.addFolder("Kaleidoscope").close();
     f.add(params, "enable").name("Enable");
     f.add(params, "segments", 3, 24, 1).name("Segments");
     f.add(params, "rotationSpeed", 0, 1.5, 0.02).name("Rotation Speed");

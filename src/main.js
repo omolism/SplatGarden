@@ -277,17 +277,44 @@ async function loadSplat() {
       cameraFrustums.visible = false;
       scene.add(cameraFrustums);
       installFrustumHover(cameraFrustums);
+
+      // ----- Tighter bbox for the data-label overlay --------------------
+      // SplatMesh.getBoundingBox() gets blown out by outlier splats, so the
+      // dashed bbox ends up far larger than the visible content. The COLMAP
+      // training cameras orbit the actual subject, so their world-space
+      // bounding box (slightly inset) is a much better proxy for "where the
+      // interesting content lives". We rebuild the overlay using that.
+      if (dataLabels && cameraFrustums.userData?.frustums?.length) {
+        const colBox = new THREE.Box3();
+        for (const f of cameraFrustums.userData.frustums) colBox.expandByPoint(f.pos);
+        const colCenter = new THREE.Vector3(); colBox.getCenter(colCenter);
+        const colSize   = new THREE.Vector3(); colBox.getSize(colSize);
+        // Cameras sit OUTSIDE the subject by definition, so 0.6× their
+        // spread is a tighter fit to what the viewer actually sees.
+        colSize.multiplyScalar(0.6);
+        dataLabels.setBounds(colCenter, colSize);
+      }
+
       console.info(`[COLMAP] ${images.length} poses → ${sampled.length} frustums`);
     })
     .catch(err => {
       console.warn("[COLMAP] failed to load:", err?.message ?? err);
     });
 
-  const dataParams = { enabled: false };
-  const fOverlay = gui.addFolder("Overlays");
-  const camCtrl = fOverlay.add(dataParams, "enabled").name("Training Cameras").onChange(v => {
-    dataLabels.setEnabled(v);
-    if (cameraFrustums) cameraFrustums.visible = v;
+  // ---- Tech Spec — split out from Overlays --------------------------------
+  // Data Labels + Training Cameras live here. Master Enable toggles both
+  // together. Future tech-breakdown rows (AI Stylization / VAT Anim / GPU /
+  // Postshot Pipeline) will sit under the same parent.
+  const dataParams = { enabled: false, dataLabels: false };
+  const techParams = { techEnable: true };
+  const fTechSpec = gui.addFolder("Tech Spec");
+  const techEnableCtrl = fTechSpec.add(techParams, "techEnable").name("Enable").onChange((v) => {
+    if (dataLabels) dataLabels.setEnabled(v && dataParams.dataLabels);
+    if (cameraFrustums) cameraFrustums.visible = v && dataParams.enabled;
+  });
+
+  const camCtrl = fTechSpec.add(dataParams, "enabled").name("Training Cameras").onChange(v => {
+    if (cameraFrustums) cameraFrustums.visible = v && techParams.techEnable;
   });
   // Postshot-style: small wireframe pyramid icon next to the label.
   const camIcon = `<svg class="ctrl-icon" viewBox="0 0 24 16" aria-hidden="true">
@@ -300,14 +327,21 @@ async function loadSplat() {
   if (nameEl) nameEl.insertAdjacentHTML("afterbegin", camIcon);
   camCtrl.domElement.title = "Lets you toggle whether training camera poses are shown in the viewport.";
 
-  // ---- HDR sky toggle (visible behind the splat when in Point sub-form) ----
+  const dataLabelsCtrl = fTechSpec.add(dataParams, "dataLabels").name("Data Labels").onChange(v => {
+    if (dataLabels) dataLabels.setEnabled(v && techParams.techEnable);
+  });
+  dataLabelsCtrl.domElement.title = "Surveillance-card overlay showing per-viewpoint metadata.";
+
+  // ---- HDR sky toggle (inside Customize) ---------------------------------
   // Loads /Skybox.hdr lazily on first activation, applies as scene.background
   // + scene.environment. Most visible when the splat is rendered as points
   // so the sky shows through; available in Gaussian mode too.
+  const fOverlay = gui.addFolder("Camera Movement");   // renamed from "Overlays"
   let hdrTex = null;
   let hdrLoading = false;
   const hdrParams = { hdr: false };
-  const hdrCtrl = fOverlay.add(hdrParams, "hdr").name("HDR Sky").onChange(async (v) => {
+  const hdrParent = gui.fCustomize || fOverlay;
+  const hdrCtrl = hdrParent.add(hdrParams, "hdr").name("HDR Sky").onChange(async (v) => {
     if (v) {
       if (!hdrTex && !hdrLoading) {
         hdrLoading = true;
@@ -341,12 +375,80 @@ async function loadSplat() {
   let camFbxRoot = null, camMixer = null, camAction = null, camAnimNode = null;
   let camMoveLoading = false;
   let camMoveState = "idle";   // "idle" | "playing" | "paused"
+  let camPhaseTimers = [];           // staged transition timers
+  let camMovePrevSubform = 0;        // restore on stop / finish
+  let camMovePrevQuadVis = 0;
   const _camFwd = new THREE.Vector3();
+
+  // Timeline / frame readout — visible only while the camera move is loaded.
+  const CAM_FPS = 24;
+  const camTimeline = document.createElement("div");
+  camTimeline.className = "cam-timeline";
+  camTimeline.innerHTML = `
+    <div class="ct-row">
+      <span class="ct-label">CAMERA MOVE</span>
+      <span class="ct-time">— / —</span>
+      <span class="ct-frame">— / —</span>
+    </div>
+    <div class="ct-bar"><div class="ct-fill"></div></div>
+  `;
+  camTimeline.style.display = "none";
+  document.getElementById("app").appendChild(camTimeline);
+  const ctTimeEl  = camTimeline.querySelector(".ct-time");
+  const ctFrameEl = camTimeline.querySelector(".ct-frame");
+  const ctFillEl  = camTimeline.querySelector(".ct-fill");
+
+  // 4 equally-spaced phases across the clip duration:
+  //   ¼ — Gaussian → Point         (begins immediately)
+  //   ½ — Quad layer fades in      (overlay)
+  //   ¾ — Quad layer fades out
+  //   1 — Point → Gaussian         (back to 3DGS as the clip ends)
+  function camMoveStartLerps() {
+    camTimeline.style.display = "flex";
+    if (!effects) return;
+    camMovePrevSubform = effects.targetSubform ?? 0;
+    camMovePrevQuadVis = effects.targetVis?.quad ?? 0;
+
+    const dur  = camAction?.getClip ? camAction.getClip().duration : 25;
+    const beat = (dur / 4) * 1000;   // ms per equal phase
+
+    camPhaseTimers.forEach(t => clearTimeout(t));
+    camPhaseTimers = [];
+
+    // Phase 1 — fire now: Gaussian → Point
+    effects.targetSubform = 1.0;
+
+    // Phase 2 — Quad fades in
+    camPhaseTimers.push(setTimeout(() => {
+      if (camMoveState === "playing") effects.setLayerVis("quad", true);
+    }, beat));
+
+    // Phase 3 — Quad fades out
+    camPhaseTimers.push(setTimeout(() => {
+      if (camMoveState === "playing") effects.setLayerVis("quad", false);
+    }, beat * 2));
+
+    // Phase 4 — Point → Gaussian (return to 3DGS)
+    camPhaseTimers.push(setTimeout(() => {
+      if (camMoveState === "playing") effects.targetSubform = 0.0;
+    }, beat * 3));
+  }
+  function camMoveRevertLerps() {
+    camPhaseTimers.forEach(t => clearTimeout(t));
+    camPhaseTimers = [];
+    camTimeline.style.display = "none";
+    if (!effects) return;
+    effects.targetSubform = camMovePrevSubform;
+    if (effects.targetVis) effects.targetVis.quad = camMovePrevQuadVis;
+  }
 
   // Live-tunable transform on the FBX root so the user can frame the gazebo.
   // Defaults: 90° around -Y (correction confirmed earlier), small Y lift,
   // scale 0.5 (the raw FBX path overshoots; scaling shortens it). All four
   // are wired to GUI sliders below.
+  // FBX camera-move transform — kept at the user's previous setting (-90°
+  // around Y). Do not change without explicit ask; the Center viewpoint
+  // override below handles "face the gazebo" separately.
   const camMoveXf = { ox: 0, oy: 0, oz: 0, scale: 0.5 };
   function applyCamFbxXf() {
     if (!camFbxRoot) return;
@@ -355,38 +457,81 @@ async function loadSplat() {
     camFbxRoot.scale.set(camMoveXf.scale, camMoveXf.scale, camMoveXf.scale);
   }
 
-  async function loadCameraMove() {
-    if (camFbxRoot || camMoveLoading) return;
+  // Promise-cached load so concurrent callers (preload + user-Play) share one
+  // fetch instead of racing and leaving camMixer null.
+  let camLoadPromise = null;
+  function loadCameraMove() {
+    if (camFbxRoot)     return Promise.resolve();
+    if (camLoadPromise) return camLoadPromise;
     camMoveLoading = true;
-    try {
-      const fbx = await new FBXLoader().loadAsync("/Shot4B_GS-FX_Camera_V01.fbx");
-      fbx.visible = false;
-      scene.add(fbx);
-      camFbxRoot = fbx;
-      applyCamFbxXf();
+    camLoadPromise = (async () => {
+      try {
+        const fbx = await new FBXLoader().loadAsync("/Shot4B_GS-FX_Camera_V01.fbx");
+        fbx.visible = false;
+        scene.add(fbx);
+        camFbxRoot = fbx;
+        applyCamFbxXf();
 
-      // Prefer a Camera node; fall back to the first non-root child.
-      camAnimNode = null;
-      fbx.traverse(o => { if (!camAnimNode && o.isCamera) camAnimNode = o; });
-      if (!camAnimNode) fbx.traverse(o => { if (!camAnimNode && o !== fbx) camAnimNode = o; });
-      if (!fbx.animations?.length) throw new Error("FBX has no animation");
+        // Prefer a Camera node; fall back to the first non-root child.
+        camAnimNode = null;
+        fbx.traverse(o => { if (!camAnimNode && o.isCamera) camAnimNode = o; });
+        if (!camAnimNode) fbx.traverse(o => { if (!camAnimNode && o !== fbx) camAnimNode = o; });
+        if (!fbx.animations?.length) throw new Error("FBX has no animation");
 
-      camMixer = new THREE.AnimationMixer(fbx);
-      camAction = camMixer.clipAction(fbx.animations[0]);
-      camAction.setLoop(THREE.LoopOnce);
-      camAction.clampWhenFinished = true;
-      camMixer.addEventListener("finished", () => {
-        camMoveState = "idle";
-        controls.enabled = true;
-        playCtrl.name("▶ Play Camera Move");
-        statusEl.textContent = "Camera move complete";
-      });
-    } catch (err) {
-      console.warn("[CameraMove] failed:", err?.message ?? err);
-      statusEl.textContent = "Camera move failed: " + (err?.message ?? err);
-    } finally {
-      camMoveLoading = false;
-    }
+        camMixer = new THREE.AnimationMixer(fbx);
+        camAction = camMixer.clipAction(fbx.animations[0]);
+        camAction.setLoop(THREE.LoopOnce);
+        camAction.clampWhenFinished = true;
+        camMixer.addEventListener("finished", () => {
+          camMoveRevertLerps();
+          camMoveState = "idle";
+          controls.enabled = true;
+          playCtrl.name("▶ Play Camera Move");
+          statusEl.textContent = "Camera move complete";
+        });
+
+        // ----- Center viewpoint = camera-move frame CENTER_FRAME ------
+        // Sample the animation POSITION at that time, but override the look
+        // direction to point at the scene bounds centre (the gazebo). The
+        // FBX keyframe's forward vector isn't aimed at the subject — we
+        // want Center to literally face the gazebo regardless.
+        const CENTER_FRAME = 460;
+        const centerVpRef = annotations?.viewpoints.find(v => v.name === "Center");
+        if (centerVpRef) {
+          const dur = camAction.getClip().duration;
+          const t   = Math.min(Math.max(CENTER_FRAME / CAM_FPS, 0), dur);
+          camAction.enabled = true;
+          camAction.paused  = true;
+          camAction.time    = t;
+          camMixer.update(0);
+          camAnimNode.updateWorldMatrix(true, false);
+
+          const sampledPos  = new THREE.Vector3();
+          camAnimNode.getWorldPosition(sampledPos);
+
+          // Reset the action so the Play button starts from the top.
+          camAction.stop();
+          camAction.time = 0;
+
+          centerVpRef.position.copy(sampledPos);
+          // Target = scene bounds centre (the gazebo / subject area). This
+          // guarantees the Center viewpoint faces the subject no matter
+          // where on the FBX path frame 460 lands.
+          centerVpRef.target.copy(center);
+          if (annotations.activeId === centerVpRef.id) {
+            camera.position.copy(centerVpRef.position);
+            controls.target.copy(centerVpRef.target);
+            controls.update();
+          }
+        }
+      } catch (err) {
+        console.warn("[CameraMove] failed:", err?.message ?? err);
+        statusEl.textContent = "Camera move failed: " + (err?.message ?? err);
+      } finally {
+        camMoveLoading = false;
+      }
+    })();
+    return camLoadPromise;
   }
 
   async function playPauseCameraMove() {
@@ -407,6 +552,7 @@ async function loadSplat() {
         camAction.reset();
         camAction.play();
         if (annotations) annotations.tween = null;       // cancel any flyTo tween
+        camMoveStartLerps();
       }
       camAction.paused = false;
       camMoveState = "playing";
@@ -419,6 +565,7 @@ async function loadSplat() {
   function stopCameraMove() {
     if (!camMixer) return;
     camAction.stop();
+    camMoveRevertLerps();
     camMoveState = "idle";
     controls.enabled = true;
     playCtrl.name("▶ Play Camera Move");
@@ -449,6 +596,15 @@ async function loadSplat() {
     camAnimNode.getWorldQuaternion(camera.quaternion);
     _camFwd.set(0, 0, -1).applyQuaternion(camera.quaternion);
     controls.target.copy(camera.position).add(_camFwd);
+
+    // Drive the on-screen timeline label
+    const dur = camAction.getClip().duration;
+    const t   = Math.min(camAction.time, dur);
+    const frT = Math.floor(t   * CAM_FPS);
+    const frD = Math.floor(dur * CAM_FPS);
+    ctTimeEl.textContent  = `${t.toFixed(2)}s / ${dur.toFixed(2)}s`;
+    ctFrameEl.textContent = `F ${frT} / ${frD}`;
+    ctFillEl.style.width  = `${(t / dur) * 100}%`;
   };
 
 
@@ -878,6 +1034,11 @@ async function loadSplat() {
 
   hideLoading();
   statusEl.textContent = `${(size.x).toFixed(1)} × ${(size.y).toFixed(1)} × ${(size.z).toFixed(1)} m`;
+
+  // Preload the FBX so Center=frame460 takes effect at startup. The promise
+  // is fire-and-forget — concurrent calls from the Play button share it via
+  // camLoadPromise.
+  loadCameraMove();
 }
 
 // ---------------------------------------------------------------------------

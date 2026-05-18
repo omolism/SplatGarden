@@ -101,7 +101,7 @@ export const params = {
   quadLayer:   false,
   voxelLayer:  false,
   splatSubform: "Gaussian",   // "Gaussian" | "Point"
-  pointSize: 0.0015,
+  pointSize: 0.0025,
   quadSize:  0.0064,
   voxelSize: 0.013,
   fadeTail: 0.9,              // tail-fade duration (s) for one-shot FX
@@ -126,6 +126,7 @@ const EFFECT_INDEX = {
   "Wave & Tint": 0,
   "Dissolve & Reform": 1,
   "Scan Line": 2,
+  "Spiral Smear": 3,
 };
 
 export function createScanModifier() {
@@ -227,6 +228,45 @@ export function createScanModifier() {
             }
             // Color helpers
             vec3 toLinear(vec3 c) { return c; } // working in linear-ish already
+
+            // ---- 3D Worley / cellular noise ------------------------------
+            // Returns distance to the nearest randomised cell point. Produces
+            // organic blob clusters — splats in the same cell get similar
+            // values, giving group-coherent variation instead of pure-random.
+            float cellular(vec3 p) {
+              vec3 i = floor(p);
+              vec3 f = fract(p);
+              float minDist = 1.0;
+              for (int x = -1; x <= 1; x++) {
+                for (int y = -1; y <= 1; y++) {
+                  for (int z = -1; z <= 1; z++) {
+                    vec3 nb   = vec3(float(x), float(y), float(z));
+                    vec3 pt   = hash33(i + nb);
+                    vec3 diff = nb + pt - f;
+                    minDist   = min(minDist, dot(diff, diff));
+                  }
+                }
+              }
+              return sqrt(minDist);                // 0 .. ~1.4
+            }
+
+            // ---- Quaternion helpers (xyz=axis*sin(θ/2), w=cos(θ/2)) -------
+            vec4 quatFromUnit(vec3 d) {
+              // Build the shortest-arc quaternion rotating +X onto d (unit).
+              vec3 fromV = vec3(1.0, 0.0, 0.0);
+              float c = dot(fromV, d);
+              if (c < -0.9999) return vec4(0.0, 1.0, 0.0, 0.0);  // 180° around Y
+              vec3 ax = cross(fromV, d);
+              vec4 q  = vec4(ax, 1.0 + c);
+              return q / length(q);
+            }
+            vec4 quatNlerp(vec4 a, vec4 b, float t) {
+              // Sign-aware nlerp — flip b if dot is negative so we take short path
+              float d = dot(a, b);
+              vec4  bb = d < 0.0 ? -b : b;
+              vec4  q  = mix(a, bb, t);
+              return q / max(length(q), 1e-6);
+            }
           `),
         ],
         statements: ({ inputs, outputs }) =>
@@ -357,6 +397,127 @@ export function createScanModifier() {
                 rgba.a *= alphaCurve * wispMul;
                 scales *= mix(1.0, 1.45, onEdge);
                 scales *= mix(1.0, 0.55, gone * (1.0 - rev) * 0.85);
+
+              } else if (${inputs.uEffect} == 3) {
+                // ==============================================================
+                // Effect 3 — Spiral Smear
+                //
+                // A focal point (uHit) holds the subject in place while splats
+                // around it orbit and drift outward as iridescent ribbon trails.
+                // Outer splats lag behind inner ones (angle ∝ dist) → the band
+                // reads as a spiral. Wind direction biases the drift so the
+                // whole thing tears off to one side like the painted-flower
+                // reference. Per-splat seeded delay & hero factor break the
+                // sheet into N independent ribbons.
+                //
+                // Reused knobs:
+                //   uRadius     — outer reach of the swirl
+                //   uSpeed      — base rotation speed
+                //   uIntensity  — twist amount (angle accumulated per unit dist)
+                //   uFlyMax     — trail length along uWindDir
+                //   uEmissive   — iridescent rim brightness
+                //   uColor      — base tint mixed under the rainbow shift
+                // ==============================================================
+                // ----- Localised band mask -------------------------------
+                // The subject (close to uHit) stays sharp, the far field
+                // stays untouched — only splats inside an annulus participate.
+                float reach     = ${inputs.uRadius} * 1.6;
+                float inner     = ${inputs.uRadius} * 0.50;
+                float innerMask = smoothstep(inner * 0.4, inner, dist);  // 0 near hit
+                float outerMask = smoothstep(reach, reach * 0.55, dist); // 0 past reach
+                float bandMask  = innerMask * outerMask;
+                // Roughen the band edge with fbm so it doesn't read as a perfect ring
+                bandMask        = clamp(bandMask + (n - 0.5) * 0.35 * ${inputs.uEdgeRagged}, 0.0, 1.0);
+
+                // ----- Directional bias: only the wind side smears -------
+                float windLen   = length(${inputs.uWindDir});
+                float windBias  = 1.0;
+                if (windLen > 1e-3) {
+                  float align   = dot(dir, ${inputs.uWindDir} / windLen);   // -1..1
+                  windBias      = pow(max(align, 0.0), 0.7);                // 0..1, sharper on aligned side
+                  windBias      = mix(0.10, 1.0, windBias);                 // keep a sliver everywhere
+                }
+                float fxMask    = bandMask * windBias;
+
+                // ----- Per-splat noise variation -------------------------
+                // Cellular noise groups nearby splats into "blobs" that share
+                // a trail-length multiplier — some clusters fly far, others
+                // barely move. Animated fbm adds an in-flight curl so each
+                // ribbon wobbles independently instead of moving as a sheet.
+                float cell      = cellular(seed * 0.55);                // 0..~1.4
+                float cellNorm  = clamp(cell / 1.2, 0.0, 1.0);
+                float curlA     = fbm(seed * 1.8 + vec3(${inputs.uTime} * 0.45, 0.0, 0.0)) - 0.5;
+                float curlB     = fbm(seed * 1.8 + vec3(0.0, ${inputs.uTime} * 0.45, 5.7)) - 0.5;
+                float curlC     = fbm(seed * 1.8 + vec3(2.3, 0.0, ${inputs.uTime} * 0.45)) - 0.5;
+                vec3  curlVec   = vec3(curlA, curlB, curlC) * 2.0;       // -1..1 per axis
+
+                // Per-splat staggered start → fans out into separate ribbons.
+                float delay     = rand1 * 0.35;
+                float a         = clamp((tNorm - delay) / max(1.0 - delay, 1e-4), 0.0, 1.0);
+                float strength  = pow(a, 0.6) * (1.0 - pow(1.0 - a, 4.0));
+
+                // Spiral angle: time-base + per-splat phase + radius twist
+                // + curl perturbation so the orbit is non-uniform.
+                float ang = ${inputs.uTime} * ${inputs.uSpeed} * 0.45
+                          + dist * ${inputs.uIntensity} * 1.4
+                          + rand2 * 0.6
+                          + curlA * 1.8;
+                float cs  = cos(ang * strength);
+                float sn  = sin(ang * strength);
+                // Rotate the splat offset around the world-up axis through uHit.
+                vec3 r   = toHit;
+                vec3 rRot = vec3(r.x * cs - r.z * sn, r.y, r.x * sn + r.z * cs);
+
+                // Hero particles ride farther along the wind direction; cell
+                // noise gives clustered "hero blobs" instead of random ones.
+                float hero  = step(0.80, rand1);
+                float cellBoost = mix(0.4, 1.6, cellNorm);               // 0.4..1.6
+                float trail = ${inputs.uFlyMax}
+                            * (0.20 + hero * 0.55 + rand2 * 0.30)
+                            * cellBoost;
+                vec3  drift = ${inputs.uWindDir} * dist * trail * 0.18 * strength;
+                // Curl pushes the drift laterally so paths aren't straight.
+                drift += curlVec * dist * 0.10 * strength;
+                // Tiny vertical wobble for life
+                drift.y += sin(${inputs.uTime} * 3.0 + rand2 * 6.28) * 0.04 * strength;
+
+                // Mix between original offset and transformed offset by fxMask.
+                // Splats outside the band keep their original world position.
+                vec3 newOffset = mix(r, rRot + drift, fxMask);
+                center = ${inputs.uHit} + newOffset;
+
+                // ===== Mild streak via bounded scale change =================
+                // Gaussian splats render via a covariance ellipsoid built from
+                // (quaternion, scales). Setting scales to a large world-meter
+                // value or rotating the quaternion away from the trained
+                // covariance makes the gaussian "vanish" (the ellipsoid spans
+                // so many pixels its per-pixel alpha drops below visible).
+                //
+                // So we keep the quaternion alone and clamp the scale change
+                // to a SMALL multiplier of the splat's own size — the trail
+                // illusion comes mostly from displacement, not from
+                // anisotropic stretching.
+                vec3 disp      = newOffset - r;
+                float dispLen  = length(disp);
+                float trailMix = fxMask * strength;
+
+                vec3  srcScales = ${inputs.gsplat}.scales;
+                float baseThick = max((srcScales.x + srcScales.y + srcScales.z) / 3.0, 1e-4);
+
+                // Stretch factor 0..2 — translates "how far the splat moved"
+                // into a bounded multiplier of its own size.
+                float reachRef    = max(${inputs.uRadius}, 0.5);
+                float stretchAmt  = clamp(dispLen / reachRef, 0.0, 1.0) * 2.0;
+                // Lengthen one axis modestly, thin the others slightly.
+                vec3  streakScales = srcScales * vec3(1.0 + stretchAmt, mix(1.0, 0.75, stretchAmt * 0.5), mix(1.0, 0.75, stretchAmt * 0.5));
+                scales = mix(srcScales, streakScales, trailMix);
+
+                // Tip of long streaks fades a little so trails feather out.
+                rgba.a *= mix(1.0, 0.75, trailMix * 0.4);
+
+                // NOTE: per-splat colour is intentionally NOT modified — every
+                // splat carries its source RGB so the smear looks like the
+                // subject's own material flowing.
 
               } else {
                 // ==============================================================
@@ -525,7 +686,7 @@ export class EffectController {
     // Layer visibility animation: each layer's uniform value lerps toward
     // its target (driven by checkbox toggle in the GUI). 1/s — frame-rate
     // independent via exp-decay in update().
-    this.visTransitionRate = 4.0;
+    this.visTransitionRate = 1.2;
     this.targetVis = {
       splat: params.splatLayer ? 1.0 : 0.0,
       quad:  params.quadLayer  ? 1.0 : 0.0,
@@ -535,7 +696,7 @@ export class EffectController {
     // Gaussian ↔ Point sub-form lerp. Toggling sets targetSubform to 0 or 1;
     // update() exp-decays the uniform toward it for a smooth shape morph.
     this.targetSubform     = SUBFORM_INDEX[params.splatSubform] ?? 0;
-    this.subformLerpRate   = 6.0;
+    this.subformLerpRate   = 1.2;
     uniforms.splatSubform.value = this.targetSubform;
     // Seed uniforms to match targets so we don't fade in unnecessarily on load.
     uniforms.splatVis.value = this.targetVis.splat;
@@ -715,6 +876,8 @@ const PRESETS = {
   "Hair Spray":     { effect: "Dissolve & Reform",  color: "#f4d3c8", radius: 1.6, speed: 4.0, intensity: 1.5, duration: 4.5, noiseScale: 1.6, edgeWidth: 0.35, emissive: 1.8, edgeRagged: 1.1, wispAmt: 1.2, flyMax: 6.0, windX: -0.9, windY: 0.4, windZ: 0 },
   "Tron Sweep":     { effect: "Scan Line",          color: "#7ef0ff", radius: 3.5, speed: 7.0, intensity: 0.6, duration: 2.0, noiseScale: 0.6, edgeWidth: 0.10, emissive: 3.2, edgeRagged: 0.3, wispAmt: 0.2, flyMax: 2.0, windX: 0,    windY: 0,   windZ: 0 },
   "Toxic Pulse":    { effect: "Wave & Tint",        color: "#9eff3a", radius: 3.0, speed: 8.0, intensity: 0.5, duration: 1.8, noiseScale: 1.2, edgeWidth: 0.15, emissive: 3.0, edgeRagged: 0.4, wispAmt: 0.4, flyMax: 2.0, windX: 0,    windY: 0,   windZ: 0 },
+  "Iris Spiral":    { effect: "Spiral Smear",       color: "#ff7fc8", radius: 3.0, speed: 5.0, intensity: 1.4, duration: 3.6, noiseScale: 1.0, edgeWidth: 0.18, emissive: 2.8, edgeRagged: 0.5, wispAmt: 0.7, flyMax: 4.0, windX: 1.0,  windY: 0,   windZ: 0 },
+  "Vortex Drift":   { effect: "Spiral Smear",       color: "#9dd8ff", radius: 4.0, speed: 3.5, intensity: 2.0, duration: 4.5, noiseScale: 1.0, edgeWidth: 0.18, emissive: 2.0, edgeRagged: 0.5, wispAmt: 0.6, flyMax: 6.0, windX: 0.6,  windY: 0.2, windZ: -0.4 },
 };
 
 export function buildGUI(controller) {
@@ -722,21 +885,31 @@ export function buildGUI(controller) {
 
   const presetKeys = Object.keys(PRESETS);
   const presetObj = { preset: presetKeys[0] };
-  gui.add(presetObj, "preset", presetKeys).name("Preset").onChange((name) => {
+
+  // ----- Top-level: 3DGS / USD (formerly "Layers") -------------------------
+  // Kept OUT of Customize so the data-source / instancer choices are visually
+  // distinct from styling controls.
+  const fLayers = gui.addFolder("3DGS/USD");
+
+  // ----- Top-level: Customize → everything visual --------------------------
+  const fCustomize = gui.addFolder("Customize");
+
+  // FX section — all click-effect controls grouped to reduce confusion.
+  const fFX = fCustomize.addFolder("FX");
+  fFX.add(presetObj, "preset", presetKeys).name("Preset").onChange((name) => {
     Object.assign(params, PRESETS[name]);
     controller.applyParams();
-    // refresh controller displays
     gui.controllersRecursive().forEach((c) => c.updateDisplay());
   });
 
-  const fCore = gui.addFolder("Core");
+  const fCore = fFX.addFolder("Core");
   fCore.add(params, "effect", Object.keys(EFFECT_INDEX)).name("Effect").onChange(() => controller.applyParams());
   fCore.addColor(params, "color").name("Color").onChange(() => controller.applyParams());
   fCore.add(params, "radius",    0.1, 10.0, 0.05).name("Radius").onChange(() => controller.applyParams());
   fCore.add(params, "duration",  0.3,  8.0, 0.1 ).name("Duration (s)").onChange(() => controller.applyParams());
   fCore.add(params, "intensity", 0.0,  3.0, 0.01).name("Intensity").onChange(() => controller.applyParams());
 
-  const fStyle = gui.addFolder("Style");
+  const fStyle = fFX.addFolder("Style").close();
   fStyle.add(params, "speed",      0.1, 20.0, 0.1 ).name("Speed / Freq").onChange(() => controller.applyParams());
   fStyle.add(params, "noiseScale", 0.1,  5.0, 0.05).name("Noise Scale").onChange(() => controller.applyParams());
   fStyle.add(params, "edgeWidth",  0.02, 0.6, 0.01).name("Edge Width").onChange(() => controller.applyParams());
@@ -746,7 +919,7 @@ export function buildGUI(controller) {
   });
 
   // ---- Dissolve-specific FX knobs (also bias Wave a bit) ----
-  const fDis = gui.addFolder("Dissolve FX");
+  const fDis = fFX.addFolder("Dissolve FX").close();
   fDis.add(params, "edgeRagged", 0.0, 1.5, 0.01).name("Edge Ragged").onChange(() => controller.applyParams());
   fDis.add(params, "wispAmt",    0.0, 1.5, 0.01).name("Wisp Alpha").onChange(() => controller.applyParams());
   fDis.add(params, "flyMax",     0.5, 8.0, 0.05).name("Hero Fly Max").onChange(() => controller.applyParams());
@@ -754,14 +927,9 @@ export function buildGUI(controller) {
   fDis.add(params, "windY",     -2.0, 2.0, 0.02).name("Wind Y").onChange(() => controller.applyParams());
   fDis.add(params, "windZ",     -2.0, 2.0, 0.02).name("Wind Z").onChange(() => controller.applyParams());
 
-  gui.add({
+  fFX.add({
     test: () => { controller.triggerAt(uniforms.hit.value); },
   }, "test").name("▶ Replay at last hit");
-
-  // ---- Layers (independent visibility per representation) -----------------
-  // Each layer can be shown or hidden independently; Gaussian and Point share
-  // the same SplatMesh and are mutually exclusive via the Splat Subform select.
-  const fLayers = gui.addFolder("Layers");
   fLayers.add(params, "splatLayer").name("Splat")
     .onChange((v) => controller.setLayerVis("splat", v));
   // Splat sub-form: segmented Gaussian / Point toggle. Lil-gui's select is
@@ -769,10 +937,32 @@ export function buildGUI(controller) {
   // Splat checkbox.
   const subformRow = document.createElement("div");
   subformRow.className = "subform-toggle";
+  // Each cell wraps a button + a hover-popover explaining what that sub-form
+  // is (data source / training pipeline / per-splat data). Tooltips are
+  // portalled into <body> below to escape lil-gui's panel transform.
   subformRow.innerHTML = `
-    <button data-val="Gaussian">Gaussian</button>
-    <button data-val="Point">Point</button>
+    <span class="subform-cell"><button data-val="Gaussian">Gaussian</button></span>
+    <span class="subform-cell"><button data-val="Point">Point</button></span>
   `;
+  // Portalled tooltips
+  const SUBFORM_TIPS = {
+    Gaussian: `<div class="k">SOURCE</div><div class="v">Unreal Engine capture</div>
+               <div class="k">TRAIN</div><div class="v">Postshot</div>
+               <div class="k">SHAPE</div><div class="v">3D anisotropic Gaussian</div>
+               <div class="k">DATA</div><div class="v">RGB · scales · quaternion · alpha</div>`,
+    Point:    `<div class="k">SOURCE</div><div class="v">Gaussian centres collapsed</div>
+               <div class="k">SHAPE</div><div class="v">isotropic point</div>
+               <div class="k">SIZE</div><div class="v">uniform — set by "Point Size"</div>
+               <div class="k">USE</div><div class="v">raw structure / sparse view</div>`,
+  };
+  subformRow.querySelectorAll(".subform-cell").forEach(cell => {
+    const val = cell.querySelector("button")?.dataset.val;
+    const tip = document.createElement("div");
+    tip.className = "subform-tip";
+    tip.innerHTML = SUBFORM_TIPS[val] || "";
+    document.body.appendChild(tip);
+    cell._tip = tip;
+  });
   const subformSync = () => {
     subformRow.querySelectorAll("button").forEach(b =>
       b.classList.toggle("active", b.dataset.val === params.splatSubform));
@@ -803,30 +993,98 @@ export function buildGUI(controller) {
 
   // ---- USD spec badges on the Quad / Voxel rows ---------------------------
   // Both layers are conceptually USD PointInstancer overlays — one prototype
-  // per layer (Plane for Quad, Cube for Voxel). The badge is a small inline
-  // tag next to the label, hinting at how the data would round-trip into USD.
+  // per layer (Plane for Quad, Cube for Voxel). The badge is a tiny inline
+  // tag; hovering opens a styled popover with a short OpenUSD primer and a
+  // "Read more" link that jumps to openusd.org.
+  const USD_DOCS_URL = "https://openusd.org/release/api/class_usd_geom_point_instancer.html";
   const attachUsdBadge = (ctrl, proto) => {
     const nameEl = ctrl.domElement.querySelector(".name");
     if (!nameEl) return;
-    const span = document.createElement("span");
-    span.className = "usd-spec";
-    span.textContent = `PointInstancer › ${proto}`;
-    span.title = `UsdGeomPointInstancer (prototype: UsdGeom${proto})`;
-    nameEl.appendChild(span);
+
+    const wrap = document.createElement("span");
+    wrap.className = "usd-spec-wrap";
+
+    const badge = document.createElement("span");
+    badge.className = "usd-spec";
+    badge.textContent = `PointInstancer › ${proto}`;
+    wrap.appendChild(badge);
+
+    const tip = document.createElement("div");
+    tip.className = "usd-tooltip";
+    tip.innerHTML =
+      `<div class="k">SCHEMA</div><div class="v">UsdGeomPointInstancer</div>` +
+      `<div class="k">PROTO</div><div class="v">UsdGeom${proto}</div>` +
+      `<div class="k">ATTRS</div><div class="v">positions, orientations, scales</div>` +
+      `<div class="k">COLOR</div><div class="v">primvars:displayColor (vertex)</div>` +
+      `<div class="k">DOCS</div><div class="v">` +
+        `<a class="t-link" href="${USD_DOCS_URL}" target="_blank" rel="noopener noreferrer">openusd.org →</a>` +
+      `</div>`;
+    // Portal the tooltip to <body> so position:fixed isn't broken by
+    // lil-gui's transform. JS toggles a .show class on hover.
+    document.body.appendChild(tip);
+    wrap._tip = tip;
+    nameEl.appendChild(wrap);
   };
   attachUsdBadge(quadCtrl,  "Plane");
   attachUsdBadge(voxelCtrl, "Cube");
 
-  // ---- Reveal Mask (driven by palm or body tracker) -----------------------
-  const fMask = gui.addFolder("Reveal Mask");
-  fMask.add(params, "maskShape", Object.keys(MASK_SHAPE_INDEX)).name("Shape")
-    .onChange(() => controller.applyParams());
-  fMask.add(params, "maskRadius", 0.05, 5.0, 0.01).name("Radius")
-    .onChange(() => controller.applyParams());
-  fMask.add(params, "maskSoft",   0.0,  1.0, 0.01).name("Edge Soft")
-    .onChange(() => controller.applyParams());
-  fMask.add(params, "bodyRadius", 0.05, 5.0, 0.01).name("Body Radius")
-    .onChange(() => controller.applyParams());
+  // ---- Hover-tooltip wiring (body-portalled, viewport-clamped) -----------
+  // lil-gui panels use CSS transforms which break `position: fixed` on any
+  // descendant (it gets positioned relative to the transformed ancestor
+  // instead of the viewport, landing off-screen). To work around that we
+  // moved the tooltips into <body>, and toggle a .show class on hover.
+  function pinPopover(wrap, tip) {
+    const wr   = wrap.getBoundingClientRect();
+    const tipW = tip.offsetWidth  || 240;
+    const tipH = tip.offsetHeight || 80;
+    const vw   = window.innerWidth;
+    const vh   = window.innerHeight;
+    const pad  = 8;
+    let left = wr.left;                       // align to trigger's left
+    let top  = wr.top - tipH - pad;            // default: above the trigger
+    if (left + tipW > vw - pad) left = vw - pad - tipW;
+    if (left < pad) left = pad;
+    if (top  < pad) top  = wr.bottom + pad;    // not enough room above → below
+    if (top + tipH > vh - pad) top = Math.max(pad, vh - pad - tipH);
+    tip.style.left = `${left}px`;
+    tip.style.top  = `${top}px`;
+  }
+  function installPopover(wrap, tip) {
+    if (!wrap || !tip) return;
+    const show = () => {
+      pinPopover(wrap, tip);
+      // Inline styles guarantee win regardless of CSS cascade quirks
+      tip.style.opacity        = "1";
+      tip.style.visibility     = "visible";
+      tip.style.pointerEvents  = "auto";
+      tip.classList.add("show");
+    };
+    const hide = () => {
+      tip.style.opacity        = "0";
+      tip.style.visibility     = "hidden";
+      tip.style.pointerEvents  = "none";
+      tip.classList.remove("show");
+    };
+    wrap.addEventListener("mouseenter", show);
+    wrap.addEventListener("mouseleave", hide);
+    tip .addEventListener("mouseleave", hide);
+  }
+  gui.domElement.querySelectorAll(".usd-spec-wrap").forEach(w => installPopover(w, w._tip));
+  gui.domElement.querySelectorAll(".subform-cell" ).forEach(w => installPopover(w, w._tip));
+
+  // ---- Reveal Mask — temporarily disabled in the UI -----------------------
+  // The mask uniforms still exist for the shader but the GUI surface is
+  // hidden so the user isn't confused by knobs that aren't being used right
+  // now. Force the mask off as well so any stale hand-tracking state can't
+  // bleed through.
+  uniforms.maskActive.value = 0.0;
+  uniforms.bodyActive.value = 0.0;
+
+  // Expose folder refs so postfx.attachGUI / main.js can place their
+  // controls inside the right parents (Customize / FX / 3DGS-USD).
+  gui.fCustomize = fCustomize;
+  gui.fFX        = fFX;
+  gui.fLayers    = fLayers;
 
   return gui;
 }

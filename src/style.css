@@ -494,6 +494,53 @@ kbd {
   background: rgba(255, 255, 255, 0.10);
   color: var(--text);
 }
+/* Hover-popover wrapping each sub-form button — same aesthetic as .frustum-tip */
+.subform-cell {
+  position: relative;
+  flex: 1;
+  display: flex;
+}
+.subform-cell button { width: 100%; }
+/* Portalled tooltips — appended to <body> by JS so position:fixed isn't
+   broken by lil-gui's panel transform. Visibility toggled via .show class. */
+.subform-tip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 10px;
+  row-gap: 2px;
+  padding: 8px 10px;
+  background: rgba(8, 12, 18, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+  color: #d8dee6;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.12s, visibility 0.12s;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+.subform-tip.show {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+.subform-tip .k {
+  color: rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
+  font-size: 9.5px;
+}
+.subform-tip .v {
+  color: #f0f3f6;
+}
 
 /* Hand-mode toggle (1-Hand / 2-Hand) — shown only when hand tracking is active */
 #hand-mode {
@@ -705,9 +752,14 @@ kbd {
   color: var(--text-mid);
   opacity: 0.85;
 }
-.lil-gui .controller .name .usd-spec {
+.lil-gui .controller .name .usd-spec-wrap {
+  position: relative;
   display: inline-block;
   margin-left: 8px;
+  vertical-align: 1px;
+}
+.lil-gui .controller .name .usd-spec {
+  display: inline-block;
   padding: 1px 5px;
   font-family: var(--font-mono, monospace);
   font-size: 9px;
@@ -717,7 +769,111 @@ kbd {
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 2px;
   white-space: nowrap;
-  vertical-align: 1px;
+  cursor: help;
+}
+/* USD tooltip — portalled to <body> so position:fixed lands relative to the
+   viewport (lil-gui's panel transform would otherwise break it). Visibility
+   toggled by a .show class set in JS on mouseenter/leave. */
+.usd-tooltip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 10px;
+  row-gap: 2px;
+  padding: 8px 10px;
+  background: rgba(8, 12, 18, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+  color: #d8dee6;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.12s, visibility 0.12s;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+.usd-tooltip.show {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto;
+}
+.usd-tooltip .k {
+  color: rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
+  font-size: 9.5px;
+}
+.usd-tooltip .v {
+  color: #f0f3f6;
+}
+.usd-tooltip .t-link {
+  color: #f0f3f6;
+  text-decoration: none;
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.35);
+}
+.usd-tooltip .t-link:hover {
+  border-bottom-color: #fff;
+}
+
+/* Camera-move timeline / frame readout */
+.cam-timeline {
+  position: fixed;
+  bottom: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 320px;
+  padding: 8px 12px;
+  background: rgba(8, 12, 18, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 4px;
+  color: #d8dee6;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+.cam-timeline .ct-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+}
+.cam-timeline .ct-label {
+  color: rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
+  font-size: 9.5px;
+}
+.cam-timeline .ct-time,
+.cam-timeline .ct-frame {
+  color: #f0f3f6;
+  font-variant-numeric: tabular-nums;
+}
+.cam-timeline .ct-bar {
+  position: relative;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.10);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.cam-timeline .ct-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  background: rgba(255, 255, 255, 0.65);
+  transition: width 0.06s linear;
 }
 
 /* Hover tooltip for training-camera frustums */
