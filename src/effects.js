@@ -881,7 +881,7 @@ const PRESETS = {
 };
 
 export function buildGUI(controller) {
-  const gui = new GUI({ title: "Scan Effect" });
+  const gui = new GUI({ title: "SplatGarden Studio" });
 
   const presetKeys = Object.keys(PRESETS);
   const presetObj = { preset: presetKeys[0] };

@@ -822,6 +822,52 @@ kbd {
   border-bottom-color: #fff;
 }
 
+/* HDRI drag-drop overlay */
+.hdri-drop {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.hdri-drop .hdri-card {
+  width: 380px;
+  padding: 24px 28px;
+  background: rgba(8, 12, 18, 0.92);
+  border: 1.5px dashed rgba(255, 255, 255, 0.32);
+  border-radius: 8px;
+  color: #d8dee6;
+  font-family: var(--font-mono, monospace);
+  letter-spacing: 0.04em;
+  text-align: center;
+  transition: border-color 0.15s, transform 0.15s;
+  pointer-events: none;
+}
+.hdri-drop.over .hdri-card {
+  border-color: rgba(255, 255, 255, 0.65);
+  transform: scale(1.02);
+}
+.hdri-drop .hdri-title {
+  font-size: 13px;
+  color: #f0f3f6;
+  margin-bottom: 6px;
+}
+.hdri-drop .hdri-hint {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.hdri-drop .hdri-status {
+  font-size: 10.5px;
+  color: #ffd086;
+  min-height: 14px;
+}
+
 /* Camera-move timeline / frame readout */
 .cam-timeline {
   position: fixed;

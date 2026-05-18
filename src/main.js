@@ -369,6 +369,105 @@ async function loadSplat() {
   });
   hdrCtrl.domElement.title = "Show the HDR environment behind the splat — most visible in Point mode.";
 
+  // ---- HDR drag-and-drop upload -------------------------------------------
+  // "Use My Own HDRI" button opens a centred drop zone; drag any .hdr file
+  // into it and it parses via RGBELoader.parse() (no fetch), replaces the
+  // current environment, and turns HDR Sky on.
+  const hdrDrop = document.createElement("div");
+  hdrDrop.className = "hdri-drop";
+  hdrDrop.innerHTML = `
+    <div class="hdri-card">
+      <div class="hdri-title">Drop your .hdr file</div>
+      <div class="hdri-hint">Equirectangular HDRI · click anywhere outside to cancel</div>
+      <div class="hdri-status"></div>
+    </div>
+  `;
+  hdrDrop.style.display = "none";
+  document.getElementById("app").appendChild(hdrDrop);
+  const hdrStatusEl = hdrDrop.querySelector(".hdri-status");
+
+  const showHdrDrop  = () => { hdrDrop.style.display = "flex"; hdrStatusEl.textContent = ""; };
+  const hideHdrDrop  = () => { hdrDrop.style.display = "none"; };
+  hdrDrop.addEventListener("click", (e) => { if (e.target === hdrDrop) hideHdrDrop(); });
+  hdrDrop.addEventListener("dragover", (e) => { e.preventDefault(); hdrDrop.classList.add("over"); });
+  hdrDrop.addEventListener("dragleave", () => hdrDrop.classList.remove("over"));
+  hdrDrop.addEventListener("drop", async (e) => {
+    e.preventDefault();
+    hdrDrop.classList.remove("over");
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    if (!/\.hdr$/i.test(file.name)) {
+      hdrStatusEl.textContent = `Not an .hdr file: ${file.name}`;
+      return;
+    }
+    hdrStatusEl.textContent = `Decoding ${file.name}…`;
+    try {
+      const buf = await file.arrayBuffer();
+      const loader = new RGBELoader();
+      const tex = loader.parse(buf);            // RGBELoader.parse → DataTexture
+      tex.mapping = THREE.EquirectangularReflectionMapping;
+      // Dispose previous if present
+      if (hdrTex) hdrTex.dispose?.();
+      hdrTex = tex;
+      scene.background  = hdrTex;
+      scene.environment = hdrTex;
+      hdrParams.hdr     = true;
+      hdrCtrl.updateDisplay();
+      hdrStatusEl.textContent = `Loaded — ${file.name}`;
+      setTimeout(hideHdrDrop, 600);
+    } catch (err) {
+      hdrStatusEl.textContent = "Decode failed: " + (err?.message ?? err);
+    }
+  });
+
+  // GUI button to open the drop zone — sits right under HDR Sky in Customize.
+  hdrParent.add({ pick: showHdrDrop }, "pick").name("⤓ Use My Own HDRI");
+
+  // ---- 3DGS drag-and-drop upload ------------------------------------------
+  // "Use My Own 3DGS" button under 3DGS/USD opens a drop overlay; drag any
+  // .splat / .ply / .spz / .ksplat file in → calls the existing
+  // replaceSplatMesh() with the dropped bytes (no fetch, no extra UI).
+  const splatDrop = document.createElement("div");
+  splatDrop.className = "hdri-drop";
+  splatDrop.innerHTML = `
+    <div class="hdri-card">
+      <div class="hdri-title">Drop your 3DGS asset</div>
+      <div class="hdri-hint">.splat · .ply · .spz · .ksplat · click outside to cancel</div>
+      <div class="hdri-status"></div>
+    </div>
+  `;
+  splatDrop.style.display = "none";
+  document.getElementById("app").appendChild(splatDrop);
+  const splatStatusEl = splatDrop.querySelector(".hdri-status");
+
+  const showSplatDrop = () => { splatDrop.style.display = "flex"; splatStatusEl.textContent = ""; };
+  const hideSplatDrop = () => { splatDrop.style.display = "none"; };
+  splatDrop.addEventListener("click", (e) => { if (e.target === splatDrop) hideSplatDrop(); });
+  splatDrop.addEventListener("dragover",  (e) => { e.preventDefault(); splatDrop.classList.add("over"); });
+  splatDrop.addEventListener("dragleave", () => splatDrop.classList.remove("over"));
+  splatDrop.addEventListener("drop", async (e) => {
+    e.preventDefault();
+    splatDrop.classList.remove("over");
+    const file = e.dataTransfer?.files?.[0];
+    if (!file) return;
+    if (!/\.(splat|ply|spz|ksplat)$/i.test(file.name)) {
+      splatStatusEl.textContent = `Unsupported file: ${file.name}`;
+      return;
+    }
+    splatStatusEl.textContent = `Loading ${file.name}…`;
+    try {
+      const buf = await file.arrayBuffer();
+      await replaceSplatMesh({ fileBytes: new Uint8Array(buf), fileName: file.name });
+      splatStatusEl.textContent = `Loaded — ${file.name}`;
+      setTimeout(hideSplatDrop, 600);
+    } catch (err) {
+      splatStatusEl.textContent = "Load failed: " + (err?.message ?? err);
+    }
+  });
+
+  const splatParent = gui.fLayers || gui;
+  splatParent.add({ pick: showSplatDrop }, "pick").name("⤓ Use My Own 3DGS");
+
   // ---- Pre-authored FBX camera move (Play / Pause / Stop) ------------------
   // Drives the scene camera off the animated FBX node every frame. Three
   // states: IDLE (time=0, controls enabled), PLAYING, PAUSED.
