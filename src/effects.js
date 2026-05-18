@@ -1051,20 +1051,15 @@ export function buildGUI(controller) {
   }
   function installPopover(wrap, tip) {
     if (!wrap || !tip) return;
+    // Start hidden — toggle via display so no CSS opacity/visibility cascade
+    // can keep it invisible. Show is `display:grid` because the tip uses a
+    // 2-column k/v layout; hide is `display:none`.
+    tip.style.display = "none";
     const show = () => {
-      pinPopover(wrap, tip);
-      // Inline styles guarantee win regardless of CSS cascade quirks
-      tip.style.opacity        = "1";
-      tip.style.visibility     = "visible";
-      tip.style.pointerEvents  = "auto";
-      tip.classList.add("show");
+      tip.style.display = "grid";
+      pinPopover(wrap, tip);          // measure AFTER it's laid out
     };
-    const hide = () => {
-      tip.style.opacity        = "0";
-      tip.style.visibility     = "hidden";
-      tip.style.pointerEvents  = "none";
-      tip.classList.remove("show");
-    };
+    const hide = () => { tip.style.display = "none"; };
     wrap.addEventListener("mouseenter", show);
     wrap.addEventListener("mouseleave", hide);
     tip .addEventListener("mouseleave", hide);

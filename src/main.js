@@ -739,39 +739,84 @@ async function loadSplat() {
   raycaster.params.Points = { threshold: Math.max(0.02, radius * 0.005) };
   annotations.setRaycaster(raycaster, splat);
 
-  // ---- Click handler ----
+  // ---- Brush mode + click handler ----
+  // Brush off (default) → click-to-trigger (one-shot FX at click point).
+  // Brush on             → press + drag = continuous paint via effects.brushAt.
+  // Same flow drives mouse pointer events AND hand-pinch (see hand block below).
+  const brushParams = { brush: false };
+  const brushParent = gui.fFX || gui;
+  brushParent.add(brushParams, "brush").name("🖌 Brush Mode")
+    .onChange(v => { canvas.style.cursor = v ? "crosshair" : ""; });
+
+  function rayHitLocal(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    const ndc = new THREE.Vector2(
+      ((clientX - rect.left) / rect.width)  * 2 - 1,
+      -((clientY - rect.top)  / rect.height) * 2 + 1,
+    );
+    raycaster.setFromCamera(ndc, camera);
+    const hits = raycaster.intersectObject(splat, false);
+    if (!hits?.[0]) return null;
+    return { hit: hits[0], local: splat.worldToLocal(hits[0].point.clone()) };
+  }
+
   let downPos = null;
+  let mouseBrushing = false;
+  // Raycasting 2.6 M splats is O(N), so throttle to ~30 Hz and skip when
+  // the cursor barely moved since the last hit. Effects.brushAt's own
+  // smoothing keeps the visual continuous between samples.
+  let _lastBrushRayMs = 0;
+  let _lastBrushX = -1e9, _lastBrushY = -1e9;
+  const BRUSH_RAY_MS = 33;            // ~30 Hz
+  const BRUSH_SKIP_PX2 = 9;           // 3 px
+
+  function brushAtScreen(clientX, clientY) {
+    const now = performance.now();
+    const dx = clientX - _lastBrushX, dy = clientY - _lastBrushY;
+    if (now - _lastBrushRayMs < BRUSH_RAY_MS && dx*dx + dy*dy < BRUSH_SKIP_PX2) return;
+    _lastBrushRayMs = now;
+    _lastBrushX = clientX; _lastBrushY = clientY;
+    const r = rayHitLocal(clientX, clientY);
+    if (r) effects.brushAt(r.local);
+  }
+
   canvas.addEventListener("pointerdown", (e) => {
     downPos = { x: e.clientX, y: e.clientY };
+    if (brushParams.brush) {
+      _lastBrushRayMs = 0; _lastBrushX = -1e9; _lastBrushY = -1e9;
+      brushAtScreen(e.clientX, e.clientY);
+      mouseBrushing = true;
+    }
+  });
+  canvas.addEventListener("pointermove", (e) => {
+    if (!mouseBrushing || !brushParams.brush) return;
+    brushAtScreen(e.clientX, e.clientY);
   });
   canvas.addEventListener("pointerup", (e) => {
+    if (mouseBrushing) {
+      effects.releaseBrush();
+      mouseBrushing = false;
+      downPos = null;
+      return;
+    }
     if (!downPos) return;
     const dx = e.clientX - downPos.x;
     const dy = e.clientY - downPos.y;
     downPos = null;
     if (dx * dx + dy * dy > 9) return; // drag, not click
 
-    const rect = canvas.getBoundingClientRect();
-    const ndc = new THREE.Vector2(
-      ((e.clientX - rect.left) / rect.width) * 2 - 1,
-      -((e.clientY - rect.top) / rect.height) * 2 + 1,
-    );
-    raycaster.setFromCamera(ndc, camera);
-    const hits = raycaster.intersectObject(splat, false);
-    const hit = hits?.[0];
-    if (!hit) {
-      statusEl.textContent = "No splat hit at click";
-      return;
-    }
+    const r = rayHitLocal(e.clientX, e.clientY);
+    if (!r) { statusEl.textContent = "No splat hit at click"; return; }
 
     // Defer to annotation system if user armed "+ Add"
-    if (annotations.handleCanvasClick(hit.point)) return;
+    if (annotations.handleCanvasClick(r.hit.point)) return;
 
     // Otherwise → trigger scan effect at hit point (in object space)
-    const localPoint = splat.worldToLocal(hit.point.clone());
-    effects.triggerAt(localPoint);
-    statusEl.textContent = `Hit (${hit.point.x.toFixed(2)}, ${hit.point.y.toFixed(2)}, ${hit.point.z.toFixed(2)})`;
+    effects.triggerAt(r.local);
+    statusEl.textContent = `Hit (${r.hit.point.x.toFixed(2)}, ${r.hit.point.y.toFixed(2)}, ${r.hit.point.z.toFixed(2)})`;
   });
+  // Expose for the hand-tracking block below to share the same logic
+  window.__brushParams = brushParams;
 
   // ---- Keyboard ----
   window.addEventListener("keydown", (e) => {
@@ -987,8 +1032,26 @@ async function loadSplat() {
     onePinchStart.y = onePinchPrev.y = p.y;
   }
 
+  let handBrushing = false;
+  let _handBrushMs = 0, _handBrushX = -1e9, _handBrushY = -1e9;
   function updateOnePinch(p) {
     if (!onePinchActive) return;
+    const brushOn = window.__brushParams?.brush;
+    if (brushOn) {
+      // Brush mode: pinch+move paints continuously at the palm hit point.
+      // Throttle the splat raycast (O(N)) to ~30Hz + skip micro-moves.
+      controls.enabled = false;
+      handBrushing = true;
+      const now = performance.now();
+      const dx = p.x - _handBrushX, dy = p.y - _handBrushY;
+      if (now - _handBrushMs >= 33 || dx*dx + dy*dy >= 9) {
+        _handBrushMs = now; _handBrushX = p.x; _handBrushY = p.y;
+        const local = screenToLocalHit(p.x, p.y);
+        if (local) effects.brushAt(local);
+      }
+      onePinchPrev.x = p.x; onePinchPrev.y = p.y;
+      return;
+    }
     if (!onePinchMoved) {
       const dx = p.x - onePinchStart.x, dy = p.y - onePinchStart.y;
       if (dx*dx + dy*dy > PINCH_DRAG_THRESHOLD_PX ** 2) {
@@ -1004,8 +1067,11 @@ async function loadSplat() {
 
   function endOnePinch(p) {
     if (!onePinchActive) return;
-    if (!onePinchMoved) {
-      // Quick tap → click → dissolve
+    if (handBrushing) {
+      effects.releaseBrush();
+      handBrushing = false;
+    } else if (!onePinchMoved) {
+      // Quick tap → click → dissolve (no brush)
       const local = screenToLocalHit(p.x, p.y);
       if (local) effects.triggerAt(local);
     }

@@ -3,6 +3,91 @@ import { EffectComposer }   from "three/addons/postprocessing/EffectComposer.js"
 import { RenderPass }       from "three/addons/postprocessing/RenderPass.js";
 import { ShaderPass }       from "three/addons/postprocessing/ShaderPass.js";
 import { UnrealBloomPass }  from "three/addons/postprocessing/UnrealBloomPass.js";
+import { Pass, FullScreenQuad } from "three/addons/postprocessing/Pass.js";
+
+// ---------------------------------------------------------------------------
+// EchoPass — Notch-style motion trails.
+//
+// Maintains a "feedback" render target that holds the previous frame's
+// output. Each frame combines the current pipeline state with the
+// feedback texture via `max(current, feedback × persistence)` so bright
+// trails linger and slowly decay. The combined result becomes the next
+// frame's feedback.
+// ---------------------------------------------------------------------------
+class EchoPass extends Pass {
+  constructor() {
+    super();
+    this.uniforms = {
+      tDiffuse:     { value: null },
+      tFeedback:    { value: null },
+      uPersistence: { value: 0.90 },
+      uMix:         { value: 1.0 },
+    };
+    this.feedbackRT = new THREE.WebGLRenderTarget(1, 1);
+    this.tempRT     = new THREE.WebGLRenderTarget(1, 1);
+    this.combineMat = new THREE.ShaderMaterial({
+      uniforms: this.uniforms,
+      vertexShader: /* glsl */ `
+        varying vec2 vUv;
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: /* glsl */ `
+        uniform sampler2D tDiffuse;
+        uniform sampler2D tFeedback;
+        uniform float uPersistence;
+        uniform float uMix;
+        varying vec2 vUv;
+        void main() {
+          vec4 cur  = texture2D(tDiffuse,  vUv);
+          vec4 prev = texture2D(tFeedback, vUv) * uPersistence;
+          vec4 trail = max(cur, prev);
+          gl_FragColor = mix(cur, trail, uMix);
+        }
+      `,
+    });
+    this.copyMat = new THREE.ShaderMaterial({
+      uniforms: { tDiffuse: { value: null } },
+      vertexShader: this.combineMat.vertexShader,
+      fragmentShader: /* glsl */ `
+        uniform sampler2D tDiffuse;
+        varying vec2 vUv;
+        void main() { gl_FragColor = texture2D(tDiffuse, vUv); }
+      `,
+    });
+    this.combineQuad = new FullScreenQuad(this.combineMat);
+    this.copyQuad    = new FullScreenQuad(this.copyMat);
+  }
+  setSize(w, h) {
+    this.feedbackRT.setSize(w, h);
+    this.tempRT.setSize(w, h);
+  }
+  render(renderer, writeBuffer, readBuffer) {
+    // 1) Combine cur + feedback into tempRT
+    this.uniforms.tDiffuse.value  = readBuffer.texture;
+    this.uniforms.tFeedback.value = this.feedbackRT.texture;
+    renderer.setRenderTarget(this.tempRT);
+    this.combineQuad.render(renderer);
+    // 2) Swap feedback / temp so feedbackRT holds the new combined result
+    const t = this.feedbackRT;
+    this.feedbackRT = this.tempRT;
+    this.tempRT = t;
+    // 3) Copy combined output to writeBuffer (or screen if final)
+    this.copyMat.uniforms.tDiffuse.value = this.feedbackRT.texture;
+    renderer.setRenderTarget(this.renderToScreen ? null : writeBuffer);
+    this.copyQuad.render(renderer);
+  }
+  dispose() {
+    this.feedbackRT.dispose();
+    this.tempRT.dispose();
+    this.combineMat.dispose();
+    this.copyMat.dispose();
+    this.combineQuad.dispose();
+    this.copyQuad.dispose();
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Kaleidoscope post-process — Kusama-style mirrored repetition.
@@ -268,6 +353,10 @@ export function setupPostFX(renderer, scene, camera) {
   const polishPass = new ShaderPass(PolishShader);
   composer.addPass(polishPass);
 
+  // Echo / Trails — Notch-style motion smear via feedback texture
+  const echoPass = new EchoPass();
+  composer.addPass(echoPass);
+
   const kaleidoPass = new ShaderPass(KaleidoscopeShader);
   composer.addPass(kaleidoPass);
 
@@ -295,6 +384,10 @@ export function setupPostFX(renderer, scene, camera) {
     bloomStrength:  0.3,
     bloomRadius:    0.84,
     bloomThreshold: 0.82,
+
+    echoOn:        false,
+    echoPersist:   0.90,
+    echoMix:       1.00,
 
     lensOn:        false,
     lensAmt:       0.20,
@@ -326,6 +419,7 @@ export function setupPostFX(renderer, scene, camera) {
     composer.setSize(w, h);
     kaleidoPass.uniforms.uAspect.value = w / h;
     bloomPass.setSize(w, h);
+    echoPass.setSize(w, h);
   }
 
   let polishTime = 0;
@@ -342,6 +436,10 @@ export function setupPostFX(renderer, scene, camera) {
     bloomPass.radius    = params.bloomRadius;
     bloomPass.threshold = params.bloomThreshold;
     bloomPass.enabled   = params.postEnable && params.bloomEnable && params.bloomStrength > 0.001;
+
+    echoPass.enabled = params.postEnable && params.echoOn;
+    echoPass.uniforms.uPersistence.value = params.echoPersist;
+    echoPass.uniforms.uMix.value         = params.echoMix;
 
     polishTime += dt;
     const u = polishPass.uniforms;
@@ -399,6 +497,11 @@ export function setupPostFX(renderer, scene, camera) {
     fPost.add(params, "exposure",   0.0, 3.0, 0.01).name("Exposure");
     fPost.add(params, "contrast",   0.5, 2.0, 0.01).name("Contrast");
     fPost.add(params, "saturation", 0.0, 2.0, 0.01).name("Saturation");
+
+    const fEcho = fPost.addFolder("Echo Trails").close();
+    fEcho.add(params, "echoOn").name("Enable");
+    fEcho.add(params, "echoPersist", 0.5, 0.99, 0.005).name("Persistence");
+    fEcho.add(params, "echoMix",     0.0, 1.0,  0.01 ).name("Mix");
 
     const fLens = fPost.addFolder("Lens Distortion").close();
     fLens.add(params, "lensOn").name("Enable");
