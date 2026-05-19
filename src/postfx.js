@@ -21,8 +21,12 @@ class EchoPass extends Pass {
     this.uniforms = {
       tDiffuse:     { value: null },
       tFeedback:    { value: null },
-      uPersistence: { value: 0.90 },
+      uPersistence: { value: 0.92 },
       uMix:         { value: 1.0 },
+      // Per-frame additive floor: prev gets this subtracted before max() so
+      // bright pixels can NEVER pin in dark areas — they decay linearly
+      // toward true black instead of converging to a grey residue.
+      uFloor:       { value: 0.012 },
     };
     this.feedbackRT = new THREE.WebGLRenderTarget(1, 1);
     this.tempRT     = new THREE.WebGLRenderTarget(1, 1);
@@ -40,12 +44,19 @@ class EchoPass extends Pass {
         uniform sampler2D tFeedback;
         uniform float uPersistence;
         uniform float uMix;
+        uniform float uFloor;
         varying vec2 vUv;
+        // Trail blend with a per-frame additive floor so bright pixels
+        // can never pin in dark areas. Pure multiplicative decay
+        // (prev * persistence) asymptotes to a non-zero residue, leaving
+        // grey splotches over time. Subtracting uFloor each frame forces
+        // linear convergence to true black so the void stays clean.
         void main() {
-          vec4 cur  = texture2D(tDiffuse,  vUv);
-          vec4 prev = texture2D(tFeedback, vUv) * uPersistence;
-          vec4 trail = max(cur, prev);
-          gl_FragColor = mix(cur, trail, uMix);
+          vec3 cur  = texture2D(tDiffuse,  vUv).rgb;
+          vec3 prev = texture2D(tFeedback, vUv).rgb;
+          vec3 decayed = max(prev * uPersistence - vec3(uFloor), vec3(0.0));
+          vec3 trail   = max(cur, decayed);
+          gl_FragColor = vec4(mix(cur, trail, uMix), 1.0);
         }
       `,
     });
@@ -689,8 +700,9 @@ export function setupPostFX(renderer, scene, camera) {
     bloomThreshold: 0.82,
 
     echoOn:        false,
-    echoPersist:   0.99,    // 0.99 ≈ 5 s visible trail; was 0.97 (~2 s)
+    echoPersist:   0.95,    // multiplicative decay per frame
     echoMix:       1.00,
+    echoFloor:     0.012,   // additive subtract per frame; guarantees clean black
 
     // Underwater — Dave_Hoskins tileable water caustic + tint + UV waves.
     // Off by default on cold launch; numeric values below are the preset
@@ -787,6 +799,7 @@ export function setupPostFX(renderer, scene, camera) {
     echoPass.enabled = params.postEnable && params.echoOn;
     echoPass.uniforms.uPersistence.value = params.echoPersist;
     echoPass.uniforms.uMix.value         = params.echoMix;
+    echoPass.uniforms.uFloor.value       = params.echoFloor;
 
     // Underwater — pass disabled entirely when toggle is off, so zero cost
     // when not in use. Otherwise drive uTime + tunables each frame.
@@ -921,6 +934,7 @@ export function setupPostFX(renderer, scene, camera) {
     // Extended max from 0.99 → 0.998 for very long trails (~10 s+).
     fEcho.add(params, "echoPersist", 0.5, 0.998, 0.001).name("Persistence");
     fEcho.add(params, "echoMix",     0.0, 1.0,  0.01 ).name("Mix");
+    fEcho.add(params, "echoFloor",   0.0, 0.05, 0.001).name("Floor (clean black)");
 
     // Sorted Particles — cornusammonis multipass sim overlay.
     const fSp = fPost.addFolder("Sorted Particles").close();
