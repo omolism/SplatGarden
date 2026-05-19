@@ -4,7 +4,6 @@ import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
 import { createScanModifier, EffectController, buildGUI, params as effectParams } from "./effects.js";
-import { EffectCallout } from "./effect-callout.js";
 import { ABCompare } from "./ab-compare.js";
 import { Profiler } from "./profiler.js";
 import { TechSpec } from "./tech-spec.js";
@@ -141,14 +140,6 @@ const pipelineHUD = new PipelineHUD({
   mountEl: document.getElementById("app") || document.body,
 });
 window.__pipelineHUD = pipelineHUD;
-
-// Effect-callout: shows the live algorithm name + technique + source ref
-// for ~5s every time a click effect fires. Driven from each triggerAt
-// invocation below.
-const effectCallout = new EffectCallout({
-  mountEl: document.getElementById("app") || document.body,
-});
-window.__effectCallout = effectCallout;
 
 // A/B Compare — backtick (`) opens / closes the side-by-side viewer.
 const abCompare = new ABCompare({
@@ -1108,7 +1099,6 @@ async function loadSplat() {
 
     // Otherwise → trigger scan effect at hit point (in object space)
     effects.triggerAt(r.local);
-    effectCallout.show(effectParams.effect);
     autoEnableEchoForClick();
     statusEl.textContent = `Hit (${r.hit.point.x.toFixed(2)}, ${r.hit.point.y.toFixed(2)}, ${r.hit.point.z.toFixed(2)})`;
   });
@@ -1441,7 +1431,6 @@ async function loadSplat() {
       const local = screenToLocalHit(p.x, p.y);
       if (local) {
         effects.triggerAt(local);
-        effectCallout.show(effectParams.effect);
       }
     }
     onePinchActive = false;
