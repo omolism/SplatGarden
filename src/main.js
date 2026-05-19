@@ -1616,7 +1616,13 @@ async function loadSplat() {
   });
 
   hideLoading();
-  statusEl.textContent = `${(size.x).toFixed(1)} × ${(size.y).toFixed(1)} × ${(size.z).toFixed(1)} m`;
+  // First-time hint so users know the default FX preset is click-armed —
+  // otherwise they open the app, see the splat, don't realize clicking the
+  // model fires the effect, and assume the FX panel is broken. Replaced by
+  // hit coords on the first click; until then, this message stays.
+  const initialPreset = effects?.params?.effect ?? "Slime Molds";
+  statusEl.textContent =
+    `${(size.x).toFixed(1)} × ${(size.y).toFixed(1)} × ${(size.z).toFixed(1)} m  ·  click the splat to fire "${initialPreset}"`;
 
   // Preload the FBX so Center=frame460 takes effect at startup. The promise
   // is fire-and-forget — concurrent calls from the Play button share it via

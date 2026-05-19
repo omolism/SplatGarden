@@ -726,7 +726,10 @@ export function setupPostFX(renderer, scene, camera) {
     seuratSat:           1.9,
     seuratPaper:         0.37,
 
-    lensOn:        true,
+    // Lens off by default — fisheye/squeeze/dispersion preset is aggressive
+    // for a first-time view; let users opt INTO the cinematic look from a
+    // clean unmodified scene.
+    lensOn:        false,
     lensAmt:       -1.0,
     lensZoom:      0.95,
     lensDispersion: 0.01,
