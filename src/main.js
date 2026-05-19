@@ -120,6 +120,10 @@ let dataLabels = null;
 let voxelizer = null;
 let quadizer = null;
 let cameraFrustums = null;
+// Wireframe sphere shown at the hand-effector position when Effector Mode is
+// active. Parented to splat so its transform is in splat-local space (same
+// space as uniforms.maskCenter), no per-frame matrix math needed.
+let effectorMesh = null;
 
 // Build a SplatMesh (either from URL or fileBytes), wait for init, and
 // return its world-space bounds so the caller can reframe the camera.
@@ -142,6 +146,26 @@ async function loadSplat() {
   const built = await createSplat({ url: SPLAT_URL });
   splat = built.splat;
   scene.add(splat);
+
+  // Wireframe sphere overlay for Effector Mode. Parented to splat so its
+  // position can be copied straight from uniforms.maskCenter (already in
+  // splat-local space) without any world-space conversion each frame.
+  effectorMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 24, 16),
+    new THREE.MeshBasicMaterial({
+      wireframe: true,
+      transparent: true,
+      opacity: 0.4,
+      depthTest: false,
+      depthWrite: false,
+      color: 0x66ddff,
+    }),
+  );
+  effectorMesh.frustumCulled = false;
+  effectorMesh.renderOrder = 998;
+  effectorMesh.visible = false;
+  splat.add(effectorMesh);
+
   setLoading("Computing bounds…");
 
   const center = built.center;
@@ -766,10 +790,29 @@ async function loadSplat() {
   // Brush off (default) → click-to-trigger (one-shot FX at click point).
   // Brush on             → press + drag = continuous paint via effects.brushAt.
   // Same flow drives mouse pointer events AND hand-pinch (see hand block below).
-  const brushParams = { brush: false };
+  const brushParams = { brush: false, effector: false };
   const brushParent = gui.fFX || gui;
   brushParent.add(brushParams, "brush").name("🖌 Brush Mode")
     .onChange(v => { canvas.style.cursor = v ? "crosshair" : ""; });
+  // Effector Mode (TD-style sphere effector for Dissolve). When on, brush
+  // press+drag drives a spatial mask that dissolves splats inside the sphere;
+  // splats outside snap back to home. Auto-switches effect to "Dissolve &
+  // Reform" since the spatial override only lives in that shader path.
+  brushParent.add(brushParams, "effector").name("🫧 Effector Mode")
+    .onChange(v => {
+      if (v) {
+        params.effect = "Dissolve & Reform";
+        // Refresh the Effect dropdown so the GUI shows the auto-switch.
+        gui.controllersRecursive().forEach(c => {
+          if (c.property === "effect") c.updateDisplay();
+        });
+        canvas.style.cursor = "crosshair";
+      } else {
+        effects.setMaskCenter(null);
+        if (effectorMesh) effectorMesh.visible = false;
+        if (!brushParams.brush) canvas.style.cursor = "";
+      }
+    });
 
   function rayHitLocal(clientX, clientY) {
     const rect = canvas.getBoundingClientRect();
@@ -800,7 +843,10 @@ async function loadSplat() {
     _lastBrushRayMs = now;
     _lastBrushX = clientX; _lastBrushY = clientY;
     const r = rayHitLocal(clientX, clientY);
-    if (r) effects.brushAt(r.local);
+    if (r) {
+      effects.brushAt(r.local);
+      if (brushParams.effector) effects.setMaskCenter(r.local);
+    }
   }
 
   canvas.addEventListener("pointerdown", (e) => {
@@ -810,6 +856,15 @@ async function loadSplat() {
       brushAtScreen(e.clientX, e.clientY);
       mouseBrushing = true;
     }
+    // Mouse press spawns a Surface Tension vortex at the cursor (gated on
+    // stMouseSpawn + the surface-tension toggle inside the pass).
+    if (postfx?.params?.stMouseSpawn && postfx?.spawnSurfaceTensionVortex) {
+      const rect = canvas.getBoundingClientRect();
+      postfx.spawnSurfaceTensionVortex(
+        (e.clientX - rect.left) / rect.width,
+        1.0 - (e.clientY - rect.top) / rect.height,
+      );
+    }
   });
   canvas.addEventListener("pointermove", (e) => {
     if (!mouseBrushing || !brushParams.brush) return;
@@ -818,6 +873,7 @@ async function loadSplat() {
   canvas.addEventListener("pointerup", (e) => {
     if (mouseBrushing) {
       effects.releaseBrush();
+      if (brushParams.effector) effects.setMaskCenter(null);
       mouseBrushing = false;
       downPos = null;
       return;
@@ -870,6 +926,10 @@ async function loadSplat() {
   }
   // Expose for the hand-tracking block below to share the same logic
   window.__brushParams = brushParams;
+  window.__effects = effects;
+  window.__effectUniforms = effectUniforms;
+  window.__effectorMesh = effectorMesh;
+  window.__postfx = postfx;
 
   // ---- Keyboard ----
   window.addEventListener("keydown", (e) => {
@@ -1083,6 +1143,15 @@ async function loadSplat() {
     onePinchMoved  = false;
     onePinchStart.x = onePinchPrev.x = p.x;
     onePinchStart.y = onePinchPrev.y = p.y;
+    // Hand pinch spawns a Surface Tension vortex at the hand's screen
+    // position. The pass guards its own gates (postEnable, surfaceTensionOn,
+    // stHandSpawn) so we can call unconditionally — it no-ops when off.
+    if (postfx?.params?.stHandSpawn && postfx?.spawnSurfaceTensionVortex) {
+      postfx.spawnSurfaceTensionVortex(
+        p.x / window.innerWidth,
+        1.0 - p.y / window.innerHeight,
+      );
+    }
   }
 
   let handBrushing = false;
@@ -1100,7 +1169,10 @@ async function loadSplat() {
       if (now - _handBrushMs >= 33 || dx*dx + dy*dy >= 9) {
         _handBrushMs = now; _handBrushX = p.x; _handBrushY = p.y;
         const local = screenToLocalHit(p.x, p.y);
-        if (local) effects.brushAt(local);
+        if (local) {
+          effects.brushAt(local);
+          if (window.__brushParams?.effector) effects.setMaskCenter(local);
+        }
       }
       onePinchPrev.x = p.x; onePinchPrev.y = p.y;
       return;
@@ -1122,6 +1194,7 @@ async function loadSplat() {
     if (!onePinchActive) return;
     if (handBrushing) {
       effects.releaseBrush();
+      if (window.__brushParams?.effector) effects.setMaskCenter(null);
       handBrushing = false;
     } else if (!onePinchMoved) {
       // Quick tap → click → dissolve (no brush)
@@ -1303,6 +1376,19 @@ renderer.setAnimationLoop(() => {
 
   // Data-label overlay (cards + bbox + ambient ticks)
   if (dataLabels) dataLabels.update(window.innerWidth, window.innerHeight);
+
+  // Effector Mode wireframe sphere — tracks the hand-driven mask center.
+  // maskCenter / maskRadius are written by effects.setMaskCenter() in the
+  // brush handlers; visibility gated on uMaskActive so the sphere only
+  // shows while the user is actively pressing / pinching.
+  if (effectorMesh) {
+    const on = effectUniforms.maskActive.value > 0.5;
+    effectorMesh.visible = on;
+    if (on) {
+      effectorMesh.position.copy(effectUniforms.maskCenter.value);
+      effectorMesh.scale.setScalar(effectUniforms.maskRadius.value);
+    }
+  }
 
   // Voxelizer / Quadizer opacity follows their layer-visibility uniform,
   // which is animated by EffectController when the corresponding checkbox

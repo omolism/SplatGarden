@@ -291,12 +291,9 @@ const PainterlyShader = {
     uMatissePosterize:    { value: 5.0 },   // colour quantization steps per channel
     uMatisseEdgeThresh:   { value: 0.15 },  // Sobel threshold above which we draw outline
     uMatisseSaturation:   { value: 1.6 },
-    uVanGoghStroke:       { value: 6.0 },   // brushstroke length in pixels
-    uVanGoghTurb:         { value: 8.0 },   // flow-field turbulence scale
-    uVanGoghSat:          { value: 1.5 },   // saturation boost
-    uSeuratDotSize:       { value: 14.0 },  // grid cell size in px
-    uSeuratSat:           { value: 1.6 },   // dot colour saturation boost
-    uSeuratPaper:         { value: 0.92 },  // background tint (paper luminance)
+    uSeuratDotSize:       { value: 5.5 },   // grid cell size in px
+    uSeuratSat:           { value: 1.9 },   // dot colour saturation boost
+    uSeuratPaper:         { value: 0.37 },  // background tint (paper luminance)
   },
   vertexShader: /* glsl */ `
     varying vec2 vUv;
@@ -312,7 +309,6 @@ const PainterlyShader = {
     uniform float uTime;
     uniform float uMonetRadius;
     uniform float uMatissePosterize, uMatisseEdgeThresh, uMatisseSaturation;
-    uniform float uVanGoghStroke, uVanGoghTurb, uVanGoghSat;
     uniform float uSeuratDotSize, uSeuratSat, uSeuratPaper;
     varying vec2 vUv;
 
@@ -412,28 +408,6 @@ const PainterlyShader = {
         vec3 paper = vec3(uSeuratPaper);
         col = mix(paper, cc, mask);
       }
-      // ---- 3. Van Gogh — flow-aligned directional brushstrokes ----------
-      // Samples N taps along a noise-driven direction → each pixel becomes
-      // an averaged smear that follows the underlying flow field, like
-      // Starry Night's swirling strokes.
-      else if (uStyle == 3) {
-        // Build a smooth flow direction from a noisy "angle field"
-        float ang = (hash21(floor(vUv * uVanGoghTurb)) +
-                     hash21(floor(vUv * uVanGoghTurb * 1.7) + 7.3)) * 6.28318;
-        vec2  dir = vec2(cos(ang), sin(ang));
-        vec3 sum  = vec3(0.0);
-        float n   = 0.0;
-        for (int i = -6; i <= 6; i++) {
-          vec2 off = dir * float(i) * px * uVanGoghStroke;
-          sum += texture2D(tDiffuse, vUv + off).rgb;
-          n   += 1.0;
-        }
-        col = sum / n;
-        // Boost saturation — Van Gogh palette runs hot
-        float lum = luma(col);
-        col = mix(vec3(lum), col, uVanGoghSat);
-      }
-
       gl_FragColor = vec4(col, 1.0);
     }
   `,
@@ -502,6 +476,249 @@ const KaleidoscopeShader = {
   `,
 };
 
+// ---------------------------------------------------------------------------
+// UnderwaterShader — Dave_Hoskins "Tileable Water Caustic" (Shadertoy 2014)
+// adapted as a screen post-process. Combines:
+//   1. The 5-iteration tileable caustic pattern (additive overlay)
+//   2. A bluish tint applied to the rendered scene (multiplicative)
+//   3. A gentle UV-wave distortion so the image shimmers like through water
+//   4. Optional darken so the underwater look reads "deeper"
+// All knobs zeroed disables visible effect; underwaterOn=false bypasses
+// the pass entirely so cost is zero when not in use.
+// ---------------------------------------------------------------------------
+const UnderwaterShader = {
+  uniforms: {
+    tDiffuse:         { value: null },
+    uTime:            { value: 0.0 },
+    uCausticStrength: { value: 0.5 },
+    uCausticScale:    { value: 8.0 },
+    uTintColor:       { value: new THREE.Vector3(0.55, 0.85, 1.0) },
+    uTintAmount:      { value: 0.4 },
+    uWaveAmount:      { value: 0.6 },
+    uDarken:          { value: 0.2 },
+  },
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: /* glsl */`
+    uniform sampler2D tDiffuse;
+    uniform float uTime;
+    uniform float uCausticStrength;
+    uniform float uCausticScale;
+    uniform vec3  uTintColor;
+    uniform float uTintAmount;
+    uniform float uWaveAmount;
+    uniform float uDarken;
+    varying vec2 vUv;
+
+    // ---- Dave_Hoskins tileable caustic (5-iteration, additive output) ----
+    // Original packs the dancing-light bands by iteratively warping a 2D
+    // domain and accumulating reciprocal distances. The "250.0" offset is
+    // a magic number from the original that places the sample far enough
+    // from the origin that fmod tiling looks seamless.
+    vec3 dhCaustic(vec2 uv, float t) {
+      const float TAU = 6.28318530718;
+      vec2 p = mod(uv * TAU, TAU) - 250.0;
+      vec2 i = p;
+      float c = 1.0;
+      float inten = 0.005;
+      for (int n = 0; n < 5; n++) {
+        float tt = t * (1.0 - (3.5 / float(n + 1)));
+        i = p + vec2(cos(tt - i.x) + sin(tt + i.y),
+                     sin(tt - i.y) + cos(tt + i.x));
+        c += 1.0 / length(vec2(p.x / (sin(i.x + tt) / inten),
+                               p.y / (cos(i.y + tt) / inten)));
+      }
+      c /= 5.0;
+      c = 1.17 - pow(c, 1.4);
+      vec3 colour = vec3(pow(abs(c), 8.0));
+      // Original biases toward teal — keep that as the caustic colour
+      // before the user-tunable tint multiplies the underlying scene.
+      return clamp(colour + vec3(0.0, 0.35, 0.5), 0.0, 1.0);
+    }
+
+    void main() {
+      // ---- Wave UV shimmer ---------------------------------------------
+      // Two perpendicular sine ripples (horizontal + vertical) at different
+      // spatial / temporal frequencies → reads as gently refracted water.
+      vec2 dUv = vUv;
+      dUv.x += sin(vUv.y * 30.0 + uTime * 0.70) * uWaveAmount * 0.004;
+      dUv.y += cos(vUv.x * 25.0 + uTime * 0.50) * uWaveAmount * 0.003;
+
+      vec4 base = texture2D(tDiffuse, clamp(dUv, vec2(0.0), vec2(1.0)));
+
+      // ---- Caustic overlay ----------------------------------------------
+      vec3 caus = dhCaustic(vUv * uCausticScale, uTime * 0.5 + 23.0);
+
+      // ---- Underwater tint + darken -------------------------------------
+      // Multiplicative blue/teal tint pulls colour temperature underwater.
+      // Darken simulates depth — fades the scene toward black before the
+      // caustic overlay reads as "light shafts from above".
+      vec3 tinted = mix(base.rgb, base.rgb * uTintColor, uTintAmount);
+      tinted     *= 1.0 - uDarken;
+
+      // Additive caustic — bright bands stay visible against the tint.
+      vec3 final = tinted + caus * uCausticStrength;
+
+      gl_FragColor = vec4(final, base.a);
+    }
+  `,
+};
+
+// ---------------------------------------------------------------------------
+// SurfaceTensionShader — visual port of xenn's "surface tension phase shift
+// osci" (Shadertoy, 2020). The original is a multi-pass cellular automaton
+// where mouse clicks spawn vortices that propagate through a particle field.
+// Replicating the CA in screen space would need feedback render targets;
+// instead we approximate the look with a single fragment pass:
+//   - Cellular-Voronoi domain with per-cell animated jitter
+//   - Phase-shifted oscillation read off the cell distance
+//   - Iridescent rainbow band at the cell edges (the "tension lines")
+//   - Optional click-driven swirl warp of the UV before sampling
+// Dedicated knobs (NOT reused from Underwater) so the look is tunable
+// independently per the user's "different param if needed" preference.
+// ---------------------------------------------------------------------------
+// Max simultaneous vortices in the Surface Tension overlay. 8 is plenty —
+// past that the loop cost climbs without much added visual richness.
+const ST_MAX_VORTEX = 8;
+const SurfaceTensionShader = {
+  uniforms: {
+    tDiffuse:           { value: null },
+    uTime:              { value: 0.0 },
+    uStStrength:        { value: 0.6 },     // overlay intensity
+    uStScale:           { value: 6.0 },     // cell density (higher = smaller bubbles)
+    uStOscSpeed:        { value: 1.0 },     // cell-jitter animation rate
+    uStPhase:           { value: 0.0 },     // global phase offset
+    uStEdgeWidth:       { value: 0.35 },    // bubble-edge band width
+    uStHueShift:        { value: 0.0 },     // iridescent hue rotation
+    uStBlendMode:       { value: 0 },       // 0=add, 1=screen, 2=multiply
+    // ---- Vortex pool — driven by hand-pinch / mouse-press events --------
+    // Each vortex is a (uv, strength) pair. Strength includes life-decay so
+    // we don't need a separate age uniform; when strength reaches ~0 the
+    // pool slot is freed by the JS side.
+    uStVortexPos:       { value: Array.from({ length: ST_MAX_VORTEX }, () => new THREE.Vector2(-2, -2)) },
+    uStVortexStrength:  { value: new Float32Array(ST_MAX_VORTEX) },
+    uStVortexCount:     { value: 0 },
+    uStVortexRadius:    { value: 0.18 },    // falloff radius in UV space per vortex
+    uStVortexTwist:     { value: 1.0 },     // global twist multiplier
+  },
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    void main() {
+      vUv = uv;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+  `,
+  fragmentShader: /* glsl */`
+    uniform sampler2D tDiffuse;
+    uniform float uTime;
+    uniform float uStStrength;
+    uniform float uStScale;
+    uniform float uStOscSpeed;
+    uniform float uStPhase;
+    uniform float uStEdgeWidth;
+    uniform float uStHueShift;
+    uniform int   uStBlendMode;
+    // Vortex pool — driven by hand-pinch / mouse-press events from JS.
+    // Length must match the JS-side ST_MAX_VORTEX constant.
+    uniform vec2  uStVortexPos[${ST_MAX_VORTEX}];
+    uniform float uStVortexStrength[${ST_MAX_VORTEX}];
+    uniform int   uStVortexCount;
+    uniform float uStVortexRadius;
+    uniform float uStVortexTwist;
+    varying vec2 vUv;
+
+    // Animated cellular distance — Voronoi with sine-jittered cell centres
+    // (cheap, gives smooth bubble-edge oscillation). Returns the distance to
+    // the nearest centre (cellular "f1" value).
+    float stCellular(vec2 p, float t) {
+      vec2 gi = floor(p);
+      vec2 gf = fract(p);
+      float minDist = 1e9;
+      for (int x = -1; x <= 1; x++) {
+        for (int y = -1; y <= 1; y++) {
+          vec2 nb = vec2(float(x), float(y));
+          vec2 jit = vec2(
+            0.5 + 0.5 * sin(t * uStOscSpeed + dot(gi + nb, vec2(4.7, 1.7))),
+            0.5 + 0.5 * cos(t * uStOscSpeed + dot(gi + nb, vec2(5.3, 9.1)))
+          );
+          vec2 d = nb + jit - gf;
+          minDist = min(minDist, dot(d, d));
+        }
+      }
+      return sqrt(minDist);
+    }
+
+    // Walk the vortex pool, applying each as a localised rotational warp
+    // of the UV (composed sequentially — later vortices twist the
+    // already-warped UV, which feels more "fluid" than blending offsets).
+    vec2 stApplyVortices(vec2 uv) {
+      vec2 warped = uv;
+      for (int i = 0; i < ${ST_MAX_VORTEX}; i++) {
+        if (i >= uStVortexCount) break;
+        vec2 c = uStVortexPos[i];
+        if (c.x < -1.0) continue;        // sentinel = empty slot
+        vec2 toC = warped - c;
+        float r  = length(toC);
+        float fall = exp(-r / max(uStVortexRadius, 0.005));
+        float ang  = uStVortexStrength[i] * uStVortexTwist * fall * 4.0;
+        float ca = cos(ang), sa = sin(ang);
+        mat2 rot = mat2(ca, -sa, sa, ca);
+        warped = c + rot * toC;
+      }
+      return warped;
+    }
+
+    void main() {
+      // ---- Vortex UV warp ---------------------------------------------
+      // Sample-coords pass through the active vortex pool. Each vortex
+      // rotates the local UV neighbourhood; falloff = exp(-r / radius)
+      // so distant pixels are untouched.
+      vec2 uv = uStVortexCount > 0 ? stApplyVortices(vUv) : vUv;
+      vec4 base = texture2D(tDiffuse, clamp(uv, vec2(0.0), vec2(1.0)));
+
+      // ---- Surface-tension pattern -------------------------------------
+      vec2 p = vUv * uStScale;
+      float cd = stCellular(p, uTime);
+
+      // Phase-shifted oscillation off the cell distance — drives both the
+      // alpha band ("tension line") and the hue.
+      float phase = sin(cd * 10.0 - uTime * 2.0 + uStPhase);
+
+      // Edge band: narrow ring where cd is near the "membrane" radius.
+      float bandCenter = 0.55;
+      float band = 1.0 - smoothstep(uStEdgeWidth * 0.5, uStEdgeWidth,
+                                    abs(cd - bandCenter));
+
+      // Iridescent gradient: rotating RGB triple driven by phase + a hue
+      // shift knob so the user can pick a colour family.
+      vec3 iris = 0.5 + 0.5 * cos(
+        vec3(0.0, 2.094, 4.188) + phase * 3.14 + uStHueShift * 6.28);
+
+      vec3 stPattern = iris * band * uStStrength;
+
+      // ---- Blend modes -------------------------------------------------
+      vec3 final;
+      if (uStBlendMode == 1) {
+        // Screen blend
+        final = 1.0 - (1.0 - base.rgb) * (1.0 - stPattern);
+      } else if (uStBlendMode == 2) {
+        // Multiply blend
+        final = base.rgb * (vec3(1.0) - stPattern * 0.5);
+      } else {
+        // Additive (default)
+        final = base.rgb + stPattern;
+      }
+
+      gl_FragColor = vec4(final, base.a);
+    }
+  `,
+};
+
 export function setupPostFX(renderer, scene, camera) {
   const composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
@@ -523,6 +740,15 @@ export function setupPostFX(renderer, scene, camera) {
   // Painterly — Monet (Kuwahara) / Matisse (posterize + Sobel) / Pollock
   const painterlyPass = new ShaderPass(PainterlyShader);
   composer.addPass(painterlyPass);
+
+  // Underwater — Dave_Hoskins tileable water caustic + blue tint + UV waves.
+  // Sits BEFORE Echo so motion trails see the underwater-treated frame.
+  const underwaterPass = new ShaderPass(UnderwaterShader);
+  composer.addPass(underwaterPass);
+
+  // Surface Tension — xenn-style oscillating Voronoi membrane overlay.
+  const surfaceTensionPass = new ShaderPass(SurfaceTensionShader);
+  composer.addPass(surfaceTensionPass);
 
   // Echo / Trails — Notch-style motion smear via feedback texture
   const echoPass = new EchoPass();
@@ -560,27 +786,55 @@ export function setupPostFX(renderer, scene, camera) {
     echoPersist:   0.97,    // 0.90 → 0.97 = much longer trails before they fade
     echoMix:       1.00,
 
+    // Underwater — Dave_Hoskins tileable water caustic + tint + UV waves.
+    // Defaults tuned to the user-preferred preset (soft caustic + warm tint).
+    underwaterOn:        true,
+    underwaterCaustic:   0.2,    // additive caustic intensity (0..1.5)
+    underwaterScale:     2.0,    // caustic spatial frequency (2..32)
+    underwaterTintR:     1.0,    // tint colour R (0..1)
+    underwaterTintG:     0.8,    // tint colour G
+    underwaterTintB:     1.0,    // tint colour B
+    underwaterTintAmt:   0.4,    // tint mix amount (0..1)
+    underwaterWave:      0.0,    // UV-wave shimmer amount (0..2)
+    underwaterDarken:    0.27,   // multiplicative darken before caustic (0..1)
+
+    // Surface Tension — independent params, NOT reused from Underwater.
+    // Vortex-pool model: hand pinch + mouse press spawn vortices, each
+    // with its own life. Up to ST_MAX_VORTEX active at once.
+    surfaceTensionOn:    false,
+    stStrength:          0.6,    // overlay opacity (0..2)
+    stScale:             6.0,    // cell density (2..24)
+    stOscSpeed:          1.0,    // animation rate (0..3)
+    stEdgeWidth:         0.35,   // membrane band thickness (0.05..0.8)
+    stPhase:             0.0,    // global phase offset (0..6.28)
+    stHueShift:          0.0,    // rotate iridescent hue (0..1)
+    stBlend:             "Additive",   // Additive | Screen | Multiply
+    // Vortex behaviour — spawned by interaction, decayed by JS each frame.
+    stVortexSpawn:       1.0,    // strength of each new vortex (0..3)
+    stVortexLifetime:    1.5,    // seconds for a vortex to decay to zero
+    stVortexRadius:      0.18,   // UV-space falloff radius per vortex (0.02..0.6)
+    stVortexTwist:       1.0,    // global twist multiplier (0..3)
+    stMouseSpawn:        true,   // mouse press spawns a vortex
+    stHandSpawn:         true,   // hand pinch spawns a vortex (when surfaceTensionOn)
+
     painterly:           "None",   // None | Monet | Matisse | Van Gogh | Seurat
     monetRadius:         4.0,
     matissePosterize:    5.0,
     matisseEdge:         0.6,      // bumped from 0.15
     matisseSaturation:   1.6,
-    vanGoghStroke:       6.0,
-    vanGoghTurb:         8.0,
-    vanGoghSat:          1.5,
-    seuratDotSize:       14.0,
-    seuratSat:           1.6,
-    seuratPaper:         0.92,
+    seuratDotSize:       5.5,
+    seuratSat:           1.9,
+    seuratPaper:         0.37,
 
-    lensOn:        false,
-    lensAmt:       0.20,
-    lensZoom:      1.00,
-    lensDispersion: 0.0,
+    lensOn:        true,
+    lensAmt:       -1.0,
+    lensZoom:      0.95,
+    lensDispersion: 0.01,
     lensCenterX:   0.5,
     lensCenterY:   0.5,
-    lensSqueeze:   1.0,
-    lensFisheye:   0.0,
-    lensFOV:       1.0,
+    lensSqueeze:   0.97,
+    lensFisheye:   0.04,
+    lensFOV:       1.77,
     vignetteOn:    false,
     vignetteAmt:   0.4,
     vignetteSoft:  0.8,
@@ -595,7 +849,10 @@ export function setupPostFX(renderer, scene, camera) {
   };
 
   const TONEMAP_INDEX = { None: 0, Reinhard: 1, Cineon: 2, ACES: 3 };
-  const PAINTERLY_INDEX = { None: 0, Monet: 1, Matisse: 2, "Van Gogh": 3, Seurat: 4 };
+  // Note: Seurat keeps index 4 even after Van Gogh's removal — the shader
+  // branches on the literal int, so reindexing would break the lookup.
+  const PAINTERLY_INDEX = { None: 0, Monet: 1, Matisse: 2, Seurat: 4 };
+  const ST_BLEND_INDEX = { Additive: 0, Screen: 1, Multiply: 2 };
 
   let rotation = 0.0;
 
@@ -608,6 +865,24 @@ export function setupPostFX(renderer, scene, camera) {
   }
 
   let polishTime = 0;
+
+  // ---- Surface Tension vortex pool --------------------------------------
+  // Each entry { x, y, strength } — x,y in [0,1] UV space (Y-up), strength
+  // decays toward 0 each frame in update(). Hand-pinch and mouse-press
+  // call spawnSurfaceTensionVortex() to push new entries; dead entries
+  // are spliced out during update so the pool stays compact.
+  const stVortexPool = [];
+  function spawnSurfaceTensionVortex(uvX, uvY, strengthMul = 1.0) {
+    if (!params.surfaceTensionOn) return;
+    stVortexPool.push({
+      x: uvX,
+      y: uvY,
+      strength: params.stVortexSpawn * strengthMul,
+    });
+    // Cap pool length at ST_MAX_VORTEX — drop the oldest if exceeded so
+    // the newest interaction always wins.
+    while (stVortexPool.length > ST_MAX_VORTEX) stVortexPool.shift();
+  }
   function update(dt) {
     rotation += params.rotationSpeed * dt;
     kaleidoPass.uniforms.uEnable.value   = params.enable ? 1.0 : 0.0;
@@ -626,6 +901,66 @@ export function setupPostFX(renderer, scene, camera) {
     echoPass.uniforms.uPersistence.value = params.echoPersist;
     echoPass.uniforms.uMix.value         = params.echoMix;
 
+    // Underwater — pass disabled entirely when toggle is off, so zero cost
+    // when not in use. Otherwise drive uTime + tunables each frame.
+    underwaterPass.enabled = params.postEnable && params.underwaterOn;
+    if (underwaterPass.enabled) {
+      const uw = underwaterPass.uniforms;
+      uw.uTime.value            = polishTime;
+      uw.uCausticStrength.value = params.underwaterCaustic;
+      uw.uCausticScale.value    = params.underwaterScale;
+      uw.uTintColor.value.set(params.underwaterTintR, params.underwaterTintG, params.underwaterTintB);
+      uw.uTintAmount.value      = params.underwaterTintAmt;
+      uw.uWaveAmount.value      = params.underwaterWave;
+      uw.uDarken.value          = params.underwaterDarken;
+    }
+
+    // Surface Tension — independent uniform drive + vortex-pool decay.
+    surfaceTensionPass.enabled = params.postEnable && params.surfaceTensionOn;
+    if (surfaceTensionPass.enabled) {
+      const st = surfaceTensionPass.uniforms;
+      st.uTime.value          = polishTime;
+      st.uStStrength.value    = params.stStrength;
+      st.uStScale.value       = params.stScale;
+      st.uStOscSpeed.value    = params.stOscSpeed;
+      st.uStEdgeWidth.value   = params.stEdgeWidth;
+      st.uStPhase.value       = params.stPhase;
+      st.uStHueShift.value    = params.stHueShift;
+      st.uStBlendMode.value   = ST_BLEND_INDEX[params.stBlend] ?? 0;
+      st.uStVortexRadius.value = params.stVortexRadius;
+      st.uStVortexTwist.value  = params.stVortexTwist;
+
+      // ---- Vortex pool decay -----------------------------------------
+      // Each active vortex loses strength linearly toward zero over
+      // stVortexLifetime seconds. Dead vortices (strength <= 0) are
+      // skipped during packing — their slot is reusable for new spawns.
+      const decayPerSec = 1.0 / Math.max(params.stVortexLifetime, 0.05);
+      for (const v of stVortexPool) v.strength -= decayPerSec * dt;
+
+      // Pack live vortices into the uniform arrays in stable order.
+      let live = 0;
+      for (const v of stVortexPool) {
+        if (v.strength <= 0.0) continue;
+        if (live >= ST_MAX_VORTEX) break;
+        st.uStVortexPos.value[live].set(v.x, v.y);
+        st.uStVortexStrength.value[live] = v.strength;
+        live++;
+      }
+      // Sentinel out the remaining slots so the shader's guard `c.x < -1`
+      // ignores them even if the loop counter is wrong.
+      for (let i = live; i < ST_MAX_VORTEX; i++) {
+        st.uStVortexPos.value[i].set(-2, -2);
+        st.uStVortexStrength.value[i] = 0.0;
+      }
+      st.uStVortexCount.value = live;
+
+      // Compact the pool (drop dead entries) so spawnSurfaceTensionVortex
+      // can reuse slots without bloating the array.
+      for (let i = stVortexPool.length - 1; i >= 0; i--) {
+        if (stVortexPool[i].strength <= 0.0) stVortexPool.splice(i, 1);
+      }
+    }
+
     const styleIdx = PAINTERLY_INDEX[params.painterly] ?? 0;
     // Painterly is a 2D post-process — operates on every pixel of the framebuffer.
     // It would smear Quad / Voxel overlays alongside the splat. Auto-disable
@@ -640,9 +975,6 @@ export function setupPostFX(renderer, scene, camera) {
     pu.uMatissePosterize.value  = params.matissePosterize;
     pu.uMatisseEdgeThresh.value = params.matisseEdge;
     pu.uMatisseSaturation.value = params.matisseSaturation;
-    pu.uVanGoghStroke.value     = params.vanGoghStroke;
-    pu.uVanGoghTurb.value       = params.vanGoghTurb;
-    pu.uVanGoghSat.value        = params.vanGoghSat;
     pu.uSeuratDotSize.value     = params.seuratDotSize;
     pu.uSeuratSat.value         = params.seuratSat;
     pu.uSeuratPaper.value       = params.seuratPaper;
@@ -711,27 +1043,22 @@ export function setupPostFX(renderer, scene, camera) {
     // Painterly: Style picker AT THE TOP, per-style detail folders below.
     // Switching style auto-opens only the relevant detail folder.
     const fPaint = fPost.addFolder("Painterly").close();
-    let fMonet, fMatisse, fVanGogh, fSeurat;
+    let fMonet, fMatisse, fSeurat;
     fPaint.add(params, "painterly", Object.keys(PAINTERLY_INDEX)).name("Style")
       .onChange((v) => {
-        [fMonet, fMatisse, fVanGogh, fSeurat].forEach(f => f?.close());
-        if (v === "Monet")    fMonet.open();
-        if (v === "Matisse")  fMatisse.open();
-        if (v === "Van Gogh") fVanGogh.open();
-        if (v === "Seurat")   fSeurat.open();
+        [fMonet, fMatisse, fSeurat].forEach(f => f?.close());
+        if (v === "Monet")   fMonet.open();
+        if (v === "Matisse") fMatisse.open();
+        if (v === "Seurat")  fSeurat.open();
       });
     fMonet   = fPaint.addFolder("Monet").close();
     fMatisse = fPaint.addFolder("Matisse").close();
-    fVanGogh = fPaint.addFolder("Van Gogh").close();
     fSeurat  = fPaint.addFolder("Seurat").close();
     fMonet.add(params, "monetRadius",         1,   8,  0.5 ).name("Radius");
     fMatisse.add(params, "matissePosterize",  2,  12,  1   ).name("Posterize");
     fMatisse.add(params, "matisseEdge",       0.0, 1.0, 0.01).name("Edge");
     fMatisse.add(params, "matisseSaturation", 0.5, 3.0, 0.05).name("Saturation");
-    fVanGogh.add(params, "vanGoghStroke",     2,  16,  0.5 ).name("Stroke Length");
-    fVanGogh.add(params, "vanGoghTurb",       2,  24,  0.5 ).name("Turbulence");
-    fVanGogh.add(params, "vanGoghSat",        0.5, 2.5, 0.05).name("Saturation");
-    fSeurat.add(params, "seuratDotSize",      4,   40, 0.5 ).name("Dot Size");
+    fSeurat.add(params, "seuratDotSize",      2,   40, 0.5 ).name("Dot Size");
     fSeurat.add(params, "seuratSat",          0.5, 3.0, 0.05).name("Saturation");
     fSeurat.add(params, "seuratPaper",        0.0, 1.0, 0.01).name("Paper Tint");
 
@@ -739,6 +1066,39 @@ export function setupPostFX(renderer, scene, camera) {
     fEcho.add(params, "echoOn").name("Enable");
     fEcho.add(params, "echoPersist", 0.5, 0.99, 0.005).name("Persistence");
     fEcho.add(params, "echoMix",     0.0, 1.0,  0.01 ).name("Mix");
+
+    // Underwater — Dave_Hoskins tileable water caustic + tint + UV waves.
+    const fUw = fPost.addFolder("Underwater").close();
+    fUw.add(params, "underwaterOn").name("Enable");
+    fUw.add(params, "underwaterCaustic", 0.0, 1.5,  0.01 ).name("Caustic Strength");
+    fUw.add(params, "underwaterScale",   2.0, 32.0, 0.5  ).name("Caustic Scale");
+    fUw.add(params, "underwaterTintR",   0.0, 1.0,  0.01 ).name("Tint R");
+    fUw.add(params, "underwaterTintG",   0.0, 1.0,  0.01 ).name("Tint G");
+    fUw.add(params, "underwaterTintB",   0.0, 1.0,  0.01 ).name("Tint B");
+    fUw.add(params, "underwaterTintAmt", 0.0, 1.0,  0.01 ).name("Tint Amount");
+    fUw.add(params, "underwaterWave",    0.0, 2.0,  0.01 ).name("Wave Shimmer");
+    fUw.add(params, "underwaterDarken",  0.0, 1.0,  0.01 ).name("Darken");
+
+    // Surface Tension — xenn-style oscillating Voronoi membrane overlay.
+    // Vortex-pool model: hand pinch + mouse press spawn vortices that
+    // decay over time. Up to ST_MAX_VORTEX live at once.
+    const fSt = fPost.addFolder("Surface Tension").close();
+    fSt.add(params, "surfaceTensionOn").name("Enable");
+    fSt.add(params, "stStrength",   0.0, 2.0,  0.01).name("Strength");
+    fSt.add(params, "stScale",      2.0, 24.0, 0.5 ).name("Cell Scale");
+    fSt.add(params, "stOscSpeed",   0.0, 3.0,  0.05).name("Osc Speed");
+    fSt.add(params, "stEdgeWidth",  0.05, 0.8, 0.01).name("Edge Width");
+    fSt.add(params, "stPhase",      0.0, 6.28, 0.05).name("Phase");
+    fSt.add(params, "stHueShift",   0.0, 1.0,  0.01).name("Hue Shift");
+    fSt.add(params, "stBlend", Object.keys(ST_BLEND_INDEX)).name("Blend Mode");
+    // Vortex sub-folder so the pool knobs cluster together.
+    const fStVortex = fSt.addFolder("Vortices").close();
+    fStVortex.add(params, "stMouseSpawn").name("Mouse Spawn");
+    fStVortex.add(params, "stHandSpawn").name("Hand Spawn");
+    fStVortex.add(params, "stVortexSpawn",    0.0, 3.0,  0.05).name("Spawn Strength");
+    fStVortex.add(params, "stVortexLifetime", 0.1, 6.0,  0.05).name("Lifetime (s)");
+    fStVortex.add(params, "stVortexRadius",   0.02, 0.6, 0.005).name("Falloff Radius");
+    fStVortex.add(params, "stVortexTwist",    0.0, 3.0,  0.05).name("Twist Mul");
 
     const fLens = fPost.addFolder("Lens Distortion").close();
     fLens.add(params, "lensOn").name("Enable");
@@ -773,5 +1133,5 @@ export function setupPostFX(renderer, scene, camera) {
     return f;
   }
 
-  return { composer, params, render, setSize, attachGUI };
+  return { composer, params, render, setSize, attachGUI, spawnSurfaceTensionVortex };
 }

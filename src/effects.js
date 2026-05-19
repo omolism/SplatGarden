@@ -127,6 +127,10 @@ const EFFECT_INDEX = {
   "Dissolve & Reform": 1,
   "Scan Line": 2,
   "Spiral Smear": 3,
+  "Vortex Drift": 4,
+  "Chaotic Particles": 5,
+  "Slime Molds": 6,
+  "Feather Roots": 7,
 };
 
 export function createScanModifier() {
@@ -348,11 +352,27 @@ export function createScanModifier() {
                 float effRadius    = radiusFx * (1.0 + edgeBend * ${inputs.uEdgeRagged} * 0.55);
                 float burn         = dist + nSigned * effRadius * 0.45;
 
-                // Sweep: 0..0.5 burn outward, 0.5..1 reform inward
+                // Sweep: 0..0.5 burn outward, 0.5..1 reform inward (one-shot click path).
                 float p   = tNorm;
                 float fwd = smoothstep(0.0, 0.50, p);
                 float rev = smoothstep(0.50, 1.0, p);
-                float cutoff = mix(0.0, effRadius, fwd) * (1.0 - rev) + mix(effRadius, 0.0, rev) * rev;
+                float cutoffTime = mix(0.0, effRadius, fwd) * (1.0 - rev) + mix(effRadius, 0.0, rev) * rev;
+
+                // ---- Effector-sphere override (hand-tracking goal) ----------
+                // When uMaskActive is held high, replace the time sweep with a
+                // spatial sphere mask centered on uMaskCenter. Splats inside
+                // the sphere stay dissolved as long as the hand is there;
+                // splats outside snap back to origin (gone=0 in their case).
+                // Matches the TD Gaussian-splat effector reference.
+                float effDist = length(center - ${inputs.uMaskCenter});
+                float effMask = 1.0 - smoothstep(
+                    ${inputs.uMaskRadius} * (1.0 - ${inputs.uMaskSoft}),
+                    ${inputs.uMaskRadius},
+                    effDist);
+                float cutoff = mix(cutoffTime, effRadius * effMask, ${inputs.uMaskActive});
+                // While held, suppress the reform tail so dissolved splats
+                // stay "blown" instead of pre-fading toward home.
+                rev = mix(rev, 0.0, ${inputs.uMaskActive});
 
                 float edgeW  = max(${inputs.uEdgeWidth} * effRadius, 0.001);
                 float burnt  = step(burn, cutoff);
@@ -514,6 +534,335 @@ export function createScanModifier() {
                 // NOTE: per-splat colour is intentionally NOT modified — every
                 // splat carries its source RGB so the smear looks like the
                 // subject's own material flowing.
+
+              } else if (${inputs.uEffect} == 4) {
+                // ==============================================================
+                // Effect 4 — Vortex Drift  (3D port of Shadertoy XsjyRm
+                // "Tons of Spatial-Sorted Particles")
+                //
+                // Each splat drifts along a 3D curl-noise flow field. The curl
+                // of a vector noise potential is divergence-free so splats
+                // orbit and shear without clumping — the dense, spatially
+                // sorted swirling look from the reference. Localised around
+                // uHit via a soft falloff mask; far splats stay fixed.
+                //
+                // Reused knobs:
+                //   uRadius     — reach of the affected volume
+                //   uNoiseScale — spatial scale of the flow field
+                //   uSpeed      — animation speed of the flow
+                //   uIntensity  — max displacement magnitude
+                //   uWindDir    — bulk drift direction added on top of curl
+                //   uEdgeRagged — noise-modulates the mask edge
+                // ==============================================================
+
+                // ----- Localisation mask (soft sphere around uHit) -------
+                float reachVD = ${inputs.uRadius} * 1.8;
+                float vMask   = 1.0 - smoothstep(reachVD * 0.55, reachVD, dist);
+                vMask         = clamp(vMask + (n - 0.5) * 0.25 * ${inputs.uEdgeRagged}, 0.0, 1.0);
+
+                // ----- 3D curl noise via finite-difference of vector noise ----
+                // Sample vnoise at 3 offset positions to get 3 distinct scalar
+                // potentials Px/Py/Pz, then take curl =
+                //   (dPz/dy - dPy/dz, dPx/dz - dPz/dx, dPy/dx - dPx/dy).
+                // Single-octave vnoise keeps cost ~12 hashes/splat; flow is
+                // smoother and reads better as a particle field than fbm.
+                float vdE   = 0.10;
+                float vdT   = ${inputs.uTime} * ${inputs.uSpeed} * 0.22;
+                vec3  vdP   = center * ${inputs.uNoiseScale} * 0.6
+                            + ${inputs.uWindDir} * vdT * 0.4;
+
+                vec3 vdOP1 = vdP + vec3(0.0,    0.0,    vdT);
+                vec3 vdOP2 = vdP + vec3(31.41,  0.0,    vdT);
+                vec3 vdOP3 = vdP + vec3(0.0,    47.13,  vdT);
+
+                vec3 vdDX = vec3(vdE, 0.0, 0.0);
+                vec3 vdDY = vec3(0.0, vdE, 0.0);
+                vec3 vdDZ = vec3(0.0, 0.0, vdE);
+
+                float vdGx = (vnoise(vdOP3 + vdDY) - vnoise(vdOP3 - vdDY))
+                           - (vnoise(vdOP2 + vdDZ) - vnoise(vdOP2 - vdDZ));
+                float vdGy = (vnoise(vdOP1 + vdDZ) - vnoise(vdOP1 - vdDZ))
+                           - (vnoise(vdOP3 + vdDX) - vnoise(vdOP3 - vdDX));
+                float vdGz = (vnoise(vdOP2 + vdDX) - vnoise(vdOP2 - vdDX))
+                           - (vnoise(vdOP1 + vdDY) - vnoise(vdOP1 - vdDY));
+                vec3 vdFlow = vec3(vdGx, vdGy, vdGz) / (2.0 * vdE);
+
+                // Per-splat seeded phase so neighbouring splats don't lockstep.
+                float vdPhase = 1.0 + 0.5 * sin(${inputs.uTime} * ${inputs.uSpeed} * 0.35 + rand1 * 6.2831);
+
+                // Time envelope (ease-in ~25%, ease-out from ~75%) so the
+                // effect blooms in and out across uDuration.
+                float vdEnv = smoothstep(0.0, 0.25, tNorm)
+                            * (1.0 - smoothstep(0.75, 1.0, tNorm));
+
+                vec3 vdDrift = vdFlow * ${inputs.uIntensity} * ${inputs.uRadius} * 0.45
+                             * vMask * vdPhase * vdEnv;
+
+                // Add a small bulk drift along uWindDir so the whole cloud
+                // breathes in one direction (matches the "drift" feel of the
+                // preset name without overriding the swirl).
+                vdDrift += ${inputs.uWindDir} * ${inputs.uIntensity} * vMask * vdEnv * 0.18;
+
+                center += vdDrift;
+
+                // Subtle bloom: gaussians on the active flow get a touch
+                // larger so dense regions read as bright "particles."
+                scales *= mix(1.0, 1.18, vMask * vdEnv);
+                // Mild alpha attenuation on the flowing parts so the swirling
+                // mass doesn't oversaturate where streaks overlap.
+                rgba.a *= mix(1.0, 0.85, vMask * vdEnv * 0.4);
+
+              } else if (${inputs.uEffect} == 5) {
+                // ==============================================================
+                // Effect 5 — Chaotic Particles  (port of Shadertoy
+                //   "chaoticParticles" by stephenl7797, 2021)
+                //
+                // 3D Voronoi particle tracking: each splat finds its nearest
+                // animated Voronoi cell center and is pulled toward it. As the
+                // cell offsets drift over time, splats "jump" from one cell to
+                // the next → chaotic clustering motion. The reference's
+                // "depth blur" is approximated by blooming scale + alpha
+                // proximally to cell centers (canonical Voronoi-edge metric
+                // f2-f1 as the bloom inverse).
+                //
+                // Reused knobs:
+                //   uRadius     — soft-mask reach around uHit
+                //   uNoiseScale — Voronoi cell density (higher = smaller cells)
+                //   uSpeed      — cell-offset drift rate
+                //   uIntensity  — pull magnitude toward target cell
+                //   uWindDir    — bulk direction the cell pattern flows in
+                //   uEdgeRagged — mask-edge roughness
+                // ==============================================================
+
+                float cpReach = ${inputs.uRadius} * 1.8;
+                float cpMask  = 1.0 - smoothstep(cpReach * 0.55, cpReach, dist);
+                cpMask        = clamp(cpMask + (n - 0.5) * 0.22 * ${inputs.uEdgeRagged}, 0.0, 1.0);
+
+                // Voronoi domain — multiplier dropped to 0.20 so cells are
+                // LARGE relative to the scene (each cell encompasses many
+                // thousands of splats). With small cells every splat picks a
+                // different center → uncorrelated jitter; with big cells,
+                // splats in the same region all pull toward the same target
+                // → coherent group migration as the field drifts.
+                float cpScale = max(${inputs.uNoiseScale} * 0.20, 0.02);
+                float cpT     = ${inputs.uTime} * ${inputs.uSpeed} * 0.22;
+                vec3  cpP     = (center - ${inputs.uHit}) * cpScale + ${inputs.uWindDir} * cpT;
+
+                // Manual 27-cell Voronoi search — track BOTH the nearest cell
+                // center (target to pull toward) AND the second-nearest
+                // distance (for the f2-f1 edge metric used as bloom inverse).
+                vec3  cpCi = floor(cpP);
+                vec3  cpCf = fract(cpP);
+                float cpD1 = 1e9;
+                float cpD2 = 1e9;
+                vec3  cpBest = vec3(0.0);
+                for (int x = -1; x <= 1; x++) {
+                  for (int y = -1; y <= 1; y++) {
+                    for (int z = -1; z <= 1; z++) {
+                      vec3 nb  = vec3(float(x), float(y), float(z));
+                      // Animate the per-cell jitter so cell centers themselves
+                      // drift — this is what makes splats "track" between cells.
+                      vec3 hh  = hash33(cpCi + nb + vec3(cpT * 0.3, cpT * 0.21, 0.0));
+                      vec3 cc  = cpCi + nb + hh;
+                      vec3 dd  = cc - cpP;
+                      float d2 = dot(dd, dd);
+                      if (d2 < cpD1) { cpD2 = cpD1; cpD1 = d2; cpBest = cc; }
+                      else if (d2 < cpD2) { cpD2 = d2; }
+                    }
+                  }
+                }
+
+                // Convert nearest cell center back to world coords:
+                //   cpBest is in voronoi-domain space; invert the domain map.
+                vec3 cpTarget = (cpBest - ${inputs.uWindDir} * cpT) / cpScale + ${inputs.uHit};
+                vec3 cpPull   = cpTarget - center;
+
+                // Time envelope: ease in/out across uDuration so the effect
+                // blooms gracefully on a one-shot trigger.
+                float cpEnv = smoothstep(0.0, 0.20, tNorm)
+                            * (1.0 - smoothstep(0.80, 1.0, tNorm));
+
+                // Pull magnitude — clamp the per-frame step so splats don't
+                // teleport on huge cells; uIntensity caps the maximum.
+                float cpPullMag = clamp(length(cpPull), 0.0, ${inputs.uIntensity} * 1.5);
+                vec3  cpPullN   = length(cpPull) > 1e-5 ? cpPull / length(cpPull) : vec3(0.0);
+                center += cpPullN * cpPullMag * 0.55 * cpMask * cpEnv;
+
+                // Tiny per-splat seeded jitter — kept very low so the mass
+                // still reads as one coherent flow rather than a noise cloud.
+                vec3 cpJit = (rand3 - 0.5) * 2.0
+                           * 0.005 * ${inputs.uIntensity} * cpMask * cpEnv;
+                center += cpJit;
+
+                // ---- Uniform bloom on all affected splats -----------------
+                // The earlier per-splat f2-f1 bloom varied independently per
+                // splat → flickery, non-cohesive look. Now the whole affected
+                // mass blooms together based on mask×envelope only.
+                scales *= mix(1.0, 1.45, cpMask * cpEnv);
+                rgba.a *= mix(1.0, 0.85, cpMask * cpEnv * 0.5);
+
+              } else if (${inputs.uEffect} == 6) {
+                // ==============================================================
+                // Effect 6 — Slime Molds  (visual port of Shadertoy
+                //   "My virtual slime molds" by michael0884, 2020)
+                //
+                // The original is an agent-based Physarum simulation (multi-
+                // pass cellular automaton — particle positions in one buffer,
+                // pheromone trail map in another, ping-pong each frame). That
+                // can't run in a stateless per-frame splat shader, so we
+                // approximate the LOOK instead: a domain-warped ridge-noise
+                // "trail field" that has thin vein-like features, with each
+                // splat pulled along the local gradient toward high-vein
+                // regions. As the field drifts in time, splats migrate
+                // between veins → similar organic branching aesthetic.
+                //
+                // Knobs:
+                //   uRadius     — soft mask reach around uHit
+                //   uNoiseScale — vein density (higher = thinner veins)
+                //   uSpeed      — vein-field drift rate
+                //   uIntensity  — pull strength toward veins
+                //   uWindDir    — direction the trail field flows in
+                // ==============================================================
+
+                float smReach = ${inputs.uRadius} * 1.8;
+                float smMask  = 1.0 - smoothstep(smReach * 0.55, smReach, dist);
+                smMask        = clamp(smMask + (n - 0.5) * 0.2 * ${inputs.uEdgeRagged}, 0.0, 1.0);
+
+                float smScale = max(${inputs.uNoiseScale} * 1.2, 0.05);
+                float smT     = ${inputs.uTime} * ${inputs.uSpeed} * 0.18;
+                vec3  smP     = (center - ${inputs.uHit}) * smScale + ${inputs.uWindDir} * smT;
+
+                // Trail field: domain-warp vnoise so streams meander, then
+                // ridge-fold (1 - |2v - 1|) to turn smooth noise into thin
+                // bright veins separated by dark gaps — the slime-trail shape.
+                // Wrapped in a macro-style local lambda would be cleaner but
+                // GLSL doesn't allow that, so we inline the helper here.
+                vec3 smW = vec3(
+                  vnoise(smP + vec3(0.0, 0.0, smT)),
+                  vnoise(smP + vec3(5.31, 7.13, smT * 0.7)),
+                  vnoise(smP + vec3(11.7, 3.27, smT * 1.1))
+                ) - 0.5;
+                vec3 smQ = smP + smW * 0.55;
+
+                float smE  = 0.10;
+                float smV  = 1.0 - abs(2.0 * vnoise(smQ) - 1.0);
+                float smVx = 1.0 - abs(2.0 * vnoise(smQ + vec3(smE, 0.0, 0.0)) - 1.0);
+                float smVy = 1.0 - abs(2.0 * vnoise(smQ + vec3(0.0, smE, 0.0)) - 1.0);
+                float smVz = 1.0 - abs(2.0 * vnoise(smQ + vec3(0.0, 0.0, smE)) - 1.0);
+                vec3  smGrad = vec3(smVx - smV, smVy - smV, smVz - smV) / smE;
+
+                // Pull TOWARD high-vein values (gradient points up the ridge).
+                // Magnitude bounded so splats don't shoot off on noisy frames.
+                float smEnv = smoothstep(0.0, 0.20, tNorm)
+                            * (1.0 - smoothstep(0.80, 1.0, tNorm));
+
+                vec3 smPull = smGrad * (${inputs.uIntensity} * 0.30 / smScale)
+                             * smMask * smEnv;
+                // Clamp per-splat step magnitude so spikes don't blow up.
+                float smPullMag = min(length(smPull), ${inputs.uIntensity} * 0.8);
+                vec3  smPullN   = length(smPull) > 1e-5 ? smPull / length(smPull) : vec3(0.0);
+                center += smPullN * smPullMag;
+
+                // Per-splat seeded jitter so the trail isn't a uniform sheet.
+                center += (rand3 - 0.5) * 2.0 * 0.018 * ${inputs.uIntensity} * smMask * smEnv;
+
+                // Splats sitting on a vein bloom slightly (brighter, larger)
+                // — reads as the dense slime "growth" mass.
+                float smOnVein = smoothstep(0.55, 0.85, smV);
+                scales *= mix(1.0, 1.45, smOnVein * smMask * smEnv);
+                rgba.a *= mix(1.0, 1.0,  smOnVein * smMask * smEnv);
+                rgba.a *= mix(1.0, 0.65, (1.0 - smOnVein) * smMask * smEnv);
+
+              } else if (${inputs.uEffect} == 7) {
+                // ==============================================================
+                // Effect 7 — Feather Roots  (visual port of Shadertoy
+                //   "Feather roots" by michael0884, 2020)
+                //
+                // The reference is multi-pass CA particles advecting through
+                // mouse-spawned vortices. We approximate the LOOK: splats
+                // stream OUTWARD from uHit along noise-perturbed radial
+                // directions. Because the noise is smooth across nearby
+                // splats, adjacent splats follow similar paths → visible
+                // branching fibers form (the "roots" / "feather barbs"
+                // character). Per-splat speed variance creates the bright
+                // tips and trailing trunks. The earlier version sucked
+                // splats INTO uHit — "dug a hole" — fixed by reversing the
+                // radial direction and adding a no-go zone around uHit so
+                // the spawn point itself stays intact.
+                //
+                // Knobs:
+                //   uRadius     — outer reach of the spreading volume
+                //   uSpeed      — base outward streaming rate
+                //   uIntensity  — push magnitude
+                //   uNoiseScale — branch frequency (higher = finer fibers)
+                //   uFlyMax     — branch divergence (how much noise tilts
+                //                 the radial direction; higher = more wild)
+                //   uWindDir    — bulk bias direction layered on top
+                // ==============================================================
+
+                vec3  frTo     = center - ${inputs.uHit};
+                float frR      = length(frTo);
+                vec3  frRadial = frR > 1e-5 ? frTo / frR : vec3(0.0, 1.0, 0.0);
+
+                // Soft reach mask + inner no-go zone so the spawn point
+                // doesn't void out. Splats inside frInner stay put — the
+                // "seed" of the root system.
+                float frReach  = ${inputs.uRadius} * 2.0;
+                float frInner  = ${inputs.uRadius} * 0.15;
+                float frOuter  = 1.0 - smoothstep(frReach * 0.5, frReach, frR);
+                float frInside = smoothstep(0.0, frInner, frR);
+                float frMask   = clamp(frOuter * frInside, 0.0, 1.0);
+                frMask         = clamp(frMask + (n - 0.5) * 0.2 * ${inputs.uEdgeRagged}, 0.0, 1.0);
+
+                // Branch direction: radial outward, perturbed by a smooth
+                // noise field. Adjacent splats sample similar noise →
+                // they follow similar paths → branches form.
+                vec3 frNoiseP = center * ${inputs.uNoiseScale} * 0.7
+                              + vec3(${inputs.uTime} * 0.25, 0.0, 0.0);
+                vec3 frPerturb = vec3(
+                  vnoise(frNoiseP + vec3(0.0,   0.0,   0.0)),
+                  vnoise(frNoiseP + vec3(5.31,  7.13,  0.0)),
+                  vnoise(frNoiseP + vec3(11.7,  3.27,  0.0))
+                ) - 0.5;
+                vec3 frBranchDir = normalize(
+                  frRadial + frPerturb * ${inputs.uFlyMax} * 0.45
+                  + ${inputs.uWindDir} * 0.15);
+
+                // Per-splat radial-speed modulation creates the feather
+                // gradient: some splats race to the tip, others trail.
+                float frFeath = vnoise(center * ${inputs.uNoiseScale} * 1.5
+                                     + vec3(0.0, ${inputs.uTime} * 0.45, 0.0));
+                // Radial-phase shell so the eye can see "waves" of growth
+                // propagating outward instead of a static cloud.
+                float frShell = sin(frR * 1.5 - ${inputs.uTime} * ${inputs.uSpeed} * 0.5);
+
+                float frEnv = smoothstep(0.0, 0.18, tNorm)
+                            * (1.0 - smoothstep(0.82, 1.0, tNorm));
+
+                float frSpeed = ${inputs.uSpeed} * 0.28
+                              * (0.30 + 1.5 * frFeath)
+                              * (0.65 + 0.35 * frShell);
+
+                // OUTWARD push (no inward suction — fixes the "hole" bug).
+                vec3 frPush = frBranchDir * ${inputs.uIntensity} * frSpeed
+                            * frMask * frEnv * 0.55;
+                center += frPush;
+
+                // Streak via scale: slight elongation along the splat's
+                // local first axis (covariance-safe — see Spiral Smear).
+                vec3  frSrcSc   = ${inputs.gsplat}.scales;
+                float frStretch = clamp(length(frPush) * 7.0, 0.0, 1.5);
+                scales = mix(frSrcSc,
+                             frSrcSc * vec3(1.0 + frStretch,
+                                            mix(1.0, 0.7, frStretch * 0.4),
+                                            mix(1.0, 0.7, frStretch * 0.4)),
+                             frMask * frEnv);
+
+                // Bloom on the active mass + tip alpha softening so
+                // branches feather out into the surrounding scene.
+                scales *= mix(1.0, 1.18, frMask * frEnv);
+                float frTipFade = smoothstep(frReach * 0.55, frReach, frR);
+                rgba.a *= mix(1.0, 0.7, frTipFade * frMask * frEnv);
 
               } else {
                 // ==============================================================
@@ -873,14 +1222,26 @@ const PRESETS = {
   "Tron Sweep":     { effect: "Scan Line",          color: "#7ef0ff", radius: 3.5, speed: 7.0, intensity: 0.6, duration: 2.0, noiseScale: 0.6, edgeWidth: 0.10, emissive: 3.2, edgeRagged: 0.3, wispAmt: 0.2, flyMax: 2.0, windX: 0,    windY: 0,   windZ: 0 },
   "Toxic Pulse":    { effect: "Wave & Tint",        color: "#9eff3a", radius: 3.0, speed: 8.0, intensity: 0.5, duration: 1.8, noiseScale: 1.2, edgeWidth: 0.15, emissive: 3.0, edgeRagged: 0.4, wispAmt: 0.4, flyMax: 2.0, windX: 0,    windY: 0,   windZ: 0 },
   "Iris Spiral":    { effect: "Spiral Smear",       color: "#ff7fc8", radius: 3.0, speed: 5.0, intensity: 1.4, duration: 3.6, noiseScale: 1.0, edgeWidth: 0.18, emissive: 2.8, edgeRagged: 0.5, wispAmt: 0.7, flyMax: 4.0, windX: 1.0,  windY: 0,   windZ: 0 },
-  "Vortex Drift":   { effect: "Spiral Smear",       color: "#9dd8ff", radius: 4.0, speed: 3.5, intensity: 2.0, duration: 4.5, noiseScale: 1.0, edgeWidth: 0.18, emissive: 2.0, edgeRagged: 0.5, wispAmt: 0.6, flyMax: 6.0, windX: 0.6,  windY: 0.2, windZ: -0.4 },
+  "Vortex Drift":   { effect: "Vortex Drift",       color: "#9dd8ff", radius: 4.0, speed: 3.5, intensity: 2.0, duration: 4.5, noiseScale: 1.0, edgeWidth: 0.18, emissive: 2.0, edgeRagged: 0.5, wispAmt: 0.6, flyMax: 6.0, windX: 0.6,  windY: 0.2, windZ: -0.4 },
+  "Chaotic Particles": { effect: "Chaotic Particles", color: "#c0a8ff", radius: 3.5, speed: 4.0, intensity: 1.6, duration: 5.0, noiseScale: 1.8, edgeWidth: 0.18, emissive: 2.2, edgeRagged: 0.6, wispAmt: 0.5, flyMax: 4.0, windX: 0.3,  windY: 0.0, windZ: 0.2 },
+  "Slime Molds":       { effect: "Slime Molds",       color: "#d4ff7a", radius: 0.95, speed: 3.0, intensity: 1.6, duration: 6.0, noiseScale: 2.2, edgeWidth: 0.18, emissive: 1.8, edgeRagged: 0.5, wispAmt: 0.7, flyMax: 3.0, windX: 0.4,  windY: 0.0, windZ: 0.3 },
+  "Feather Roots":     { effect: "Feather Roots",     color: "#d4ff7a", radius: 5.4, speed: 5.0, intensity: 1.6, duration: 6.0, noiseScale: 1.6, edgeWidth: 0.18, emissive: 2.0, edgeRagged: 0.4, wispAmt: 0.5, flyMax: 2.0, windX: 0.0,  windY: 1.0, windZ: 0.0 },
 };
 
 export function buildGUI(controller) {
   const gui = new GUI({ title: "SplatGarden Studio" });
 
   const presetKeys = Object.keys(PRESETS);
-  const presetObj = { preset: presetKeys[0] };
+  // Default the FX dropdown to Slime Molds and seed params with its values
+  // so the GUI controllers display Slime Molds' knobs on first render
+  // (without this, params would still reflect the bare module-level defaults
+  // and the dropdown label would mismatch the visible knob values).
+  const DEFAULT_PRESET = "Slime Molds";
+  const presetObj = { preset: DEFAULT_PRESET };
+  if (PRESETS[DEFAULT_PRESET]) {
+    Object.assign(params, PRESETS[DEFAULT_PRESET]);
+    controller.applyParams();
+  }
 
   // ----- Top-level: 3DGS / USD (formerly "Layers") -------------------------
   // Kept OUT of Customize so the data-source / instancer choices are visually
