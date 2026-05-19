@@ -10,9 +10,46 @@
     <div id="app">
       <canvas id="viewport"></canvas>
 
+      <!-- Editorial loading splash — shown until the first splat finishes
+           loading. #loading-text + the .hidden class are still the JS hooks. -->
       <div id="loading">
-        <div class="spinner"></div>
-        <div id="loading-text">Loading splat&hellip;</div>
+        <div class="ld-corner ld-tl">
+          <span class="ld-k">EST</span><span class="ld-v">2026</span>
+        </div>
+        <div class="ld-corner ld-tr">
+          <span class="ld-v">SPLATGARDEN&nbsp;STUDIO&nbsp;/&nbsp;WEB</span>
+        </div>
+        <div class="ld-corner ld-bl">
+          <span class="ld-k">RUNTIME</span><span class="ld-v">SPARK&nbsp;·&nbsp;THREE.JS&nbsp;·&nbsp;WEBGL&nbsp;2</span>
+        </div>
+        <div class="ld-corner ld-br">
+          <span class="ld-k">SCENE</span><span class="ld-v">WHOLE_WITH_STATUE</span>
+        </div>
+
+        <main class="ld-stage">
+          <h1 class="ld-title">SplatGarden</h1>
+          <div class="ld-sub">Studio&nbsp;&middot;&nbsp;Showcase</div>
+
+          <div class="ld-rule"></div>
+
+          <p class="ld-desc">
+            An asset-pipeline showcase built around <span class="ld-em">3D Gaussian Splatting</span>.
+          </p>
+          <p class="ld-desc ld-desc-fine">
+            A Houdini / SpeedTree / Unreal garden &mdash; set-dressed, captured at Litchfield Studio, trained in Postshot, and served back as a hot-swappable, USD-aware 3DGS you can inspect at every layer.
+          </p>
+
+          <div class="ld-pillars">
+            <span class="ld-pillar"><span class="ld-pillar-n">01</span> 3DGS</span>
+            <span class="ld-pillar"><span class="ld-pillar-n">02</span> USD</span>
+            <span class="ld-pillar"><span class="ld-pillar-n">03</span> AI</span>
+          </div>
+        </main>
+
+        <footer class="ld-foot">
+          <div class="ld-bar"><div class="ld-fill"></div></div>
+          <div id="loading-text" class="ld-status">Loading splat&hellip;</div>
+        </footer>
       </div>
 
       <!-- Sketchfab-style annotation overlay layer -->

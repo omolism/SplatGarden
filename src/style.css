@@ -1634,35 +1634,188 @@ kbd {
   letter-spacing: 0.02em;
 }
 
-/* ============ Loading overlay ============ */
+/* ============================================================
+   Editorial loading splash
+   - Full-viewport dark overlay shown until the first splat lands.
+   - Four corner annotations (museum / data-card aesthetic).
+   - Center stack: large light-weight title, mono subtitle, hairline rule,
+     two paragraphs of description, three numbered pillars.
+   - Bottom: thin indeterminate progress bar + status text (kept under
+     #loading-text so setLoading(msg) in main.js still drives it).
+   ============================================================ */
 #loading {
-  position: absolute; inset: 0;
+  position: absolute;
+  inset: 0;
   z-index: 100;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  align-items: stretch;
+  background:
+    radial-gradient(120% 80% at 50% 35%, rgba(255, 255, 255, 0.04), transparent 60%),
+    #050608;
+  color: var(--text);
+  font-family: var(--font-ui);
+  letter-spacing: 0.01em;
+  pointer-events: all;
+  overflow: hidden;
+  padding: 44px 44px 32px;
+  opacity: 1;
+  transition: opacity 0.45s ease, visibility 0s linear 0s;
+}
+#loading.hidden {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+  transition: opacity 0.45s ease, visibility 0s linear 0.45s;
+}
+
+/* Corner annotations */
+#loading .ld-corner {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-mid);
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  white-space: nowrap;
+}
+#loading .ld-tl { top: 32px; left: 44px; }
+#loading .ld-tr { top: 32px; right: 44px; }
+#loading .ld-bl { bottom: 84px; left: 44px; }
+#loading .ld-br { bottom: 84px; right: 44px; }
+#loading .ld-k {
+  color: var(--text-faint);
+  padding-right: 6px;
+  border-right: 1px solid var(--hair-strong);
+}
+#loading .ld-v { color: var(--text); }
+
+/* Center hero stack */
+#loading .ld-stage {
+  grid-row: 2;
+  align-self: center;
+  justify-self: center;
+  text-align: center;
+  max-width: 720px;
+  padding: 0 24px;
+}
+#loading .ld-title {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: clamp(56px, 9vw, 104px);
+  font-weight: 300;
+  letter-spacing: -0.025em;
+  line-height: 0.95;
+  color: var(--text);
+}
+#loading .ld-sub {
+  margin-top: 18px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--text-mid);
+}
+#loading .ld-rule {
+  width: 56px;
+  height: 1px;
+  background: var(--hair-strong);
+  margin: 38px auto 32px;
+}
+#loading .ld-desc {
+  margin: 0 auto;
+  font-family: var(--font-ui);
+  font-size: 19px;
+  font-weight: 300;
+  line-height: 1.45;
+  letter-spacing: 0.005em;
+  color: var(--text);
+  max-width: 580px;
+}
+#loading .ld-desc-fine {
+  margin-top: 18px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-mid);
+  letter-spacing: 0.01em;
+  line-height: 1.7;
+  max-width: 560px;
+}
+#loading .ld-em { color: var(--text); font-weight: 400; }
+#loading .ld-pillars {
+  margin-top: 44px;
+  display: flex;
+  justify-content: center;
+  gap: 36px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+#loading .ld-pillar {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+#loading .ld-pillar-n {
+  font-size: 9px;
+  color: var(--text-dim);
+  letter-spacing: 0.10em;
+}
+
+/* Bottom progress bar + status text */
+#loading .ld-foot {
+  grid-row: 3;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.96);
-  color: var(--text);
-  pointer-events: all;
+  gap: 14px;
+  align-items: stretch;
+  max-width: 100%;
 }
-#loading.hidden { display: none; }
-#loading-text {
-  margin-top: 22px;
-  font-size: 11px;
-  color: var(--text-mid);
+#loading .ld-bar {
+  position: relative;
+  width: 100%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+#loading .ld-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24%;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.85);
+  animation: ld-bar-indef 1.6s cubic-bezier(.42,.0,.58,1.0) infinite;
+}
+@keyframes ld-bar-indef {
+  0%   { transform: translateX(-110%); }
+  100% { transform: translateX(540%); }
+}
+#loading .ld-status {
   font-family: var(--font-mono);
-  letter-spacing: 0.06em;
+  font-size: 10px;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
+  color: var(--text-mid);
+  text-align: center;
+  min-height: 14px;
 }
-.spinner {
-  width: 32px; height: 32px;
-  border: 1.5px solid rgba(255, 255, 255, 0.10);
-  border-top-color: rgba(255, 255, 255, 0.85);
-  border-radius: 50%;
-  animation: spin 0.9s linear infinite;
+
+/* Mobile: tighten margins so corner labels still fit */
+@media (max-width: 640px) {
+  #loading { padding: 32px 24px 24px; }
+  #loading .ld-tl, #loading .ld-bl { left: 24px; }
+  #loading .ld-tr, #loading .ld-br { right: 24px; }
+  #loading .ld-tl, #loading .ld-tr { top: 24px; }
+  #loading .ld-bl, #loading .ld-br { bottom: 72px; }
+  #loading .ld-corner { font-size: 8.5px; letter-spacing: 0.14em; }
+  #loading .ld-pillars { gap: 22px; }
 }
-@keyframes spin { to { transform: rotate(360deg); } }
 
 /* ============ lil-gui — monochrome glass override ============ */
 .lil-gui {
