@@ -1140,24 +1140,30 @@ async function loadSplat() {
     // mid-ramp clicks must NOT capture the inflated peak, or consecutive
     // clicks would walk values upward toward 1.0.
     const baseline = _echoRamp ? _echoRamp.baseline : postfx.params.echoPersist;
-    const peak     = 0.998;     // "way more longer" trails at the bell crest
-    const peakMix  = 1.0;       // bell crest for the mix lerp
+    const peak     = 0.998;
+    const peakMix  = 1.0;
     const fxDur    = effectUniforms?.duration?.value ?? 2.5;
     const fadeTail = effects?.fadeTailS ?? 0.9;
-    const durMs    = (fxDur + fadeTail + 1.5) * 1000;
-    _echoRamp = { startMs: performance.now(), durMs, baseline, peakMix, peak };
-    postfx.params.echoOn = true;
+    // Two phases aligned with the FX timing — feels like natural echo physics:
+    //   sustainMs : trail at peak while splats are still in motion
+    //   fadeMs    : ~1.2 s smooth dissipation after the motion settles
+    const sustainMs = (fxDur + fadeTail) * 1000;
+    const fadeMs    = 1200;
+    const durMs     = sustainMs + fadeMs;
+    _echoRamp = { startMs: performance.now(), durMs, sustainMs, baseline, peak, peakMix };
+    // INSTANT snap to peak on click — no rise-in latency. Echo emits on
+    // event like a real-world echo, not a wave that builds up first.
+    postfx.params.echoPersist = peak;
+    postfx.params.echoMix     = peakMix;
+    postfx.params.echoOn      = true;
     refreshEchoGui();
   }
   function _updateEchoRamp() {
     if (!_echoRamp || !postfx?.params) return;
-    const t = (performance.now() - _echoRamp.startMs) / _echoRamp.durMs;
-    if (t >= 1.0) {
-      // Ramp complete — restore persistence baseline AND drop mix to 0
-      // (user request: "mix should go back to 0" at end of interaction).
-      // The user's GUI-set baseline is preserved on _echoRamp until next
-      // click; mix being zero means echo contributes nothing visually
-      // until a new interaction restarts the ramp.
+    const elapsed = performance.now() - _echoRamp.startMs;
+    if (elapsed >= _echoRamp.durMs) {
+      // Ramp complete — restore baselines and disable echo so subsequent
+      // clicks start with a fresh feedback buffer instead of stale trails.
       postfx.params.echoPersist = _echoRamp.baseline;
       postfx.params.echoMix     = 0.0;
       postfx.params.echoOn      = false;
@@ -1165,16 +1171,22 @@ async function loadSplat() {
       refreshEchoGui();
       return;
     }
-    // 0-1-0 lerp for BOTH persist and mix: quick rise so the trail
-    // appears nearly instantly on click, slow fall so it eases out
-    // smoothly instead of cutting off abruptly at the end. Persist's
-    // peak is 0.998 (long trails), mix peaks at 1.0 (full overlay).
-    const rise = _smoothstep01(0.0, 0.05, t);     // ~5% of duration to crest
-    const fall = 1.0 - _smoothstep01(0.50, 1.0, t); // last 50% smoothly decays
-    const env  = rise * fall;
-    postfx.params.echoPersist = _echoRamp.baseline
-      + (_echoRamp.peak - _echoRamp.baseline) * env;
-    postfx.params.echoMix = _echoRamp.peakMix * env;
+    if (elapsed < _echoRamp.sustainMs) {
+      // Sustain phase — trails are at peak while splats are still moving.
+      // Values stay constant here so the trail buffer accumulates fully
+      // over the FX duration without any modulation flicker.
+      postfx.params.echoPersist = _echoRamp.peak;
+      postfx.params.echoMix     = _echoRamp.peakMix;
+    } else {
+      // Fade phase — splats have settled; trails dissipate over fadeMs.
+      // Smoothstep both persist and mix so the dissipation feels physical.
+      const fadeT = (elapsed - _echoRamp.sustainMs)
+                  / (_echoRamp.durMs - _echoRamp.sustainMs);
+      const env   = 1.0 - _smoothstep01(0.0, 1.0, fadeT);   // 1 → 0
+      postfx.params.echoPersist = _echoRamp.baseline
+        + (_echoRamp.peak - _echoRamp.baseline) * env;
+      postfx.params.echoMix = _echoRamp.peakMix * env;
+    }
     refreshEchoGui();
   }
   // Expose so the render loop can tick the ramp each frame.
