@@ -136,7 +136,7 @@ export const TECH_SPECS = [
 
   {
     section: "POST-PROCESSING",
-    desc:    "Toy chain — view via Customize ▸ PostFX",
+    desc:    "Toy chain — view via Customize ▸ Play ▸ Post-Process",
     items: [
       { name: "Echo Trails",              ref: "Notch-style motion-blur accumulator",      source: "src/postfx.js:18"  },
       { name: "Unreal Bloom",             ref: "UnrealBloomPass (Three.js addons)",         source: "src/postfx.js:715" },
@@ -150,7 +150,7 @@ export const TECH_SPECS = [
 
   {
     section: "CLICK FX",
-    desc:    "Toy interaction — view via Customize ▸ FX",
+    desc:    "Toy interaction — view via Customize ▸ Play ▸ FX",
     items: [
       { name: "Wave & Tint",       ref: "sin(t·ω − dist·5) · e^(−0.7t) · ringMask",          source: "src/effects.js:307" },
       { name: "Dissolve & Reform", ref: "FBM-warped burn front · TouchDesigner SOP Effector", source: "src/effects.js:339" },

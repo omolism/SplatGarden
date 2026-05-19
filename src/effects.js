@@ -1256,8 +1256,12 @@ export function buildGUI(controller) {
   // ----- Top-level: Customize → everything visual --------------------------
   const fCustomize = gui.addFolder("Customize");
 
+  // Play — toy section housing the click FX + post-process. Demoted from
+  // Customize-level so the headline UI stays on assets / pipeline / interaction.
+  const fPlay = fCustomize.addFolder("Play").close();
+
   // FX section — all click-effect controls grouped to reduce confusion.
-  const fFX = fCustomize.addFolder("FX");
+  const fFX = fPlay.addFolder("FX");
   fFX.add(presetObj, "preset", presetKeys).name("Preset").onChange((name) => {
     Object.assign(params, PRESETS[name]);
     controller.applyParams();
@@ -1442,8 +1446,9 @@ export function buildGUI(controller) {
   uniforms.bodyActive.value = 0.0;
 
   // Expose folder refs so postfx.attachGUI / main.js can place their
-  // controls inside the right parents (Customize / FX / 3DGS-USD).
+  // controls inside the right parents (Customize / Play / FX / 3DGS-USD).
   gui.fCustomize = fCustomize;
+  gui.fPlay      = fPlay;
   gui.fFX        = fFX;
   gui.fLayers    = fLayers;
 

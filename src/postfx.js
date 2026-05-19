@@ -952,10 +952,11 @@ export function setupPostFX(renderer, scene, camera) {
   }
 
   function attachGUI(parentGui) {
-    // Post-Process lives under Customize, Kaleidoscope under FX. Fall back to
-    // the parent if those refs aren't exposed (older buildGUI shape).
-    const customizeParent = parentGui.fCustomize || parentGui;
-    const fxParent        = parentGui.fFX        || parentGui;
+    // Post-Process lives under Customize > Play (toy section), Kaleidoscope
+    // under FX. Fall back through older buildGUI shapes if those refs aren't
+    // exposed.
+    const customizeParent = parentGui.fPlay || parentGui.fCustomize || parentGui;
+    const fxParent        = parentGui.fFX                          || parentGui;
 
     // Post-Process — Sketchfab-style finishing effects, all under one folder.
     // The master "Enable" checkbox at the top kills every pass at once.
