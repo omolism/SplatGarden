@@ -37,10 +37,10 @@ Eight GPU shader effects live in a single `dyno.Dyno` branched on a uniform `int
 7. **Slime Molds** *(new)* — domain-warped ridge-noise vein field. Splats are pulled along the local gradient toward bright veins (Physarum visual approximation). Default preset on launch.
 8. **Feather Roots** *(new)* — splats stream OUTWARD from the click point along noise-perturbed radial directions (no inward suction). Per-splat speed variance + radial-phase shells create branching fibers. `FlyMax` knob → branch divergence.
 
-### Effector Mode (`Customize → FX → 🫧 Effector Mode`)
+### Effector Mode (`Customize → FX → Effector Mode`)
 TouchDesigner-style sphere effector for the Dissolve shader. While the toggle is on, press+drag (mouse or hand pinch) drives a spatial-mask center; splats inside the sphere stay dissolved as long as the gesture holds, splats outside snap back. A wireframe sphere overlay tracks the live mask center. Auto-switches the Effect dropdown to **Dissolve & Reform**.
 
-### Brush Mode (`Customize → FX → 🖌 Brush Mode`)
+### Brush Mode (`Customize → FX → Brush Mode`)
 Press + drag = continuous `effects.brushAt()` paint instead of one-shot click trigger. While Brush is on, **OrbitControls is locked** so the drag doesn't tumble the camera. Cursor flips to crosshair. Works for both mouse and hand-pinch input paths.
 
 ### Camera Movement
@@ -74,7 +74,7 @@ A surveillance dock for the underlying pipeline. Master **Enable** gates everyth
 - **Training Cameras** — 3D wireframe pyramid frustums (Postshot-style) at every COLMAP capture pose. Drawn always-on-top (depth-test off) so other layers can't occlude them. Hover any frustum for a tooltip showing `CAM_ID`, `POS`, `QUAT`.
 - **Data Labels** — surveillance card overlay with per-viewpoint Id / Name / Time / Date / Coord, anchored to the 3D point via a thin SVG connector.
 
-### Particle system (`Customize → FX → ✨ Particles`)
+### Particle system (`Customize → FX → Particles`)
 Three layered subsystems for fluid / audio-reactive interaction. Particles **render in a separate scene AFTER the composer**, so they bypass every post-FX pass (no echo smearing, no bloom overlay, no painterly blur). Always-on-top additive sprites.
 
 | Subsystem | Role |
@@ -84,7 +84,7 @@ Three layered subsystems for fluid / audio-reactive interaction. Particles **ren
 | **Audio Reactor** | AnalyserNode FFT (256 bins) wrapping a file source / mic / URL. Live amp / bass / mid / treble metrics. Default source: `/Forest_Ambience.mp3` auto-loads on first user gesture (autoplay gate). Amp feeds `uAudioAmp` on the particle render — loud frames pull harder + bigger points. |
 | **Sorted Particles overlay** | cornusammonis 4-buffer screen-space sim (Buffers A/B/C: spatial sort with strides 25/1/5 + curl advection; Buffer D: EWMA-smoothed nearest-distance accumulator). Display pass blends the EWMA glow over the scene. See `Customize → Post-Process → Sorted Particles`. |
 
-Particle knobs: Point Size · Field Strength · Damping · Gravity Y · Alpha · Color Cool / Hot. Plus a **🎲 Seed from USD Voxels** button that respawns every particle at a voxel-cell center and expands the spawn AABB to the scene bounds.
+Particle knobs: Point Size · Field Strength · Damping · Gravity Y · Alpha · Color Cool / Hot. Plus a **Seed from USD Voxels** button that respawns every particle at a voxel-cell center and expands the spawn AABB to the scene bounds.
 
 ### Customize → Post-Process
 Sketchfab-style finishing pipeline. Master **Enable** kills every pass at once. **Bloom is OFF by default on launch** — toggle on per scene as needed. All knobs use dedicated prefixes per the "no shared knobs across FX" rule.
@@ -163,11 +163,11 @@ SplatGarden Studio
 │   │   ├── Style
 │   │   ├── Dissolve FX
 │   │   ├── ▶ Replay at last hit
-│   │   ├── 🖌 Brush Mode        (locks OrbitControls while on)
-│   │   ├── 🫧 Effector Mode     (TD-style sphere effector for Dissolve)
-│   │   ├── ✨ Particles         (Enable + tuning knobs)
-│   │   │   ├── 🔊 Audio Source  (file / mic / live amp · bass · mid · treble)
-│   │   │   └── 🎲 Seed from USD Voxels
+│   │   ├── Brush Mode          (locks OrbitControls while on)
+│   │   ├── Effector Mode       (TD-style sphere effector for Dissolve)
+│   │   ├── Particles           (Enable + tuning knobs)
+│   │   │   ├── Audio Source    (file / mic / live amp · bass · mid · treble)
+│   │   │   └── Seed from USD Voxels
 │   │   └── Kaleidoscope
 │   ├── Post-Process [Enable]
 │   │   ├── Bloom [Enable]       (default OFF)
@@ -284,7 +284,7 @@ The new **Spiral Smear** effect (uEffect = 3) layers:
 
 ## Roadmap
 
-- ~~**Sound interaction**~~ — **shipped**. AnalyserNode + 4-band metrics drive `uAudioAmp` on the GPGPU particle system. Default `Forest_Ambience.mp3` auto-loads on first gesture; users can swap to file/mic via `🔊 Audio Source`.
+- ~~**Sound interaction**~~ — **shipped**. AnalyserNode + 4-band metrics drive `uAudioAmp` on the GPGPU particle system. Default `Forest_Ambience.mp3` ships in `/public`; users pick it (or any other file) via `Audio Source → Load Audio File`. Mic also supported.
 - **Hand-tracking point light** — palm position drives an additive light contribution per splat (cheat lighting since splats don't ship normals).
 - **USD export** — bake the live Voxelizer / Quadizer instance arrays as a `.usda` `UsdGeomPointInstancer` block with per-instance `primvars:displayColor`.
 - **Tech Spec content rows** — placeholders for AI Stylization breakdown, VAT animation pipeline, GPU profile, Postshot training params.

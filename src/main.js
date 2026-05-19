@@ -848,7 +848,7 @@ async function loadSplat() {
   // Same flow drives mouse pointer events AND hand-pinch (see hand block below).
   const brushParams = { brush: false, effector: false };
   const brushParent = gui.fFX || gui;
-  brushParent.add(brushParams, "brush").name("🖌 Brush Mode")
+  brushParent.add(brushParams, "brush").name("Brush Mode")
     .onChange(v => {
       canvas.style.cursor = v ? "crosshair" : "";
       // Lock OrbitControls while brushing so drag doesn't accidentally
@@ -860,7 +860,7 @@ async function loadSplat() {
   // press+drag drives a spatial mask that dissolves splats inside the sphere;
   // splats outside snap back to home. Auto-switches effect to "Dissolve &
   // Reform" since the spatial override only lives in that shader path.
-  brushParent.add(brushParams, "effector").name("🫧 Effector Mode")
+  brushParent.add(brushParams, "effector").name("Effector Mode")
     .onChange(v => {
       if (v) {
         params.effect = "Dissolve & Reform";
@@ -890,7 +890,7 @@ async function loadSplat() {
     colorCool:     "#4cbfff",
     colorHot:      "#ff8c33",
   };
-  const fGpParticles = brushParent.addFolder("✨ Particles").close();
+  const fGpParticles = brushParent.addFolder("Particles").close();
   fGpParticles.add(gpParticleParams, "enable").name("Enable")
     .onChange(v => gpgpuParticles.setEnabled(v));
   // Apply the default-true state immediately (constructor inits visible=false).
@@ -914,7 +914,7 @@ async function loadSplat() {
   // lil-gui has no native file picker → trigger a hidden <input> via a
   // method controller. amp/bass/mid/treble are live readouts (disabled
   // controllers reading from audioReactor.metrics).
-  const fAudio = fGpParticles.addFolder("🔊 Audio Source").close();
+  const fAudio = fGpParticles.addFolder("Audio Source").close();
   const audioFileInput = document.createElement("input");
   audioFileInput.type = "file";
   audioFileInput.accept = "audio/*";
@@ -934,13 +934,13 @@ async function loadSplat() {
     },
     stop: () => audioReactor.disconnect(),
   };
-  fAudio.add(audioActions, "loadFile").name("📁 Load Audio File…");
-  fAudio.add(audioActions, "useMic").name("🎤 Use Microphone");
-  fAudio.add(audioActions, "stop").name("⏹ Stop");
+  fAudio.add(audioActions, "loadFile").name("Load Audio File…");
+  fAudio.add(audioActions, "useMic").name("Use Microphone");
+  fAudio.add(audioActions, "stop").name("Stop");
 
   // Audio auto-load disabled per user request. Forest_Ambience is still
-  // bundled in /public and can be picked manually via 📁 Load Audio File…
-  // (or use the 🎤 mic toggle for live input). Reactor stays dormant on
+  // bundled in /public and can be picked manually via Load Audio File…
+  // (or use the mic toggle for live input). Reactor stays dormant on
   // launch — uAudioAmp = 0 in the particle update path until something
   // is connected.
 
@@ -991,7 +991,7 @@ async function loadSplat() {
       statusEl.textContent = `Seeded ${gpgpuParticles.N} particles from ${voxelizer.cellCount} voxels — voxel layer hidden`;
     },
   };
-  fGpParticles.add(voxelSeedActions, "seedFromVoxels").name("🎲 Seed from USD Voxels");
+  fGpParticles.add(voxelSeedActions, "seedFromVoxels").name("Seed from USD Voxels");
   // Live readouts — bound to audioReactor.metrics so they tick each frame.
   // lil-gui auto-refreshes via .listen().
   fAudio.add(audioReactor.metrics, "amp",    0, 1).name("Amp").listen().disable();
