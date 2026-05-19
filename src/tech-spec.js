@@ -36,6 +36,7 @@ export const TECH_SPECS = [
       {
         name:      "Grape Hyacinth",
         location:  "Near gazebo",
+        worldPos:  [0.313, -0.773, 2.226],
         toolchain: ["Houdini (procedural)", "Unreal Engine", "Postshot"],
         output:    "Baked into env 3DGS",
         note:      "Houdini-generated cluster scattered across the gazebo planters",
@@ -44,6 +45,7 @@ export const TECH_SPECS = [
       {
         name:      "Daffodil",
         location:  "Near gazebo",
+        worldPos:  [-0.195, -0.730, 2.379],
         toolchain: ["Houdini", "VAT bake", "Python · OSC · MediaPipe", "AI texture stylization", "Unreal Engine", "Postshot"],
         output:    "Baked into env 3DGS · animation captured per frame",
         note:      "Animated procedurally in Houdini, VAT-baked, MediaPipe/OSC drove the rig at capture time, AI stylization on the diffuse",

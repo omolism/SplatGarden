@@ -290,13 +290,11 @@ export class AnnotationManager {
       // by half the bounds radius — a sane distance to scroll-zoom from.
       { name: "Center", pos: new THREE.Vector3(0, 0, 0),
                         targetOffset: new THREE.Vector3(0, 0, -boundsRadius * 0.5) },
-      // Asset-anchored viewpoints — absolute world targets on each named
-      // asset baked into the splat. Camera placed at a Front-like offset
-      // from the target so framing is sensible on first load; tune with C
-      // in-app to overwrite.
-      { name: "Gazebo",         absoluteTarget: new THREE.Vector3( 0.616, -0.937, 3.695) },
-      { name: "Grape Hyacinth", absoluteTarget: new THREE.Vector3( 0.313, -0.773, 2.226) },
-      { name: "Daffodil",       absoluteTarget: new THREE.Vector3(-0.195, -0.730, 2.379) },
+      // Gazebo viewpoint — anchors at the gazebo asset's world position.
+      // (Tree / Grape Hyacinth / Daffodil are not viewpoints; their world
+      // positions live on the TECH_SPECS asset items as `worldPos` and drive
+      // the upcoming hover info card.)
+      { name: "Gazebo", absoluteTarget: new THREE.Vector3(0.616, -0.937, 3.695) },
     ];
     let centerVp = null;
     for (const p of presets) {

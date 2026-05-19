@@ -1637,6 +1637,34 @@ async function loadSplat() {
   // is fire-and-forget — concurrent calls from the Play button share it via
   // camLoadPromise.
   loadCameraMove();
+
+  // Scan public/manifest.json for any other splat assets and load them as
+  // hidden secondary layers. The Scene panel exposes them with eye toggles
+  // so the user can swap which splat is rendering.
+  loadAdditionalSplatLayers();
+}
+
+async function loadAdditionalSplatLayers() {
+  let list = [];
+  try {
+    const res = await fetch("/manifest.json", { cache: "no-cache" });
+    if (!res.ok) return;
+    list = await res.json();
+  } catch { return; }
+  if (!Array.isArray(list)) return;
+
+  const primaryFile = SPLAT_URL.replace(/^\//, "");
+  const secondaries = list.filter(f => typeof f === "string" && f && f !== primaryFile);
+
+  for (const fname of secondaries) {
+    try {
+      const built = await createSplat({ url: "/" + fname });
+      const layer = sceneLayers.add({ mesh: built.splat, name: fname });
+      if (layer) sceneLayers.setVisible(layer.id, false);   // hidden so it doesn't double-render
+    } catch (err) {
+      console.warn(`Skipping ${fname}:`, err?.message ?? err);
+    }
+  }
 }
 
 // ---------------------------------------------------------------------------
