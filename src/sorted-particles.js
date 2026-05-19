@@ -215,9 +215,10 @@ const BUFFER_D_FRAG = /* glsl */`
   }
 `;
 
+// NOTE: THREE.js auto-injects `in vec3 position` and `in vec2 uv` for
+// ShaderMaterial in GLSL3 mode (they come from the geometry's standard
+// attributes). Redeclaring them here causes "redefinition" compile errors.
 const VERT = /* glsl */`
-  in  vec3 position;
-  in  vec2 uv;
   out vec2 vUv;
   void main() {
     vUv = uv;
