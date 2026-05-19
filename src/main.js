@@ -1605,7 +1605,7 @@ async function loadSplat() {
 // ---------------------------------------------------------------------------
 const clock = new THREE.Clock();
 let frameCount = 0;
-let fpsAccum = 0;
+let fpsLastMs = 0;
 
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
@@ -1686,16 +1686,21 @@ renderer.setAnimationLoop(() => {
   }
   renderer.autoClear = prevAutoClear;
 
+  // FPS readout — uses raw performance.now() (NOT the clamped dt, which
+  // pegs at 20 fps because dt is capped at 50 ms). One decimal place so
+  // sub-60 variation is visible. Suffix is regex-replaced so any base
+  // text (size, hit coords, the initial hint, etc.) keeps its fps tail.
   frameCount++;
-  fpsAccum += dt;
-  if (fpsAccum >= 0.5) {
-    const fps = (frameCount / fpsAccum).toFixed(0);
-    if (statusEl && !statusEl.textContent.startsWith("Hit") && !statusEl.textContent.startsWith("Click")) {
-      const base = statusEl.textContent.split(" • ")[0];
+  const _fpsNow = performance.now();
+  if (!fpsLastMs) fpsLastMs = _fpsNow;
+  if (_fpsNow - fpsLastMs >= 500) {
+    const fps = (frameCount * 1000 / (_fpsNow - fpsLastMs)).toFixed(1);
+    if (statusEl) {
+      const base = statusEl.textContent.replace(/\s*•\s*[\d.]+\s*fps$/, '');
       statusEl.textContent = `${base} • ${fps} fps`;
     }
     frameCount = 0;
-    fpsAccum = 0;
+    fpsLastMs = _fpsNow;
   }
 });
 
