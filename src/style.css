@@ -1142,16 +1142,17 @@ kbd {
   font-family: var(--font-ui);
   color: var(--text);
   letter-spacing: 0.01em;
+  pointer-events: none;   /* let drags through; .ts-panel re-enables itself */
 }
 #tech-spec.show { display: block; }
-/* Backdrop stays transparent so the 3DGS scene reads sharply behind the
- * panel — the drawer is a live document, not a modal. Click on the
- * backdrop area still closes the drawer (handler wired in tech-spec.js). */
+/* Backdrop is fully transparent AND click-through so the 3DGS scene reads
+ * sharply AND stays draggable behind the panel. The drawer is a live doc,
+ * not a modal — close via T / Esc / the × button. */
 #tech-spec .ts-backdrop {
   position: absolute;
   inset: 0;
   background: transparent;
-  pointer-events: auto;
+  pointer-events: none;
 }
 #tech-spec .ts-panel {
   position: absolute;
@@ -1159,6 +1160,7 @@ kbd {
   right: 0;
   bottom: 0;
   width: min(460px, 92vw);
+  pointer-events: auto;   /* re-enable on top of the click-through parent */
   background: var(--panel-strong);
   backdrop-filter: blur(28px) saturate(140%);
   -webkit-backdrop-filter: blur(28px) saturate(140%);

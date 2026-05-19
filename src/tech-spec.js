@@ -262,7 +262,8 @@ export class TechSpec {
     mountEl.appendChild(this.el);
 
     this.el.querySelector(".ts-close").addEventListener("click", () => this.close());
-    this.el.querySelector(".ts-backdrop").addEventListener("click", () => this.close());
+    // Backdrop is click-through (pointer-events:none) so drags reach the
+    // canvas — no listener wired. Close via × button, Esc, or T toggle.
 
     this.el.querySelectorAll(".ts-sec-head").forEach(h => {
       h.addEventListener("click", () => {
