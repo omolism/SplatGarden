@@ -176,18 +176,13 @@ window.__sceneLayers = sceneLayers;
 _hudRefs.sceneLayers = sceneLayers;   // RENDER HUD sums splats across visible layers
 
 // Asset hover hotspots — project each TECH_SPECS asset's worldPos onto the
-// viewport. Hover a dot for the poster-style info card.
-// worldPos values are authored in the splat-local frame (the one Houdini /
-// SuperSplat / etc. show), so apply the primary splat's matrixWorld each
-// frame to land them in real world space — the splat is rotated 180° X
-// at load (Postshot / Inria Y-up convention) so the raw coords land in
-// the wrong half-space without this.
+// viewport. Hover a dot for the poster-style info card. worldPos values
+// are raw Three.js world coords (same convention as the Gazebo viewpoint).
 const assetHover = new AssetHoverManager({
   mountEl: document.getElementById("app") || document.body,
   camera,
   canvas,
   items: TECH_SPECS.flatMap(s => s.items),
-  getSplatMatrix: () => sceneLayers.getPrimary()?.mesh?.matrixWorld ?? null,
 });
 window.__assetHover = assetHover;
 

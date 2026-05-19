@@ -96,19 +96,17 @@ export class AssetHoverManager {
    * @param {THREE.Camera} opts.camera
    * @param {HTMLCanvasElement} opts.canvas
    * @param {Array}  opts.items          — TECH_SPECS items (with worldPos[])
-   * @param {() => THREE.Matrix4|null} [opts.getSplatMatrix] — returns the
-   *     primary splat's matrixWorld. The `worldPos` values on TECH_SPECS
-   *     items are authored in the splat-local frame (the same frame the
-   *     user picks coordinates from in Houdini / SuperSplat / etc.), so
-   *     we apply this matrix to land them in actual world space — which
-   *     is rotated 180° around X relative to the source frame.
+   *
+   * `worldPos` values are interpreted as raw Three.js world coordinates
+   * (same convention the Gazebo absoluteTarget viewpoint uses) — no
+   * extra splat transform applied, since the picker tool the artist uses
+   * already exports coords in that frame.
    */
-  constructor({ mountEl, camera, canvas, items, getSplatMatrix = null }) {
-    this.camera         = camera;
-    this.canvas         = canvas;
-    this.getSplatMatrix = getSplatMatrix;
-    this.items          = (items || []).filter(it => Array.isArray(it.worldPos));
-    this._pinned        = null;   // item locked open by click — survives mouseleave
+  constructor({ mountEl, camera, canvas, items }) {
+    this.camera  = camera;
+    this.canvas  = canvas;
+    this.items   = (items || []).filter(it => Array.isArray(it.worldPos));
+    this._pinned = null;   // item locked open by click — survives mouseleave
 
     this.dots = this.items.map(it => {
       const dot = document.createElement("div");
@@ -165,11 +163,8 @@ export class AssetHoverManager {
   update() {
     if (!this.camera || !this.canvas) return;
     const rect = this.canvas.getBoundingClientRect();
-    const splatMat = this.getSplatMatrix?.();
     for (const d of this.dots) {
-      _v.copy(d.world);
-      if (splatMat) _v.applyMatrix4(splatMat);   // splat-local → world
-      _v.project(this.camera);
+      _v.copy(d.world).project(this.camera);
       const offscreen = _v.z > 1 || _v.x < -1.1 || _v.x > 1.1 || _v.y < -1.1 || _v.y > 1.1;
       if (offscreen) {
         d.el.style.display = "none";
