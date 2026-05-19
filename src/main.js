@@ -17,6 +17,7 @@ import { GPGPUParticles } from "./gpgpu-particles.js";
 import { Voxelizer } from "./voxelizer.js";
 import { Quadizer }  from "./quadizer.js";
 import { PipelineHUD } from "./pipeline-hud.js";
+import { SceneLayers } from "./scene-layers.js";
 import { uniforms as effectUniforms } from "./effects.js";
 import { loadColmapImages, buildColmapFrustums } from "./colmap-loader.js";
 
@@ -163,6 +164,16 @@ const techSpec = new TechSpec({
 });
 window.__techSpec = techSpec;
 
+// Scene layers — SuperSplat-style panel with per-layer visibility toggles.
+// First splat added (in loadSplat below) becomes the primary; subsequent
+// drag-drop or "+ Add" calls append secondary layers that can be hidden /
+// removed without touching the primary's effects / voxel / quad bindings.
+const sceneLayers = new SceneLayers({
+  scene,
+  mountEl: document.getElementById("left-stack") || document.body,
+});
+window.__sceneLayers = sceneLayers;
+
 // Tech-Spec overlay scene — training cameras (and any future tech-spec 3D
 // gizmos) live here so they bypass the post-FX composer pipeline. Rendered
 // AFTER postfx.render() with autoClear=false so they sit cleanly on top.
@@ -230,6 +241,7 @@ async function loadSplat() {
   splat = built.splat;
   scene.add(splat);
   _hudRefs.splat = splat;
+  sceneLayers.add({ mesh: splat, name: SPLAT_URL.split("/").pop(), isPrimary: true });
 
   // Wireframe sphere overlay for Effector Mode. Parented to splat so its
   // position can be copied straight from uniforms.maskCenter (already in
@@ -1500,10 +1512,42 @@ async function loadSplat() {
   // in the repo for future use; UI / wiring intentionally omitted.)
 
   // ---- Drag-and-drop splat upload -----------------------------------------
-  // Hot-swap the splat without a page reload. Closures over voxelizer /
-  // quadizer / annotations / dataLabels / raycaster mean the existing
-  // controllers + GUI wiring stay intact; we just point them at the new mesh.
+  // Drop adds a NEW secondary layer alongside the primary splat (the original
+  // load). Effects / voxel / quad / annotations stay bound to the primary.
+  // Use replaceSplatMesh() programmatically if you want the swap-and-rebind
+  // behavior instead — drag-drop no longer triggers it.
   const dropZone = document.getElementById("drop-zone");
+
+  async function addSplatLayer(options) {
+    setLoading("Loading splat layer…");
+    try {
+      const built = await createSplat(options);
+      sceneLayers.add({ mesh: built.splat, name: options.fileName || "Layer" });
+      statusEl.textContent = `+ ${options.fileName || "splat"}`;
+    } finally {
+      hideLoading();
+    }
+  }
+
+  // Hidden file input wired to Scene panel's "+ Add" button.
+  const addSplatInput = document.createElement("input");
+  addSplatInput.type   = "file";
+  addSplatInput.accept = ".splat,.ply,.spz,.ksplat";
+  addSplatInput.style.display = "none";
+  document.body.appendChild(addSplatInput);
+  addSplatInput.addEventListener("change", async (e) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";   // allow re-picking the same file
+    if (!f) return;
+    try {
+      const buf = await f.arrayBuffer();
+      await addSplatLayer({ fileBytes: new Uint8Array(buf), fileName: f.name });
+    } catch (err) {
+      console.error("Add splat layer failed:", err);
+      statusEl.textContent = "Load failed: " + (err?.message ?? err);
+    }
+  });
+  sceneLayers.onAddRequest = () => addSplatInput.click();
 
   async function replaceSplatMesh(options) {
     setLoading("Loading splat…");
@@ -1574,9 +1618,9 @@ async function loadSplat() {
     }
     try {
       const buf = await file.arrayBuffer();
-      await replaceSplatMesh({ fileBytes: new Uint8Array(buf), fileName: file.name });
+      await addSplatLayer({ fileBytes: new Uint8Array(buf), fileName: file.name });
     } catch (err) {
-      console.error("Splat replace failed:", err);
+      console.error("Add splat layer failed:", err);
       setLoading("Load failed: " + (err?.message ?? err));
       setTimeout(() => hideLoading(), 2500);
     }
