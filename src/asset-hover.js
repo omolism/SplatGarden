@@ -97,10 +97,10 @@ export class AssetHoverManager {
    * @param {HTMLCanvasElement} opts.canvas
    * @param {Array}  opts.items          — TECH_SPECS items (with worldPos[])
    *
-   * `worldPos` values are interpreted as raw Three.js world coordinates
-   * (same convention the Gazebo absoluteTarget viewpoint uses) — no
-   * extra splat transform applied, since the picker tool the artist uses
-   * already exports coords in that frame.
+   * `worldPos` values are picked from the artist's source tool. That tool
+   * exports with +Z forward (into the scene); Three.js uses -Z forward.
+   * X and Y axes already match. We therefore flip Z only when projecting
+   * to land the dots on the actual asset in the rendered scene.
    */
   constructor({ mountEl, camera, canvas, items }) {
     this.camera  = camera;
@@ -124,7 +124,12 @@ export class AssetHoverManager {
         if (this._pinned) this._show(it); else this._hide();
       });
       mountEl.appendChild(dot);
-      return { item: it, el: dot, world: new THREE.Vector3(...it.worldPos) };
+      // Z-flip only — tool exports +Z forward, Three.js wants -Z forward.
+      return {
+        item:  it,
+        el:    dot,
+        world: new THREE.Vector3(it.worldPos[0], it.worldPos[1], -it.worldPos[2]),
+      };
     });
 
     this.card = document.createElement("aside");
