@@ -901,25 +901,26 @@ kbd {
 }
 
 /* ----------------------------------------------------------------------
- * Tech Spec — research-bibliography overlay. Slides in from the right
- * with a dimmed backdrop; matches the other HUDs' visual language
- * (dark glass, monospace caps headers, dashed dividers).
+ * Pipeline — right-side slide-in. Information-design centerpiece for the
+ * showcase: assets, render primitives, capture & train, etc. Same
+ * Luma-glass language as the sidebar / hand panel / pipeline HUD.
  * -------------------------------------------------------------------- */
 #tech-spec {
   position: absolute;
   inset: 0;
-  z-index: 5000;          /* above lil-gui (1001) so the bibliography reads cleanly */
+  z-index: 5000;          /* above lil-gui (1001) so it reads cleanly */
   display: none;
-  font-family: var(--font-mono, ui-monospace, monospace);
-  color: rgba(255, 255, 255, 0.92);
-  letter-spacing: 0.04em;
+  font-family: var(--font-ui);
+  color: var(--text);
+  letter-spacing: 0.01em;
 }
 #tech-spec.show { display: block; }
 #tech-spec .ts-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.50);
+  background: rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
   opacity: 0;
   transition: opacity 0.18s ease;
 }
@@ -929,10 +930,12 @@ kbd {
   top: 0;
   right: 0;
   bottom: 0;
-  width: min(440px, 92vw);
-  background: rgba(10, 14, 20, 0.94);
-  border-left: 1px solid rgba(255, 255, 255, 0.10);
-  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.55);
+  width: min(460px, 92vw);
+  background: var(--panel-strong);
+  backdrop-filter: blur(28px) saturate(140%);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  border-left: 1px solid var(--hair);
+  box-shadow: var(--shadow-soft);
   display: flex;
   flex-direction: column;
   transform: translateX(40px);
@@ -947,57 +950,61 @@ kbd {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 12px 14px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--hair);
 }
 #tech-spec .ts-title {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex: 1;
 }
 #tech-spec .ts-title .dot {
   width: 6px; height: 6px; border-radius: 50%;
-  background: #6ad97c;
-  box-shadow: 0 0 6px #6ad97c;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.35);
 }
 #tech-spec .ts-title .t {
-  font-weight: 600;
-  font-size: 10px;
+  font-family: var(--font-ui);
+  font-weight: 500;
+  font-size: 11px;
   letter-spacing: 0.22em;
-  color: rgba(255, 255, 255, 0.95);
+  text-transform: uppercase;
+  color: var(--text);
 }
 #tech-spec .ts-key {
+  font-family: var(--font-mono);
   background: rgba(255, 255, 255, 0.06);
   padding: 1px 6px;
-  border-radius: 2px;
+  border-radius: 3px;
   font-size: 9px;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--text-mid);
   letter-spacing: 0.10em;
 }
 #tech-spec .ts-close {
   appearance: none;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 3px;
-  width: 24px;
-  height: 24px;
-  color: rgba(255, 255, 255, 0.75);
+  border: 1px solid var(--hair-strong);
+  border-radius: 4px;
+  width: 26px;
+  height: 26px;
+  color: var(--text-mid);
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
 #tech-spec .ts-close:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.30);
+  background: var(--hover-strong);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: var(--text);
 }
 #tech-spec .ts-sub {
-  padding: 8px 14px;
-  font-size: 9.5px;
-  color: rgba(255, 255, 255, 0.45);
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.10);
+  padding: 10px 16px;
+  font-size: 10px;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--hair);
+  letter-spacing: 0.02em;
 }
 #tech-spec .ts-body {
   flex: 1;
@@ -1012,44 +1019,49 @@ kbd {
   border-radius: 3px;
 }
 #tech-spec .ts-sec {
-  padding: 10px 14px 8px;
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid var(--hair);
 }
+#tech-spec .ts-sec:last-child { border-bottom: none; }
 #tech-spec .ts-sec-head {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   padding: 4px 0;
   cursor: pointer;
   user-select: none;
 }
 #tech-spec .ts-sec-name {
   flex: 1;
+  font-family: var(--font-ui);
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 500;
   letter-spacing: 0.20em;
-  color: rgba(255, 255, 255, 0.92);
+  text-transform: uppercase;
+  color: var(--text);
 }
 #tech-spec .ts-sec-count {
+  font-family: var(--font-mono);
   font-size: 9px;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--text-mid);
   background: rgba(255, 255, 255, 0.06);
   padding: 1px 6px;
-  border-radius: 2px;
+  border-radius: 3px;
 }
 #tech-spec .ts-caret {
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.50);
+  color: var(--text-dim);
   transition: transform 0.18s;
 }
 #tech-spec .ts-sec.collapsed .ts-caret { transform: rotate(-90deg); }
 #tech-spec .ts-sec.collapsed .ts-list,
 #tech-spec .ts-sec.collapsed .ts-sec-desc { display: none; }
 #tech-spec .ts-sec-desc {
-  font-size: 9px;
-  color: rgba(255, 255, 255, 0.42);
-  padding: 2px 0 6px;
-  letter-spacing: 0.06em;
+  font-size: 10px;
+  color: var(--text-dim);
+  padding: 4px 0 8px;
+  letter-spacing: 0.02em;
+  line-height: 1.45;
 }
 #tech-spec .ts-list {
   list-style: none;
@@ -1057,48 +1069,104 @@ kbd {
   padding: 0;
 }
 #tech-spec .ts-item {
-  padding: 6px 0 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 8px 0 10px;
+  border-top: 1px solid var(--hair);
 }
 #tech-spec .ts-item:first-child { border-top: none; }
+#tech-spec .ts-item-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
 #tech-spec .ts-item-name {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.96);
+  flex: 1;
+  font-family: var(--font-ui);
+  font-size: 12px;
   font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+#tech-spec .ts-item-loc {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--hair);
+  padding: 2px 6px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+#tech-spec .ts-item-chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+}
+#tech-spec .ts-chip {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
   letter-spacing: 0.04em;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--hair-strong);
+  padding: 2px 7px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+#tech-spec .ts-arrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-faint);
+  padding: 0 1px;
+}
+#tech-spec .ts-item-output {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.02em;
+  color: var(--text-mid);
+  margin-top: 6px;
 }
 #tech-spec .ts-item-ref {
+  font-family: var(--font-mono);
   font-size: 9.5px;
-  color: rgba(140, 200, 255, 0.78);
-  padding-top: 1px;
+  color: var(--text-mid);
+  padding-top: 3px;
   letter-spacing: 0.02em;
 }
 #tech-spec .ts-item-note {
-  font-size: 9px;
-  color: rgba(255, 255, 255, 0.55);
-  padding-top: 2px;
-  line-height: 1.45;
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  color: var(--text-mid);
+  padding-top: 4px;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
 }
 #tech-spec .ts-item-src {
+  font-family: var(--font-mono);
   font-size: 9px;
-  color: rgba(106, 217, 124, 0.78);
-  padding-top: 3px;
+  color: var(--text-dim);
+  padding-top: 5px;
   letter-spacing: 0.04em;
 }
 #tech-spec .ts-footer {
   display: flex;
   justify-content: space-between;
-  padding: 8px 14px 10px;
-  border-top: 1px dashed rgba(255, 255, 255, 0.10);
-  font-size: 9px;
-  background: rgba(255, 255, 255, 0.02);
+  padding: 10px 16px 12px;
+  border-top: 1px solid var(--hair);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
 }
 #tech-spec .ts-foot-k {
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--text-dim);
   letter-spacing: 0.10em;
+  text-transform: uppercase;
 }
 #tech-spec .ts-foot-v {
-  color: rgba(255, 255, 255, 0.80);
+  color: var(--text-mid);
+  letter-spacing: 0.02em;
 }
 
 /* ----------------------------------------------------------------------
