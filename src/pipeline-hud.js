@@ -20,6 +20,13 @@ function compactInt(n) {
   return String(n);
 }
 
+// Exact integer with thousands separators — used for splat count, which is
+// the headline figure for 3DGS and deserves precision over compactness.
+function exactInt(n) {
+  if (!Number.isFinite(n)) return "—";
+  return n.toLocaleString("en-US");
+}
+
 function getGpuInfo(renderer) {
   try {
     const gl  = renderer.getContext();
@@ -134,19 +141,21 @@ export class PipelineHUD {
     const ri = this.renderer.info.render;
 
     // ---- RENDER row ----
+    // Splat count uses exactInt — it's the headline figure for 3DGS and
+    // small differences matter (e.g. 2,987,341 vs "3.00M" hides 12k).
     const nSplats = r.splat?.packedSplats?.numSplats ?? null;
-    this._set("splats", nSplats != null ? compactInt(nSplats) : "—");
+    this._set("splats", nSplats != null ? exactInt(nSplats) : "—");
 
     const nQuads  = r.quadizer?.mesh?.geometry?.instanceCount ?? 0;
     const qVis    = r.quadizer?.opacity ?? 0;
     this._set("quads",  nQuads > 0
-      ? `${compactInt(nQuads)} · ${(qVis*100).toFixed(0)}%`
+      ? `${exactInt(nQuads)} · ${(qVis*100).toFixed(0)}%`
       : "— · off");
 
     const nVoxels = r.voxelizer?.mesh?.geometry?.instanceCount ?? 0;
     const vVis    = r.voxelizer?.opacity ?? 0;
     this._set("voxels", nVoxels > 0
-      ? `${compactInt(nVoxels)} · ${(vVis*100).toFixed(0)}%`
+      ? `${exactInt(nVoxels)} · ${(vVis*100).toFixed(0)}%`
       : "— · off");
 
     this._set("draw", compactInt(ri.calls));
