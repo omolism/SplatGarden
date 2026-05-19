@@ -594,6 +594,390 @@ kbd {
   padding: 0px 4px;
 }
 
+/* ----------------------------------------------------------------------
+ * Profiler — per-phase frame-time breakdown. Toggle via P.
+ * -------------------------------------------------------------------- */
+#profiler {
+  position: absolute;
+  bottom: 18px;
+  right: 18px;
+  width: 300px;
+  z-index: 22;
+  background: rgba(10, 14, 20, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 6px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  color: rgba(255, 255, 255, 0.92);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  user-select: none;
+  display: none;
+}
+#profiler.show { display: block; }
+#profiler .prof-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+#profiler .prof-title .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #ffd66a;
+  box-shadow: 0 0 6px #ffd66a;
+}
+#profiler .prof-title .t {
+  flex: 1;
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.20em;
+}
+#profiler .prof-key {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 0px 6px;
+  border-radius: 2px;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.55);
+}
+#profiler .prof-body { padding: 6px 10px 10px; }
+#profiler .prof-frame { padding: 4px 0; }
+#profiler .prof-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 1.5px 0;
+}
+#profiler .prof-row .k {
+  color: rgba(255, 255, 255, 0.50);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+}
+#profiler .prof-row .v {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 10px;
+  font-weight: 500;
+}
+#profiler .prof-frame-row .v { font-size: 13px; }
+#profiler .prof-divider {
+  border-top: 1px dashed rgba(255, 255, 255, 0.10);
+  margin: 6px 0;
+}
+#profiler .prof-phase {
+  margin-bottom: 6px;
+}
+#profiler .prof-phase-label {
+  display: flex;
+  justify-content: space-between;
+  padding-bottom: 2px;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.65);
+}
+#profiler .prof-phase-bar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+  overflow: hidden;
+}
+#profiler .prof-phase-bar .fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: rgba(106, 217, 124, 0.65);
+  transition: width 0.18s ease;
+}
+
+/* ----------------------------------------------------------------------
+ * A/B Compare — paper-figure split-screen viewer. Opens via backtick (`).
+ * -------------------------------------------------------------------- */
+#ab-compare {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  display: none;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 0.04em;
+}
+#ab-compare.show { display: block; }
+#ab-compare .abc-shade {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.40);
+  backdrop-filter: blur(2px);
+}
+#ab-compare .abc-frame {
+  position: absolute;
+  inset: 60px 360px 60px 60px;        /* leave room for control rail on right */
+  background: #060810;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: ew-resize;
+}
+#ab-compare .abc-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  pointer-events: none;
+}
+#ab-compare .abc-img-b { z-index: 1; }
+#ab-compare .abc-img-a { z-index: 2; }
+#ab-compare .abc-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  margin-left: -1px;
+  background: rgba(255, 255, 255, 0.85);
+  z-index: 3;
+  cursor: ew-resize;
+  box-shadow:
+    -2px 0 8px rgba(0, 0, 0, 0.55),
+     2px 0 8px rgba(0, 0, 0, 0.55);
+}
+#ab-compare .abc-knob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 28px;
+  height: 28px;
+  margin: -14px;
+  background: rgba(10, 14, 20, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: ew-resize;
+}
+#ab-compare .abc-tag {
+  position: absolute;
+  top: 16px;
+  display: flex;
+  gap: 8px;
+  padding: 4px 10px;
+  background: rgba(10, 14, 20, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  font-size: 10px;
+  z-index: 4;
+}
+#ab-compare .abc-tag .k {
+  color: rgba(106, 217, 124, 0.85);
+  font-weight: 600;
+  letter-spacing: 0.10em;
+}
+#ab-compare .abc-tag .v {
+  color: rgba(255, 255, 255, 0.88);
+}
+#ab-compare .abc-tag-a { left: 16px; }
+#ab-compare .abc-tag-b { right: 16px; }
+#ab-compare .abc-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.40);
+  text-transform: uppercase;
+}
+#ab-compare .abc-ctrl {
+  position: absolute;
+  top: 60px;
+  right: 60px;
+  width: 280px;
+  background: rgba(10, 14, 20, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 4px;
+  backdrop-filter: blur(10px);
+  padding: 10px;
+}
+#ab-compare .abc-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 10px;
+}
+#ab-compare .abc-title .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #ffd66a;
+  box-shadow: 0 0 6px #ffd66a;
+}
+#ab-compare .abc-title .t {
+  font-weight: 600;
+  font-size: 9.5px;
+  letter-spacing: 0.20em;
+}
+#ab-compare .abc-buttons {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+#ab-compare .abc-cap {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 3px;
+  padding: 6px 8px;
+  color: rgba(255, 255, 255, 0.92);
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+#ab-compare .abc-cap:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+#ab-compare .abc-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+#ab-compare .abc-fields label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.08em;
+}
+#ab-compare .abc-fields input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.30);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 2px;
+  padding: 4px 6px;
+  color: rgba(255, 255, 255, 0.92);
+  font-family: inherit;
+  font-size: 10px;
+}
+#ab-compare .abc-fields input:focus {
+  outline: none;
+  border-color: rgba(157, 216, 255, 0.55);
+}
+#ab-compare .abc-hint {
+  padding-top: 8px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.10);
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.40);
+  line-height: 1.5;
+}
+
+/* ----------------------------------------------------------------------
+ * Effect Callout — bottom-left card that pops in on click-FX trigger.
+ * Visual continuity with PipelineHUD: same dark glass, mono font, dashed
+ * dividers, hairline border, monospace caps for headings.
+ * -------------------------------------------------------------------- */
+#effect-callout {
+  position: absolute;
+  left: 18px;
+  bottom: 80px;             /* sit above the Hand Tracking panel */
+  width: 320px;
+  z-index: 22;
+  display: flex;
+  gap: 12px;
+  padding: 10px 12px;
+  background: rgba(10, 14, 20, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-left: 2px solid rgba(106, 217, 124, 0.65);  /* status accent */
+  border-radius: 4px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  color: rgba(255, 255, 255, 0.92);
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  user-select: none;
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+#effect-callout.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+#effect-callout .ec-glyph {
+  position: relative;
+  flex: 0 0 28px;
+  height: 28px;
+  align-self: flex-start;
+  margin-top: 2px;
+}
+#effect-callout .ec-corner {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border: 1.5px solid rgba(106, 217, 124, 0.85);
+}
+#effect-callout .ec-corner.tl { top: 0;    left: 0;    border-right: 0; border-bottom: 0; }
+#effect-callout .ec-corner.tr { top: 0;    right: 0;   border-left: 0;  border-bottom: 0; }
+#effect-callout .ec-corner.bl { bottom: 0; left: 0;    border-right: 0; border-top: 0;    }
+#effect-callout .ec-corner.br { bottom: 0; right: 0;   border-left: 0;  border-top: 0;    }
+#effect-callout .ec-cross {
+  position: absolute;
+  inset: 50% 50% auto auto;
+  width: 8px;
+  height: 8px;
+  margin: -4px;
+  background:
+    linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)) center/100% 1px no-repeat,
+    linear-gradient(rgba(255,255,255,0.85), rgba(255,255,255,0.85)) center/1px 100% no-repeat;
+}
+#effect-callout .ec-body {
+  flex: 1;
+  min-width: 0;
+}
+#effect-callout .ec-eyebrow {
+  font-size: 8.5px;
+  letter-spacing: 0.20em;
+  color: rgba(106, 217, 124, 0.85);
+  margin-bottom: 4px;
+}
+#effect-callout .ec-name {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  color: rgba(255, 255, 255, 0.96);
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#effect-callout .ec-technique {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.78);
+  margin-bottom: 6px;
+  line-height: 1.45;
+}
+#effect-callout .ec-meta {
+  display: flex;
+  gap: 6px;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.50);
+  flex-wrap: wrap;
+  padding-top: 4px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.10);
+}
+#effect-callout .ec-source { color: rgba(157, 216, 255, 0.85); }
+#effect-callout .ec-sep { color: rgba(255, 255, 255, 0.25); }
+#effect-callout .ec-ref { color: rgba(255, 255, 255, 0.55); flex: 1; }
+
 /* Segmented toggles (Splat Subform, Hand Mode, etc.) — shared style */
 .subform-toggle {
   display: flex;
@@ -630,12 +1014,13 @@ kbd {
 }
 .subform-cell button { width: 100%; }
 /* Portalled tooltips — appended to <body> by JS so position:fixed isn't
-   broken by lil-gui's panel transform. Visibility toggled via .show class. */
+   broken by lil-gui's panel transform. Visibility toggled via .show class.
+   z-index sits above every other overlay (Pipeline HUD, A/B Compare, etc.). */
 .subform-tip {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 1000;
+  z-index: 9999;
   display: grid;
   grid-template-columns: auto 1fr;
   column-gap: 10px;
@@ -906,7 +1291,7 @@ kbd {
   position: fixed;
   top: 0;
   left: 0;
-  z-index: 1000;
+  z-index: 9999;
   display: grid;
   grid-template-columns: auto 1fr;
   column-gap: 10px;

@@ -3,7 +3,10 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
-import { createScanModifier, EffectController, buildGUI } from "./effects.js";
+import { createScanModifier, EffectController, buildGUI, params as effectParams } from "./effects.js";
+import { EffectCallout } from "./effect-callout.js";
+import { ABCompare } from "./ab-compare.js";
+import { Profiler } from "./profiler.js";
 import { AnnotationManager } from "./annotations.js";
 import { HandController } from "./handtracking.js";
 import { setupPostFX } from "./postfx.js";
@@ -52,7 +55,10 @@ document.body.classList.toggle("mobile", IS_MOBILE);
 // ---------------------------------------------------------------------------
 // Renderer / scene / camera
 // ---------------------------------------------------------------------------
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
+// preserveDrawingBuffer enables canvas.toDataURL() for the A/B Compare
+// snapshot path. Minor GPU cost; the headline cost was already paid by
+// post-FX render targets.
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, preserveDrawingBuffer: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, IS_MOBILE ? 1.5 : 2));
 renderer.setSize(window.innerWidth, window.innerHeight, false);
 renderer.setClearColor(0x0b0f14, 1);
@@ -145,6 +151,27 @@ const pipelineHUD = new PipelineHUD({
   mountEl: document.getElementById("app") || document.body,
 });
 window.__pipelineHUD = pipelineHUD;
+
+// Effect-callout: shows the live algorithm name + technique + source ref
+// for ~5s every time a click effect fires. Driven from each triggerAt
+// invocation below.
+const effectCallout = new EffectCallout({
+  mountEl: document.getElementById("app") || document.body,
+});
+window.__effectCallout = effectCallout;
+
+// A/B Compare — backtick (`) opens / closes the side-by-side viewer.
+const abCompare = new ABCompare({
+  canvas,
+  mountEl: document.getElementById("app") || document.body,
+});
+window.__abCompare = abCompare;
+
+// Profiler — per-phase wall-clock frame timing. Toggle with P.
+const profiler = new Profiler({
+  mountEl: document.getElementById("app") || document.body,
+});
+window.__profiler = profiler;
 
 // Tech-Spec overlay scene — training cameras (and any future tech-spec 3D
 // gizmos) live here so they bypass the post-FX composer pipeline. Rendered
@@ -1123,6 +1150,7 @@ async function loadSplat() {
 
     // Otherwise → trigger scan effect at hit point (in object space)
     effects.triggerAt(r.local);
+    effectCallout.show(effectParams.effect);
     autoEnableEchoForClick();
     statusEl.textContent = `Hit (${r.hit.point.x.toFixed(2)}, ${r.hit.point.y.toFixed(2)}, ${r.hit.point.z.toFixed(2)})`;
   });
@@ -1453,7 +1481,10 @@ async function loadSplat() {
     } else if (!onePinchMoved) {
       // Quick tap → click → dissolve (no brush)
       const local = screenToLocalHit(p.x, p.y);
-      if (local) effects.triggerAt(local);
+      if (local) {
+        effects.triggerAt(local);
+        effectCallout.show(effectParams.effect);
+      }
     }
     onePinchActive = false;
     onePinchMoved  = false;
@@ -1628,6 +1659,8 @@ let fpsLastMs = 0;
 
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
+  profiler.beginFrame();
+  profiler.begin("logic");
 
   // Annotation tween + screen-space marker update
   if (annotations) {
@@ -1681,6 +1714,7 @@ renderer.setAnimationLoop(() => {
   // (Echo auto-toggle handled by setTimeout in autoEnableEchoForClick — no per-frame tick needed.)
   // Convolve + advect the velocity field one step. Downstream readers
   // (Phase 2 particles, Phase 3 voxel particles) sample its texture.
+  profiler.mark("step");
   velocityField.step();
   // Phase 2.5: pull live audio metrics; feed amp into the particle step
   // so loud frames scale field-strength + point-size (per gpgpu shader).
@@ -1688,11 +1722,13 @@ renderer.setAnimationLoop(() => {
   gpgpuParticles.step(dt, camera, velocityField.getTexture(), audioMetrics.amp);
   // Sorted-particles sim removed — Warp FX is a pure-shader post-pass with
   // no companion sim, so the composer just renders directly.
+  profiler.mark("compose");
   postfx.render(dt);
   // GPGPU particles + Tech-Spec gizmos live in their own scenes rendered
   // AFTER the composer so they bypass every post-FX pass (Echo, Bloom,
   // Painterly, Underwater, etc.). autoClear=false preserves the composed
   // pixels underneath; both scenes are additive/overlay-style.
+  profiler.mark("overlay");
   const prevAutoClear = renderer.autoClear;
   renderer.autoClear = false;
   if (gpgpuParticles.points.visible) {
@@ -1703,6 +1739,7 @@ renderer.setAnimationLoop(() => {
   }
   renderer.autoClear = prevAutoClear;
 
+  profiler.mark("hud");
   // Pipeline HUD — read live render-info / pass counts / particle / audio
   // and refresh DOM at ~2 Hz inside the module.
   pipelineHUD.tick(performance.now(), dt * 1000);
@@ -1723,6 +1760,7 @@ renderer.setAnimationLoop(() => {
     frameCount = 0;
     fpsLastMs = _fpsNow;
   }
+  profiler.endFrame();
 });
 
 loadSplat().catch((err) => {
