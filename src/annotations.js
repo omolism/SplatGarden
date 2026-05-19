@@ -226,6 +226,22 @@ export class AnnotationManager {
     if (vp) this.flyTo(vp.id);
   }
 
+  // Tween to an arbitrary (position, target) pose without registering a
+  // sidebar viewpoint — used by ad-hoc destinations like asset hotspots.
+  flyToPose(position, target, duration = 0.9) {
+    this.controls.enabled = false;
+    this.activeId = null;          // not a saved viewpoint
+    this._rebuildList();
+    this.tween = {
+      t: 0,
+      duration,
+      fromPos:    this.camera.position.clone(),
+      fromTarget: this.controls.target.clone(),
+      toPos:      position.clone(),
+      toTarget:   target.clone(),
+    };
+  }
+
   // Smoothstep easing
   _ease(x) { return x * x * (3 - 2 * x); }
 

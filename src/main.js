@@ -341,6 +341,16 @@ async function loadSplat() {
   annotations._suspendSave = true;
   const centerVp = annotations.seedDefaults(center, radius);
   annotations._suspendSave = false;
+
+  // Asset hotspot click → tween the camera close to the asset. Same Z-flip
+  // as the hotspot projection so the camera lands on the visible asset
+  // (not its source-tool mirror across the origin).
+  assetHover.onAssetSelect = (it) => {
+    if (!Array.isArray(it.worldPos)) return;
+    const target   = new THREE.Vector3(it.worldPos[0], it.worldPos[1], -it.worldPos[2]);
+    const position = target.clone().add(new THREE.Vector3(0, 0.5, 1.5));
+    annotations.flyToPose(position, target);
+  };
   // If localStorage has saved viewpoints (e.g. the user's custom "Gazebo"
   // viewpoint added in a previous session), replace the seeded defaults
   // with them. Auto-save on add/remove/rename keeps storage in sync going
@@ -1547,6 +1557,15 @@ async function loadSplat() {
       const built = await createSplat(options);
       sceneLayers.add({ mesh: built.splat, name: options.fileName || "Layer" });
       statusEl.textContent = `+ ${options.fileName || "splat"}`;
+
+      // Bundled-scene-specific overlays (Training Cameras / Data Labels /
+      // Daffodil + Grape Hyacinth hotspots) don't match a user-uploaded
+      // splat — turn them off so the new asset is presented cleanly.
+      // Re-enable via the Tech Spec Enable checkbox + reload if needed.
+      if (typeof techEnableCtrl !== "undefined" && techEnableCtrl) {
+        techEnableCtrl.setValue(false);
+      }
+      assetHover?.setVisible(false);
     } finally {
       hideLoading();
     }

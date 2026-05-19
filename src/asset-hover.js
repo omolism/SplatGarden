@@ -103,10 +103,12 @@ export class AssetHoverManager {
    * to land the dots on the actual asset in the rendered scene.
    */
   constructor({ mountEl, camera, canvas, items }) {
-    this.camera  = camera;
-    this.canvas  = canvas;
-    this.items   = (items || []).filter(it => Array.isArray(it.worldPos));
-    this._pinned = null;   // item locked open by click — survives mouseleave
+    this.camera         = camera;
+    this.canvas         = canvas;
+    this.items          = (items || []).filter(it => Array.isArray(it.worldPos));
+    this._pinned        = null;   // item locked open by click — survives mouseleave
+    this._visible       = true;   // whole layer toggle; user-uploaded splats hide it
+    this.onAssetSelect  = null;   // called with the item on click (camera fly-to hook)
 
     this.dots = this.items.map(it => {
       const dot = document.createElement("div");
@@ -120,8 +122,14 @@ export class AssetHoverManager {
       dot.addEventListener("mouseleave", () => { if (!this._pinned) this._hide(); });
       dot.addEventListener("click", (e) => {
         e.stopPropagation();
-        this._pinned = (this._pinned === it) ? null : it;
-        if (this._pinned) this._show(it); else this._hide();
+        const same = this._pinned === it;
+        this._pinned = same ? null : it;
+        if (this._pinned) {
+          this._show(it);
+          this.onAssetSelect?.(it);   // camera fly-to (subscribed in main.js)
+        } else {
+          this._hide();
+        }
       });
       mountEl.appendChild(dot);
       // Z-flip only — tool exports +Z forward, Three.js wants -Z forward.
@@ -164,9 +172,22 @@ export class AssetHoverManager {
     this.card.classList.remove("pinned");
   }
 
+  // Toggle the entire hotspot layer. Used to hide the bundled scene's
+  // asset markers when the user drops in their own splat.
+  setVisible(on) {
+    this._visible = !!on;
+    if (!on) {
+      this._pinned = null;
+      this._hide();
+    }
+    for (const d of this.dots) {
+      d.el.style.display = this._visible ? "" : "none";
+    }
+  }
+
   // Call once per frame after the camera matrices are current.
   update() {
-    if (!this.camera || !this.canvas) return;
+    if (!this._visible || !this.camera || !this.canvas) return;
     const rect = this.canvas.getBoundingClientRect();
     for (const d of this.dots) {
       _v.copy(d.world).project(this.camera);
