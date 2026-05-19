@@ -1928,3 +1928,311 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   background: rgba(255, 255, 255, 0.10) !important;
   border-color: rgba(255, 255, 255, 0.22) !important;
 }
+
+/* ============================================================
+   Asset hotspots + hover info card
+   - A small floating dot sits at each TECH_SPECS asset's worldPos
+   - Hover the dot → poster-style overlay card pops in the upper-centre
+     of the viewport; click locks it open (pinned state, close × visible)
+   ============================================================ */
+.asset-hotspot {
+  position: absolute;
+  left: 0; top: 0;
+  width: 14px; height: 14px;
+  margin-left: -7px; margin-top: -7px;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  will-change: transform;
+}
+.asset-hotspot .ahot-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.45);
+  transition: transform 0.15s cubic-bezier(.2,.7,.3,1);
+}
+.asset-hotspot .ahot-ring {
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.40);
+  opacity: 0.6;
+  animation: ahotPulse 2.4s ease-in-out infinite;
+}
+.asset-hotspot .ahot-label {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text);
+  background: rgba(8, 12, 18, 0.78);
+  border: 1px solid var(--hair);
+  border-radius: 3px;
+  padding: 3px 7px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.asset-hotspot:hover .ahot-dot { transform: scale(1.4); }
+.asset-hotspot:hover .ahot-label { opacity: 1; }
+.asset-hotspot:hover .ahot-ring {
+  border-color: rgba(255, 255, 255, 0.80);
+  inset: -5px;
+}
+@keyframes ahotPulse {
+  0%, 100% { opacity: 0.35; transform: scale(1.0); }
+  50%      { opacity: 0.85; transform: scale(1.3); }
+}
+
+/* ---------- Card ---------- */
+#asset-hover-card {
+  position: absolute;
+  top: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(600px, 72vw);
+  max-height: calc(100vh - 160px);
+  z-index: 25;
+  background: var(--panel-strong);
+  backdrop-filter: blur(28px) saturate(140%);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0.01em;
+  user-select: text;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.20) transparent;
+}
+#asset-hover-card[hidden] { display: none; }
+#asset-hover-card::-webkit-scrollbar { width: 6px; }
+#asset-hover-card::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 3px;
+}
+
+#asset-hover-card .ah-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: 1px solid var(--hair-strong);
+  border-radius: 4px;
+  color: var(--text-mid);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  display: none;
+  z-index: 1;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+#asset-hover-card.pinned .ah-close { display: block; }
+#asset-hover-card .ah-close:hover {
+  background: var(--hover-strong);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: var(--text);
+}
+
+#asset-hover-card .ah-head {
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--hair);
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+#asset-hover-card .ah-name {
+  flex: 1;
+  font-family: var(--font-ui);
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+#asset-hover-card .ah-loc {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-mid);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--hair);
+  padding: 3px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+
+#asset-hover-card .ah-section {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--hair);
+}
+#asset-hover-card .ah-section:last-of-type { border-bottom: none; }
+#asset-hover-card .ah-sec-title {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+
+/* Toolchain chip row */
+#asset-hover-card .ah-chain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+}
+#asset-hover-card .ah-chip {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--hair-strong);
+  padding: 3px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+#asset-hover-card .ah-arrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+/* Triptych — Style Reference / Original Texture / Result */
+#asset-hover-card .ah-triptych {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+#asset-hover-card .ah-triptych figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+#asset-hover-card .ah-frame {
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--hair);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#asset-hover-card .ah-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+#asset-hover-card .ah-ph {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+#asset-hover-card figcaption {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: var(--text-mid);
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+/* Pipeline strip — n-wide image row */
+#asset-hover-card .ah-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 8px;
+}
+#asset-hover-card .ah-strip figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+#asset-hover-card .ah-strip .ah-frame {
+  aspect-ratio: 1 / 1;
+}
+#asset-hover-card .ah-strip figcaption {
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+/* Bullet features */
+#asset-hover-card .ah-bullets {
+  margin: 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+#asset-hover-card .ah-bullets li {
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--text-mid);
+  letter-spacing: 0.01em;
+}
+#asset-hover-card .ah-bullets li strong,
+#asset-hover-card .ah-bullets li b { color: var(--text); font-weight: 500; }
+
+/* Notes */
+#asset-hover-card .ah-note {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--text-mid);
+  letter-spacing: 0.01em;
+}
+
+/* Footer — Output / Source / Pos */
+#asset-hover-card .ah-foot {
+  padding: 12px 18px 14px;
+  border-top: 1px solid var(--hair);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.02);
+}
+#asset-hover-card .ah-foot-row {
+  display: flex;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.02em;
+}
+#asset-hover-card .ah-foot-row .ah-k {
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.10em;
+  width: 60px;
+  flex-shrink: 0;
+}
+#asset-hover-card .ah-foot-row .ah-v {
+  color: var(--text-mid);
+  flex: 1;
+  word-break: break-word;
+}

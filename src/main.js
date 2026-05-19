@@ -6,7 +6,8 @@ import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
 import { createScanModifier, EffectController, buildGUI, params as effectParams } from "./effects.js";
 import { ABCompare } from "./ab-compare.js";
 import { Profiler } from "./profiler.js";
-import { TechSpec } from "./tech-spec.js";
+import { TechSpec, TECH_SPECS } from "./tech-spec.js";
+import { AssetHoverManager } from "./asset-hover.js";
 import { AnnotationManager } from "./annotations.js";
 import { HandController } from "./handtracking.js";
 import { setupPostFX } from "./postfx.js";
@@ -171,6 +172,16 @@ const sceneLayers = new SceneLayers({
   mountEl: document.getElementById("left-stack") || document.body,
 });
 window.__sceneLayers = sceneLayers;
+
+// Asset hover hotspots — project each TECH_SPECS asset's worldPos onto the
+// viewport. Hover a dot for the poster-style info card.
+const assetHover = new AssetHoverManager({
+  mountEl: document.getElementById("app") || document.body,
+  camera,
+  canvas,
+  items: TECH_SPECS.flatMap(s => s.items),
+});
+window.__assetHover = assetHover;
 
 // Tech-Spec overlay scene — training cameras (and any future tech-spec 3D
 // gizmos) live here so they bypass the post-FX composer pipeline. Rendered
@@ -1757,6 +1768,8 @@ renderer.setAnimationLoop(() => {
   // Pipeline HUD — read live render-info / pass counts / particle stats
   // and refresh DOM at ~2 Hz inside the module.
   pipelineHUD.tick(performance.now(), dt * 1000);
+  // Asset hover hotspots — project worldPos to screen each frame.
+  assetHover?.update();
 
   // FPS readout — uses raw performance.now() (NOT the clamped dt, which
   // pegs at 20 fps because dt is capped at 50 ms). One decimal place so
