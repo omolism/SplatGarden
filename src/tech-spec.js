@@ -13,6 +13,99 @@
 // ---------------------------------------------------------------------------
 
 export const TECH_SPECS = [
+  // ============== Three pillars: 3DGS / USD / AI ==============
+  {
+    section: "3DGS",
+    desc:    "The render primitive and the pipeline that produces it",
+    items: [
+      {
+        name:   "3D Gaussian Splatting",
+        ref:    "Kerbl et al., SIGGRAPH 2023",
+        note:   "Per-splat ellipsoidal Gaussians + SH view-dep color",
+        source: "via @sparkjsdev/spark",
+      },
+      {
+        name:   "Point subform",
+        ref:    "Gaussian centers collapsed to isotropic points",
+        note:   "Same data, drawn as bare points so the sky shows through gaps",
+        source: "Spark subform · Customize ▸ Splat ▸ Point",
+      },
+      {
+        name:   "Scene assembly",
+        ref:    "Unreal Engine — every asset set-dressed into one scene",
+        note:   "Perforce-backed version control across artists",
+        source: "off-repo",
+      },
+      {
+        name:   "Capture",
+        ref:    "Litchfield Studio capture pipeline",
+        source: "off-repo",
+      },
+      {
+        name:   "Pose reconstruction",
+        ref:    "COLMAP Structure-from-Motion · 990 cameras recovered",
+        source: "src/colmap-loader.js:50",
+      },
+      {
+        name:   "Splat training",
+        ref:    "Postshot — per-splat Gaussian fit + SH coefficients",
+        source: "off-repo",
+      },
+      {
+        name:   "Cinematic flythrough",
+        ref:    "Houdini-authored FBX · 24 fps · 25 s · 600 frames",
+        source: "public/Shot4B_GS-FX_Camera_V01.fbx",
+      },
+    ],
+  },
+
+  {
+    section: "USD",
+    desc:    "OpenUSD interop — alternative subforms expressed as PointInstancer prims",
+    items: [
+      {
+        name:   "Quad — camera-facing billboard",
+        ref:    "OpenUSD UsdGeomPointInstancer · proto = Plane",
+        note:   "Per-instance positions / orientations / scales + primvars:displayColor",
+        source: "src/quadizer.js:1",
+      },
+      {
+        name:   "Voxel — uniform-grid binning",
+        ref:    "OpenUSD UsdGeomPointInstancer · proto = Cube",
+        note:   "Averaged color per cell — same per-instance arrays as Quad",
+        source: "src/voxelizer.js:1",
+      },
+    ],
+  },
+
+  {
+    section: "AI",
+    desc:    "Custom diffusion-based texture tool driving the painterly look on Daffodil + Landscape",
+    items: [
+      {
+        name:      "Artist-Directed Style Transfer",
+        ref:       "Diffusion-based style transfer with controllable color preservation",
+        toolchain: ["IP-Adapter (Ye 2023)", "ControlNet (Zhang 2023)", "AdaIN (Huang & Belongie 2017)", "Diffusion"],
+        output:    "Painterly textures with preserved palette",
+        note:      "Two artist-selectable modes — Full Style Transfer (color + texture + tone from a reference) and Texture-Only Transfer (auto-grayscale reference + AdaIN to apply painterly brushwork while keeping the original color palette intact). Per-channel histogram matching + patch-wise AdaIN run post-generation to deterministically correct residual color drift — output stays faithful to the pre-approved palette across runs.",
+        source:    "off-repo",
+      },
+      {
+        name:   "Generation Parameters",
+        ref:    "Artist-controllable knobs",
+        note:   "ControlNet Mode — Tile (colored renders, preserves pixel structure) / Canny (sketches, preserves edges) · ControlNet Strength · IP-Adapter Strength · Inference Steps · Guidance Scale.",
+        source: "Gradio interface",
+      },
+      {
+        name:   "Implementation",
+        ref:    "PyTorch 2.11 · CUDA 13.0 · Python",
+        note:   "Runs on NVIDIA RTX PRO 6000 Blackwell (96 GB VRAM); generates a 4K image in ≈ 20 s at 20 inference steps.",
+        source: "off-repo",
+      },
+    ],
+  },
+
+  // ============== Per-asset cards (consume the three pillars above) ==============
   {
     section: "ASSETS",
     desc:    "Per-object authoring — set-dressed in Unreal, then captured together as one 3DGS",
@@ -32,7 +125,7 @@ export const TECH_SPECS = [
         worldPos:  [-0.195, -0.730, 2.379],
         toolchain: ["Houdini", "VAT bake", "Unreal Engine (set dress)", "Python · OSC · MediaPipe", "AI texture stylization"],
         output:    "Mesh + VAT animation · interactively driven in Unreal",
-        note:      "Animated procedurally in Houdini and VAT-baked, then set-dressed in Unreal. Inside the Unreal session, Python · OSC · MediaPipe drives the rig live (hand gesture → OSC → blueprint). Diffuse texture passes through the custom AI stylization tool (see below).",
+        note:      "Animated procedurally in Houdini and VAT-baked, then set-dressed in Unreal. Inside the Unreal session, Python · OSC · MediaPipe drives the rig live (hand gesture → OSC → blueprint). Diffuse texture passes through the custom AI stylization tool.",
         source:    "in-scene",
       },
       {
@@ -63,112 +156,10 @@ export const TECH_SPECS = [
   },
 
   {
-    section: "AI STYLIZATION",
-    desc:    "Custom diffusion-based texture tool driving the painterly look on Daffodil + Landscape",
-    items: [
-      {
-        name:      "Artist-Directed Style Transfer",
-        ref:       "Diffusion-based style transfer with controllable color preservation",
-        toolchain: ["IP-Adapter (Ye 2023)", "ControlNet (Zhang 2023)", "AdaIN (Huang & Belongie 2017)", "Diffusion"],
-        output:    "Painterly textures with preserved palette",
-        note:      "Two artist-selectable modes — Full Style Transfer (color + texture + tone from a reference) and Texture-Only Transfer (auto-grayscale reference + AdaIN to apply painterly brushwork while keeping the original color palette intact). Per-channel histogram matching + patch-wise AdaIN run post-generation to deterministically correct residual color drift — output stays faithful to the pre-approved palette across runs.",
-        source:    "off-repo",
-      },
-      {
-        name:      "Generation Parameters",
-        ref:       "Artist-controllable knobs",
-        note:      "ControlNet Mode — Tile (colored renders, preserves pixel structure) / Canny (sketches, preserves edges) · ControlNet Strength · IP-Adapter Strength · Inference Steps · Guidance Scale.",
-        source:    "Gradio interface",
-      },
-      {
-        name:      "Implementation",
-        ref:       "PyTorch 2.11 · CUDA 13.0 · Python",
-        note:      "Runs on NVIDIA RTX PRO 6000 Blackwell (96 GB VRAM); generates a 4K image in ≈ 20 s at 20 inference steps.",
-        source:    "off-repo",
-      },
-    ],
-  },
-
-  {
-    section: "RENDER PRIMITIVES",
-    desc:    "Same splat scene, four interchangeable subforms",
-    items: [
-      {
-        name:   "3D Gaussian Splatting",
-        ref:    "Kerbl et al., SIGGRAPH 2023",
-        note:   "Per-splat ellipsoidal Gaussians + SH view-dep color",
-        source: "via @sparkjsdev/spark",
-      },
-      {
-        name:   "Point",
-        ref:    "Bare splat centers, no anisotropy",
-        source: "Spark subform — Point",
-      },
-      {
-        name:   "Quad — camera-facing billboard",
-        ref:    "OpenUSD UsdGeomPointInstancer · proto = Plane",
-        source: "src/quadizer.js:1",
-      },
-      {
-        name:   "Voxel — uniform-grid binning",
-        ref:    "OpenUSD UsdGeomPointInstancer · proto = Cube",
-        note:   "Averaged color per cell",
-        source: "src/voxelizer.js:1",
-      },
-    ],
-  },
-
-  {
-    section: "CAMERA TRACK",
-    desc:    "Authored cinematography + reconstructed capture poses",
-    items: [
-      {
-        name:   "Cinematic flythrough",
-        ref:    "Houdini-authored, FBX bake · 24 fps · 25 s · 600 frames",
-        source: "public/Shot4B_GS-FX_Camera_V01.fbx",
-      },
-      {
-        name:   "Capture cameras",
-        ref:    "990 COLMAP poses recovered from training frames",
-        source: "src/colmap-loader.js:50",
-      },
-    ],
-  },
-
-  {
-    section: "CAPTURE & TRAIN",
-    desc:    "Pipeline that turns the assembled Unreal scene into the 3DGS rendered here",
-    items: [
-      {
-        name:   "Scene assembly",
-        ref:    "Unreal Engine — every asset set-dressed into one scene",
-        note:   "Perforce-backed version control across artists",
-        source: "off-repo",
-      },
-      {
-        name:   "Capture",
-        ref:    "Litchfield Studio capture pipeline",
-        source: "off-repo",
-      },
-      {
-        name:   "Pose reconstruction",
-        ref:    "COLMAP Structure-from-Motion · 990 cameras recovered",
-        source: "src/colmap-loader.js:50",
-      },
-      {
-        name:   "Splat training",
-        ref:    "Postshot — per-splat Gaussian fit + SH coefficients",
-        source: "off-repo",
-      },
-    ],
-  },
-
-  {
     section: "INPUT & SENSING",
-    desc:    "MediaPipe-driven interaction surfaces",
+    desc:    "MediaPipe-driven interaction surface",
     items: [
       { name: "Hand tracking", ref: "MediaPipe HandLandmarker (tasks-vision 0.10.35)", source: "src/handtracking.js:1" },
-      { name: "Body tracking", ref: "MediaPipe PoseLandmarker (tasks-vision 0.10.35)", source: "src/bodytracking.js:1" },
     ],
   },
 

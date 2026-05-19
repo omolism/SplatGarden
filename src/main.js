@@ -1539,9 +1539,6 @@ async function loadSplat() {
     });
   });
 
-  // (Body tracking is parked as a wish-list feature — bodytracking.js stays
-  // in the repo for future use; UI / wiring intentionally omitted.)
-
   // ---- Drag-and-drop splat upload -----------------------------------------
   // Drop adds a NEW secondary layer alongside the primary splat (the original
   // load). Effects / voxel / quad / annotations stay bound to the primary.

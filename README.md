@@ -34,12 +34,11 @@ Right-side slide-in. The information-design centerpiece of the showcase — orga
 
 | Section | Contents |
 |---|---|
+| **3DGS** | The render primitive (Kerbl 2023) + Point subform + the full production chain: Unreal scene assembly (Perforce) → Litchfield Studio capture → COLMAP SfM → Postshot training → Houdini camera flythrough. |
+| **USD** | OpenUSD interop — Quad and Voxel subforms expressed as `UsdGeomPointInstancer` prims (proto = Plane / Cube + `primvars:displayColor`). |
+| **AI** | Custom diffusion-based texture tool — IP-Adapter + ControlNet (Tile / Canny) + AdaIN. Drives the painterly look on Daffodil + Landscape textures. Full vs Texture-Only modes. PyTorch 2.11 / CUDA 13.0 / RTX PRO 6000 Blackwell. |
 | **Assets** | Per-asset cards with tool-chain chip rows. Each asset ends at Unreal set dress; only the final Garden Environment touches Litchfield + Postshot. Covers Grape Hyacinth, Daffodil, Tree, Landscape, Garden Environment. |
-| **AI Stylization** | Custom diffusion-based texture tool — IP-Adapter + ControlNet (Tile / Canny) + AdaIN. Drives the painterly look on Daffodil + Landscape textures. Two modes: Full Style Transfer or Texture-Only. PyTorch 2.11 / CUDA 13.0 / RTX PRO 6000 Blackwell. |
-| **Render Primitives** | The four interchangeable subforms — 3DGS / Point / Quad / Voxel — with USD analogues |
-| **Camera Track** | The Houdini-authored 25 s FBX + 990 COLMAP poses |
-| **Capture & Train** | Unreal scene assembly (Perforce) → Litchfield Studio capture → COLMAP SfM → Postshot training |
-| **Input & Sensing** | MediaPipe Hand / Body tracking |
+| **Input & Sensing** | MediaPipe hand tracking |
 | Post-Processing · Click FX | Demoted to bottom — labelled "toy" sections |
 
 ### Pipeline HUD — RENDER (`top-left`)
@@ -232,7 +231,6 @@ src/
   colmap-loader.js                    # images.bin parser + frustum geometry builder
   datalabels.js                       # surveillance-card overlay
   handtracking.js                     # MediaPipe-driven hand-control state machine
-  bodytracking.js                     # MediaPipe PoseLandmarker (wired but UI parked)
   quadizer.js, voxelizer.js           # UsdGeomPointInstancer-style overlays
   ab-compare.js                       # `-key paper-figure split-screen viewer
   profiler.js                         # per-phase frame-time bars (P)

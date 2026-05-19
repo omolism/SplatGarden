@@ -64,7 +64,7 @@ export const uniforms = {
   wispAmt:    dyno.dynoFloat(0.7),
   flyMax:     dyno.dynoFloat(3.5),
 
-  // ---- Mask reveal (palm / body driven) ----
+  // ---- Mask reveal (palm-driven) ----
   // Inside the mask, pointMode is LOCALLY inverted: if the scene is currently
   // crystallized, a moving "hole" lets you peek at the underlying splats;
   // if the scene is splats, the mask reveals the crystallized form within.
@@ -73,15 +73,6 @@ export const uniforms = {
   maskRadius: dyno.dynoFloat(0.6),                        // world units
   maskShape:  dyno.dynoInt(0),                            // 0 = sphere, 1 = cube
   maskSoft:   dyno.dynoFloat(0.25),                       // soft-edge fraction
-
-  // ---- Body-shape mask (5 body landmarks, OR-ed with palm mask) ----
-  bodyActive: dyno.dynoFloat(0.0),
-  bodyRadius: dyno.dynoFloat(0.5),
-  bodyP0:     dyno.dynoVec3(new THREE.Vector3()),         // head
-  bodyP1:     dyno.dynoVec3(new THREE.Vector3()),         // left hand
-  bodyP2:     dyno.dynoVec3(new THREE.Vector3()),         // right hand
-  bodyP3:     dyno.dynoVec3(new THREE.Vector3()),         // left foot
-  bodyP4:     dyno.dynoVec3(new THREE.Vector3()),         // right foot
 };
 
 export const params = {
@@ -109,7 +100,6 @@ export const params = {
   maskShape: "Sphere",
   maskRadius: 0.6,
   maskSoft: 0.25,
-  bodyRadius: 0.5,
 
   windX: 0.0,
   windY: 0.0,
@@ -162,13 +152,6 @@ export function createScanModifier() {
           uMaskRadius: "float",
           uMaskShape:  "int",
           uMaskSoft:   "float",
-          uBodyActive: "float",
-          uBodyRadius: "float",
-          uBodyP0:     "vec3",
-          uBodyP1:     "vec3",
-          uBodyP2:     "vec3",
-          uBodyP3:     "vec3",
-          uBodyP4:     "vec3",
           uWindDir:    "vec3",
           uEdgeRagged: "float",
           uWispAmt:    "float",
@@ -929,9 +912,9 @@ export function createScanModifier() {
             //                 = 1 → Point    (collapse scales to uPointSize)
             //   uSplatVis     → multiplies final splat alpha (0 = invisible)
             //
-            // Mask reveal (palm / body): inside the mask region, sub-form is
-            // inverted — i.e. a "hole" of Gaussians in a Point-form scene or
-            // vice-versa.
+            // Mask reveal (palm): inside the mask region, sub-form is
+            // inverted — i.e. a "hole" of Gaussians in a Point-form scene
+            // or vice-versa.
             // ================================================================
             float maskMix = 0.0;
             float soft = max(${inputs.uMaskSoft}, 0.001);
@@ -943,17 +926,6 @@ export function createScanModifier() {
               float r0 = ${inputs.uMaskRadius} * (1.0 - soft);
               float r1 = ${inputs.uMaskRadius};
               maskMix = 1.0 - smoothstep(r0, r1, mDist);
-            }
-            if (${inputs.uBodyActive} > 0.5) {
-              float br0 = ${inputs.uBodyRadius} * (1.0 - soft);
-              float br1 = ${inputs.uBodyRadius};
-              vec3 c = ${outputs.gsplat}.center;
-              float dMin = length(c - ${inputs.uBodyP0});
-              dMin = min(dMin, length(c - ${inputs.uBodyP1}));
-              dMin = min(dMin, length(c - ${inputs.uBodyP2}));
-              dMin = min(dMin, length(c - ${inputs.uBodyP3}));
-              dMin = min(dMin, length(c - ${inputs.uBodyP4}));
-              maskMix = max(maskMix, 1.0 - smoothstep(br0, br1, dMin));
             }
 
             // Effective sub-form per splat: invert inside the mask.
@@ -1002,13 +974,6 @@ export function createScanModifier() {
           uMaskRadius: uniforms.maskRadius,
           uMaskShape:  uniforms.maskShape,
           uMaskSoft:   uniforms.maskSoft,
-          uBodyActive: uniforms.bodyActive,
-          uBodyRadius: uniforms.bodyRadius,
-          uBodyP0:     uniforms.bodyP0,
-          uBodyP1:     uniforms.bodyP1,
-          uBodyP2:     uniforms.bodyP2,
-          uBodyP3:     uniforms.bodyP3,
-          uBodyP4:     uniforms.bodyP4,
           uWindDir:    uniforms.windDir,
           uEdgeRagged: uniforms.edgeRagged,
           uWispAmt:    uniforms.wispAmt,
@@ -1075,7 +1040,6 @@ export class EffectController {
     uniforms.maskShape.value  = MASK_SHAPE_INDEX[params.maskShape] ?? 0;
     uniforms.maskRadius.value = params.maskRadius;
     uniforms.maskSoft.value   = params.maskSoft;
-    uniforms.bodyRadius.value = params.bodyRadius;
     uniforms.windDir.value.set(params.windX, params.windY, params.windZ);
     uniforms.edgeRagged.value = params.edgeRagged;
     uniforms.wispAmt.value    = params.wispAmt;
@@ -1098,22 +1062,6 @@ export class EffectController {
       uniforms.maskActive.value = 1.0;
     } else {
       uniforms.maskActive.value = 0.0;
-    }
-    this.mesh?.updateVersion();
-  }
-
-  // Body-silhouette mask: pass {head, lhand, rhand, lfoot, rfoot} as object-space
-  // THREE.Vector3 (or null/undefined to disable).
-  setBodyPoints(pts) {
-    if (!pts) {
-      uniforms.bodyActive.value = 0.0;
-    } else {
-      uniforms.bodyP0.value.copy(pts.head);
-      uniforms.bodyP1.value.copy(pts.lhand);
-      uniforms.bodyP2.value.copy(pts.rhand);
-      uniforms.bodyP3.value.copy(pts.lfoot);
-      uniforms.bodyP4.value.copy(pts.rfoot);
-      uniforms.bodyActive.value = 1.0;
     }
     this.mesh?.updateVersion();
   }
@@ -1443,7 +1391,6 @@ export function buildGUI(controller) {
   // now. Force the mask off as well so any stale hand-tracking state can't
   // bleed through.
   uniforms.maskActive.value = 0.0;
-  uniforms.bodyActive.value = 0.0;
 
   // Expose folder refs so postfx.attachGUI / main.js can place their
   // controls inside the right parents (Customize / Play / FX / 3DGS-USD).
