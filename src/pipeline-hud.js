@@ -1,14 +1,14 @@
 // ---------------------------------------------------------------------------
 // PipelineHUD — top-left tech-spec HUD that reads live numbers off the
-// renderer, post-fx composer, splat / voxel / quad / particle subsystems,
-// and audio reactor. Refreshes ~2 Hz so the panel doesn't flicker per frame.
+// renderer, post-fx composer, and splat / voxel / quad / particle
+// subsystems. Refreshes ~2 Hz so the panel doesn't flicker per frame.
 //
 // Sections:
-//   ① RENDER   — splat / quad / voxel counts + draw calls + triangles
-//   ② POSTFX   — total / enabled pass count + per-pass list
-//   ③ PARTICLES — gpgpu count + live audio amp bar
-//   ④ FRAME    — fps + frame ms breakdown (Profiler integration if available)
-//   ⑤ GPU      — WebGL vendor / renderer / driver
+//   ① RENDER    — splat / quad / voxel counts + draw calls + triangles
+//   ② POSTFX    — total / enabled pass count + per-pass list
+//   ③ PARTICLES — gpgpu count + visibility
+//   ④ FRAME     — fps + frame ms breakdown (Profiler integration if available)
+//   ⑤ GPU       — WebGL vendor / renderer / driver
 // ---------------------------------------------------------------------------
 
 const UPDATE_HZ_MS = 500;
@@ -43,7 +43,7 @@ export class PipelineHUD {
   constructor({ renderer, postfx, refs = {}, mountEl = document.body, profiler = null }) {
     this.renderer = renderer;
     this.postfx   = postfx;
-    this.refs     = refs;       // { splat, voxelizer, quadizer, gpgpuParticles, audioReactor }
+    this.refs     = refs;       // { splat, voxelizer, quadizer, gpgpuParticles }
     this.profiler = profiler;
     this._lastT   = 0;
     this._frames  = 0;
@@ -80,9 +80,6 @@ export class PipelineHUD {
         <div class="hud-section" data-key="particles">
           <div class="hud-shdr">PARTICLES</div>
           <div class="hud-row"><span class="k">GPGPU</span><span class="v" data-k="gpgpuCount">—</span></div>
-          <div class="hud-row"><span class="k">AUDIO</span>
-            <span class="v hud-bar-wrap"><span class="hud-bar" data-k="audioBar"></span><span class="v hud-bar-num" data-k="audioNum">0.00</span></span>
-          </div>
         </div>
 
         <div class="hud-section" data-key="frame">
@@ -117,9 +114,6 @@ export class PipelineHUD {
     if (el) el.textContent = value;
   }
 
-  // Hint that the audio reactor is now live (avoids reading the file before
-  // user interaction completes the autoplay gate).
-  setAudioReactor(r) { this.refs.audioReactor = r; }
   setProfiler(p)     { this.profiler = p; }
 
   // Called every frame; updates internal counters but only rewrites DOM at
@@ -184,11 +178,6 @@ export class PipelineHUD {
       pCount != null
         ? `${compactInt(pCount)} · ${pVis ? "on" : "off"}`
         : "—");
-
-    const amp = r.audioReactor?.metrics?.amp ?? 0;
-    const bar = this.el.querySelector('[data-k="audioBar"]');
-    if (bar) bar.style.setProperty("--w", `${Math.min(amp, 1) * 100}%`);
-    this._set("audioNum", amp.toFixed(2));
 
     // ---- FRAME row ----
     this._set("fps", `${fps.toFixed(1)}`);

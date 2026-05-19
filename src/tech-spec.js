@@ -93,11 +93,10 @@ export const TECH_SPECS = [
 
   {
     section: "INPUT & SENSING",
-    desc:    "MediaPipe + Web Audio drive interactive control surfaces",
+    desc:    "MediaPipe drives interactive control surfaces",
     items: [
       { name: "Hand tracking",  ref: "MediaPipe HandLandmarker (tasks-vision 0.10.35)", source: "src/handtracking.js:1" },
       { name: "Body tracking",  ref: "MediaPipe PoseLandmarker (tasks-vision 0.10.35)", source: "src/bodytracking.js:1" },
-      { name: "Audio analyser", ref: "Web Audio AnalyserNode · FFT 512 · amp/bass/mid/treble bands", source: "src/audio-reactor.js:1" },
     ],
   },
 

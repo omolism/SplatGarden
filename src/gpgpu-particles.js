@@ -12,10 +12,6 @@
 // Hookup:
 //   - Reads Phase-1 VelocityField texture each frame; particles drift along
 //     the field's 2D velocity (projected from world to screen UV).
-//   - Audio amplitude uniform (uAudioAmp, 0..1) modulates field strength
-//     and point size. Phase 2.5 wires AnalyserNode → uAudioAmp; until then
-//     it stays at 0 and the particles just react to interaction-injected
-//     field motion.
 // ---------------------------------------------------------------------------
 
 import * as THREE from "three";
@@ -67,7 +63,6 @@ const VEL_FRAG = /* glsl */`
   uniform float     uFieldStrength;
   uniform float     uDamping;
   uniform vec3      uGravity;
-  uniform float     uAudioAmp;
   varying vec2      vUv;
 
   void main() {
@@ -81,10 +76,8 @@ const VEL_FRAG = /* glsl */`
       vec2 fUv = ndc * 0.5 + 0.5;
       if (fUv.x >= 0.0 && fUv.x <= 1.0 && fUv.y >= 0.0 && fUv.y <= 1.0) {
         vec4 field = texture2D(tField, fUv);
-        // Field is 2D; lift into 3D along camera XY. Audio amp boosts the
-        // pull so loud beats yank particles harder.
-        vec3 push = vec3(field.r, field.g, 0.0)
-                  * uFieldStrength * (1.0 + uAudioAmp * 0.8);
+        // Field is 2D; lift into 3D along camera XY.
+        vec3 push = vec3(field.r, field.g, 0.0) * uFieldStrength;
         vel.xyz += push * uDt;
       }
     }
@@ -135,7 +128,6 @@ const RENDER_VERT = /* glsl */`
   uniform sampler2D tPos;
   uniform sampler2D tVel;
   uniform float     uPointSize;
-  uniform float     uAudioAmp;
   attribute vec2    reference;       // particle's coord in the pos texture
   varying float     vAgeNorm;
   varying float     vSpeed;
@@ -146,9 +138,9 @@ const RENDER_VERT = /* glsl */`
     vSpeed   = length(vel.xyz);
     vec4 mv = modelViewMatrix * vec4(pos.xyz, 1.0);
     gl_Position = projectionMatrix * mv;
-    // Distance-attenuated point size with an audio-driven punch.
+    // Distance-attenuated point size.
     float dist = max(-mv.z, 0.1);
-    gl_PointSize = uPointSize * (1.0 + uAudioAmp * 0.8) * (1.0 / dist);
+    gl_PointSize = uPointSize * (1.0 / dist);
   }
 `;
 
@@ -226,7 +218,6 @@ export class GPGPUParticles {
         uFieldStrength: { value: 3.0 },
         uDamping:       { value: 0.94 },
         uGravity:       { value: new THREE.Vector3(0, -0.4, 0) },
-        uAudioAmp:      { value: 0 },
       },
       vertexShader:   QUAD_VERT,
       fragmentShader: VEL_FRAG,
@@ -288,7 +279,6 @@ export class GPGPUParticles {
         tPos:       { value: this.posRead.texture },
         tVel:       { value: this.velRead.texture },
         uPointSize: { value: 16.0 },
-        uAudioAmp:  { value: 0 },
         uColorCool: { value: new THREE.Color(0.30, 0.75, 1.00) },
         uColorHot:  { value: new THREE.Color(1.00, 0.55, 0.20) },
         uAlphaMul:  { value: 1.0 },
@@ -324,9 +314,8 @@ export class GPGPUParticles {
    * @param {THREE.Camera} camera For pos→screen-UV projection.
    * @param {THREE.Texture|null} fieldTex Velocity-field texture (from
    *   VelocityField.getTexture()). Pass null to skip the field push.
-   * @param {number} audioAmp 0..1 audio amplitude (Phase 2.5).
    */
-  step(dt, camera, fieldTex, audioAmp = 0) {
+  step(dt, camera, fieldTex) {
     if (!this.points.visible) return;       // skip work when disabled
     const prevTarget = this.renderer.getRenderTarget();
 
@@ -335,7 +324,6 @@ export class GPGPUParticles {
     this.velMat.uniforms.tVel.value  = this.velRead.texture;
     this.velMat.uniforms.tField.value = fieldTex;
     this.velMat.uniforms.uDt.value   = Math.min(dt, 0.05);
-    this.velMat.uniforms.uAudioAmp.value = audioAmp;
     this.velMat.uniforms.uProjView.value
         .multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     this.renderer.setRenderTarget(this.velWrite);
@@ -354,9 +342,8 @@ export class GPGPUParticles {
     this.renderer.setRenderTarget(prevTarget);
 
     // Update the render material's texture refs.
-    this.renderMat.uniforms.tPos.value     = this.posRead.texture;
-    this.renderMat.uniforms.tVel.value     = this.velRead.texture;
-    this.renderMat.uniforms.uAudioAmp.value = audioAmp;
+    this.renderMat.uniforms.tPos.value = this.posRead.texture;
+    this.renderMat.uniforms.tVel.value = this.velRead.texture;
   }
 
   setEnabled(on) { this.points.visible = !!on; }

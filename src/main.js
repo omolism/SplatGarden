@@ -14,7 +14,6 @@ import { setupPostFX } from "./postfx.js";
 import { DataLabelLayer } from "./datalabels.js";
 import { VelocityField } from "./velocity-field.js";
 import { GPGPUParticles } from "./gpgpu-particles.js";
-import { AudioReactor } from "./audio-reactor.js";
 // SortedParticles removed — replaced by the WarpFx post-process pass.
 import { Voxelizer } from "./voxelizer.js";
 import { Quadizer }  from "./quadizer.js";
@@ -100,16 +99,15 @@ postfx.setSize(window.innerWidth, window.innerHeight);
 // Phase-1 foundation: 2D velocity-conservation field. Hand pinch + mouse
 // press inject mass/velocity at the input UV; the field convolves + advects
 // each frame, exposing its current state via getTexture() for downstream
-// passes (Phase 2 audio particles, Phase 3 voxel particles) to consume.
+// passes (particles, voxel particles) to consume.
 // Cheap at 256x256 half-float (~1ms/frame), so stepped unconditionally.
 const velocityField = new VelocityField(renderer, { resolution: 256 });
 window.__velocityField = velocityField;   // dev affordance for runtime inspection
 
-// Phase-2: GPGPU particle system that advects through the velocity field.
+// GPGPU particle system that advects through the velocity field.
 // 64² = 4096 additive point sprites; off by default until the user enables
 // it via the FX GUI. Bounds set wide so particles spread through a typical
-// splat scene (~10 m wide). Audio amp uniform stays at 0 until Phase 2.5
-// wires the AnalyserNode hookup.
+// splat scene (~10 m wide).
 const gpgpuParticles = new GPGPUParticles(renderer, {
   size:   64,
   bounds: { min: [-6, -2, -6], max: [6, 6, 6] },
@@ -126,24 +124,15 @@ const particleScene = new THREE.Scene();
 particleScene.add(gpgpuParticles.points);
 window.__gpgpuParticles = gpgpuParticles;
 
-// Phase 2.5: Audio reactor — feeds an amplitude uniform into the particle
-// step each frame. Source can be a file (drag in / pick) or the mic. The
-// reactor is dormant (mode=none, metrics all zero) until the user wires a
-// source; particles still work without audio (uAudioAmp stays at 0).
-const audioReactor = new AudioReactor();
-window.__audioReactor = audioReactor;
-
-// Tech-spec HUD — reads from renderer / postfx / refs each frame.
+// Pipeline HUD — reads from renderer / postfx / refs each frame.
 // Refs may be null at construction; pipelineHUD reads them lazily via the
-// refs object so later assignments to splat / voxelizer / quadizer are picked
-// up automatically. setAudioReactor wires the audio metrics once the panel
-// is up and the reactor has been kicked alive by a user gesture.
+// refs object so later assignments to splat / voxelizer / quadizer are
+// picked up automatically.
 const _hudRefs = {
   splat:           null,
   voxelizer:       null,
   quadizer:        null,
   gpgpuParticles,
-  audioReactor,
 };
 const pipelineHUD = new PipelineHUD({
   renderer,
@@ -970,40 +959,6 @@ async function loadSplat() {
   fGpParticles.addColor(gpParticleParams, "colorHot").name("Color Hot")
     .onChange(v => gpgpuParticles.setColorHot(v));
 
-  // ---- Audio source sub-folder -----------------------------------------
-  // lil-gui has no native file picker → trigger a hidden <input> via a
-  // method controller. amp/bass/mid/treble are live readouts (disabled
-  // controllers reading from audioReactor.metrics).
-  const fAudio = fGpParticles.addFolder("Audio Source").close();
-  const audioFileInput = document.createElement("input");
-  audioFileInput.type = "file";
-  audioFileInput.accept = "audio/*";
-  audioFileInput.style.display = "none";
-  document.body.appendChild(audioFileInput);
-  audioFileInput.addEventListener("change", async (e) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    try { await audioReactor.connectFile(f); }
-    catch (err) { console.warn("audio file connect failed:", err); }
-  });
-  const audioActions = {
-    loadFile: () => audioFileInput.click(),
-    useMic: async () => {
-      try { await audioReactor.connectMic(); }
-      catch (err) { console.warn("mic connect failed:", err); statusEl.textContent = "Mic permission denied"; }
-    },
-    stop: () => audioReactor.disconnect(),
-  };
-  fAudio.add(audioActions, "loadFile").name("Load Audio File…");
-  fAudio.add(audioActions, "useMic").name("Use Microphone");
-  fAudio.add(audioActions, "stop").name("Stop");
-
-  // Audio auto-load disabled per user request. Forest_Ambience is still
-  // bundled in /public and can be picked manually via Load Audio File…
-  // (or use the mic toggle for live input). Reactor stays dormant on
-  // launch — uAudioAmp = 0 in the particle update path until something
-  // is connected.
-
   // ---- Phase 3: Seed particles from USD voxel layer --------------------
   // Voxelizer caches cellPositions/cellCount/cellBoundsMin/Max after each
   // rebuild. Button reads those, expands the particle AABB to the voxel
@@ -1052,12 +1007,6 @@ async function loadSplat() {
     },
   };
   fGpParticles.add(voxelSeedActions, "seedFromVoxels").name("Seed from USD Voxels");
-  // Live readouts — bound to audioReactor.metrics so they tick each frame.
-  // lil-gui auto-refreshes via .listen().
-  fAudio.add(audioReactor.metrics, "amp",    0, 1).name("Amp").listen().disable();
-  fAudio.add(audioReactor.metrics, "bass",   0, 1).name("Bass").listen().disable();
-  fAudio.add(audioReactor.metrics, "mid",    0, 1).name("Mid").listen().disable();
-  fAudio.add(audioReactor.metrics, "treble", 0, 1).name("Treble").listen().disable();
 
   function rayHitLocal(clientX, clientY) {
     const rect = canvas.getBoundingClientRect();
@@ -1725,10 +1674,7 @@ renderer.setAnimationLoop(() => {
   // (Phase 2 particles, Phase 3 voxel particles) sample its texture.
   profiler.mark("step");
   velocityField.step();
-  // Phase 2.5: pull live audio metrics; feed amp into the particle step
-  // so loud frames scale field-strength + point-size (per gpgpu shader).
-  const audioMetrics = audioReactor.update();
-  gpgpuParticles.step(dt, camera, velocityField.getTexture(), audioMetrics.amp);
+  gpgpuParticles.step(dt, camera, velocityField.getTexture());
   // Sorted-particles sim removed — Warp FX is a pure-shader post-pass with
   // no companion sim, so the composer just renders directly.
   profiler.mark("compose");
@@ -1749,7 +1695,7 @@ renderer.setAnimationLoop(() => {
   renderer.autoClear = prevAutoClear;
 
   profiler.mark("hud");
-  // Pipeline HUD — read live render-info / pass counts / particle / audio
+  // Pipeline HUD — read live render-info / pass counts / particle stats
   // and refresh DOM at ~2 Hz inside the module.
   pipelineHUD.tick(performance.now(), dt * 1000);
 
