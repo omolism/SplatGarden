@@ -120,17 +120,28 @@ export class Voxelizer {
       const n = cellArr.length;
       const positions = new Float32Array(n * 3);
       const colors    = new Float32Array(n * 3);
+      let xMin = Infinity, yMin = Infinity, zMin = Infinity;
+      let xMax = -Infinity, yMax = -Infinity, zMax = -Infinity;
       for (let i = 0; i < n; i++) {
         const c = cellArr[i];
         const k = i * 3;
         positions[k]   = c.cx;
         positions[k+1] = c.cy;
         positions[k+2] = c.cz;
+        if (c.cx < xMin) xMin = c.cx; if (c.cx > xMax) xMax = c.cx;
+        if (c.cy < yMin) yMin = c.cy; if (c.cy > yMax) yMax = c.cy;
+        if (c.cz < zMin) zMin = c.cz; if (c.cz > zMax) zMax = c.cz;
         const inv = 1.0 / Math.max(c.n, 1);
         colors[k]   = c.r * inv;
         colors[k+1] = c.g * inv;
         colors[k+2] = c.b * inv;
       }
+
+      // Cached for Phase-3 hook: GPGPUParticles can seed from these.
+      this.cellPositions = positions;
+      this.cellCount     = n;
+      this.cellBoundsMin = new THREE.Vector3(xMin, yMin, zMin);
+      this.cellBoundsMax = new THREE.Vector3(xMax, yMax, zMax);
 
       const cube = new THREE.BoxGeometry(1, 1, 1);
       const geom = new THREE.InstancedBufferGeometry();

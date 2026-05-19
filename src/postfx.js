@@ -787,8 +787,9 @@ export function setupPostFX(renderer, scene, camera) {
     echoMix:       1.00,
 
     // Underwater — Dave_Hoskins tileable water caustic + tint + UV waves.
-    // Defaults tuned to the user-preferred preset (soft caustic + warm tint).
-    underwaterOn:        true,
+    // Off by default on cold launch; numeric values below are the preset
+    // that loads when the user enables it.
+    underwaterOn:        false,
     underwaterCaustic:   0.2,    // additive caustic intensity (0..1.5)
     underwaterScale:     2.0,    // caustic spatial frequency (2..32)
     underwaterTintR:     1.0,    // tint colour R (0..1)

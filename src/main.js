@@ -8,6 +8,9 @@ import { AnnotationManager } from "./annotations.js";
 import { HandController } from "./handtracking.js";
 import { setupPostFX } from "./postfx.js";
 import { DataLabelLayer } from "./datalabels.js";
+import { VelocityField } from "./velocity-field.js";
+import { GPGPUParticles } from "./gpgpu-particles.js";
+import { AudioReactor } from "./audio-reactor.js";
 import { Voxelizer } from "./voxelizer.js";
 import { Quadizer }  from "./quadizer.js";
 import { uniforms as effectUniforms } from "./effects.js";
@@ -84,6 +87,34 @@ controls.maxDistance = 200;
 // ---------------------------------------------------------------------------
 const postfx = setupPostFX(renderer, scene, camera);
 postfx.setSize(window.innerWidth, window.innerHeight);
+
+// Phase-1 foundation: 2D velocity-conservation field. Hand pinch + mouse
+// press inject mass/velocity at the input UV; the field convolves + advects
+// each frame, exposing its current state via getTexture() for downstream
+// passes (Phase 2 audio particles, Phase 3 voxel particles) to consume.
+// Cheap at 256x256 half-float (~1ms/frame), so stepped unconditionally.
+const velocityField = new VelocityField(renderer, { resolution: 256 });
+window.__velocityField = velocityField;   // dev affordance for runtime inspection
+
+// Phase-2: GPGPU particle system that advects through the velocity field.
+// 64² = 4096 additive point sprites; off by default until the user enables
+// it via the FX GUI. Bounds set wide so particles spread through a typical
+// splat scene (~10 m wide). Audio amp uniform stays at 0 until Phase 2.5
+// wires the AnalyserNode hookup.
+const gpgpuParticles = new GPGPUParticles(renderer, {
+  size:   64,
+  bounds: { min: [-6, -2, -6], max: [6, 6, 6] },
+  maxAge: 4.0,
+});
+scene.add(gpgpuParticles.points);
+window.__gpgpuParticles = gpgpuParticles;
+
+// Phase 2.5: Audio reactor — feeds an amplitude uniform into the particle
+// step each frame. Source can be a file (drag in / pick) or the mic. The
+// reactor is dormant (mode=none, metrics all zero) until the user wires a
+// source; particles still work without audio (uAudioAmp stays at 0).
+const audioReactor = new AudioReactor();
+window.__audioReactor = audioReactor;
 // Mobile: kill post-processing by default — Bloom is the biggest GPU tax,
 // and the Polish pass is fill-rate heavy on mobile GPUs.
 if (IS_MOBILE) {
@@ -814,6 +845,119 @@ async function loadSplat() {
       }
     });
 
+  // ---- GPGPU Particles (Phase 2) --------------------------------------------
+  // Multipass particle system driven by the Phase-1 velocity field. Off by
+  // default; user enables via the FX → Particles folder. All knobs dedicated
+  // (gpParticle* prefix) per the dedicated-params-per-fx preference.
+  const gpParticleParams = {
+    enable:        true,
+    pointSize:     16.0,
+    fieldStrength: 3.0,
+    damping:       0.94,
+    gravityY:      -0.4,
+    alpha:         1.0,
+    colorCool:     "#4cbfff",
+    colorHot:      "#ff8c33",
+  };
+  const fGpParticles = brushParent.addFolder("✨ Particles").close();
+  fGpParticles.add(gpParticleParams, "enable").name("Enable")
+    .onChange(v => gpgpuParticles.setEnabled(v));
+  // Apply the default-true state immediately (constructor inits visible=false).
+  gpgpuParticles.setEnabled(gpParticleParams.enable);
+  fGpParticles.add(gpParticleParams, "pointSize", 1, 60, 0.5).name("Point Size")
+    .onChange(v => gpgpuParticles.setPointSize(v));
+  fGpParticles.add(gpParticleParams, "fieldStrength", 0, 12, 0.1).name("Field Strength")
+    .onChange(v => gpgpuParticles.setFieldStrength(v));
+  fGpParticles.add(gpParticleParams, "damping", 0.5, 0.999, 0.001).name("Damping")
+    .onChange(v => gpgpuParticles.setDamping(v));
+  fGpParticles.add(gpParticleParams, "gravityY", -3, 3, 0.05).name("Gravity Y")
+    .onChange(v => gpgpuParticles.setGravity(v));
+  fGpParticles.add(gpParticleParams, "alpha", 0.05, 2.0, 0.01).name("Alpha")
+    .onChange(v => gpgpuParticles.setAlphaMul(v));
+  fGpParticles.addColor(gpParticleParams, "colorCool").name("Color Cool")
+    .onChange(v => gpgpuParticles.setColorCool(v));
+  fGpParticles.addColor(gpParticleParams, "colorHot").name("Color Hot")
+    .onChange(v => gpgpuParticles.setColorHot(v));
+
+  // ---- Audio source sub-folder -----------------------------------------
+  // lil-gui has no native file picker → trigger a hidden <input> via a
+  // method controller. amp/bass/mid/treble are live readouts (disabled
+  // controllers reading from audioReactor.metrics).
+  const fAudio = fGpParticles.addFolder("🔊 Audio Source").close();
+  const audioFileInput = document.createElement("input");
+  audioFileInput.type = "file";
+  audioFileInput.accept = "audio/*";
+  audioFileInput.style.display = "none";
+  document.body.appendChild(audioFileInput);
+  audioFileInput.addEventListener("change", async (e) => {
+    const f = e.target.files?.[0];
+    if (!f) return;
+    try { await audioReactor.connectFile(f); }
+    catch (err) { console.warn("audio file connect failed:", err); }
+  });
+  const audioActions = {
+    loadFile: () => audioFileInput.click(),
+    useMic: async () => {
+      try { await audioReactor.connectMic(); }
+      catch (err) { console.warn("mic connect failed:", err); statusEl.textContent = "Mic permission denied"; }
+    },
+    stop: () => audioReactor.disconnect(),
+  };
+  fAudio.add(audioActions, "loadFile").name("📁 Load Audio File…");
+  fAudio.add(audioActions, "useMic").name("🎤 Use Microphone");
+  fAudio.add(audioActions, "stop").name("⏹ Stop");
+
+  // ---- Default audio source: Forest_Ambience from /public ----------------
+  // Browsers block autoplay until a user gesture, so we don't try to play
+  // immediately. The first pointerdown / keydown on the page kicks off the
+  // connect attempt (idempotent — re-fires safely if the file is missing).
+  // Drop Forest_Ambience.mp3 into /public to use it; if absent, this fails
+  // silently and the user can pick another via the GUI button.
+  const DEFAULT_AUDIO_URL = "/Forest_Ambience.mp3";
+  const tryDefaultAudio = async () => {
+    if (audioReactor.mode !== "none") return;
+    try { await audioReactor.connectUrl(DEFAULT_AUDIO_URL); }
+    catch (err) { /* file missing or play blocked — user can pick manually */ }
+  };
+  window.addEventListener("pointerdown", tryDefaultAudio);
+  window.addEventListener("keydown", tryDefaultAudio);
+
+  // ---- Phase 3: Seed particles from USD voxel layer --------------------
+  // Voxelizer caches cellPositions/cellCount/cellBoundsMin/Max after each
+  // rebuild. Button reads those, expands the particle AABB to the voxel
+  // bounds (so seeded particles aren't immediately OOB-respawned), and
+  // blits voxel positions into the pos RT. Particle count stays fixed
+  // (4096) — voxels cycle if there are more, repeat if fewer.
+  const voxelSeedActions = {
+    seedFromVoxels: () => {
+      if (!voxelizer || !voxelizer.cellPositions || !voxelizer.cellCount) {
+        statusEl.textContent = "Voxel layer has no data yet — enable Voxel layer first";
+        return;
+      }
+      // Add a 10% margin around the voxel AABB so drift doesn't trigger
+      // immediate respawn at the boundary.
+      const mn = voxelizer.cellBoundsMin.clone();
+      const mx = voxelizer.cellBoundsMax.clone();
+      const pad = mx.clone().sub(mn).multiplyScalar(0.10);
+      mn.sub(pad); mx.add(pad);
+      gpgpuParticles.setBounds(mn, mx);
+      gpgpuParticles.seedFromPositions(voxelizer.cellPositions, voxelizer.cellCount);
+      gpgpuParticles.setEnabled(true);
+      gpParticleParams.enable = true;
+      gui.controllersRecursive().forEach(c => {
+        if (c.property === "enable" && c.object === gpParticleParams) c.updateDisplay();
+      });
+      statusEl.textContent = `Seeded ${gpgpuParticles.N} particles from ${voxelizer.cellCount} voxels`;
+    },
+  };
+  fGpParticles.add(voxelSeedActions, "seedFromVoxels").name("🎲 Seed from USD Voxels");
+  // Live readouts — bound to audioReactor.metrics so they tick each frame.
+  // lil-gui auto-refreshes via .listen().
+  fAudio.add(audioReactor.metrics, "amp",    0, 1).name("Amp").listen().disable();
+  fAudio.add(audioReactor.metrics, "bass",   0, 1).name("Bass").listen().disable();
+  fAudio.add(audioReactor.metrics, "mid",    0, 1).name("Mid").listen().disable();
+  fAudio.add(audioReactor.metrics, "treble", 0, 1).name("Treble").listen().disable();
+
   function rayHitLocal(clientX, clientY) {
     const rect = canvas.getBoundingClientRect();
     const ndc = new THREE.Vector2(
@@ -865,6 +1009,37 @@ async function loadSplat() {
         1.0 - (e.clientY - rect.top) / rect.height,
       );
     }
+    // Inject mass + velocity into the global velocity field at the cursor.
+    // Velocity vector is zero on press (no cursor delta yet); subsequent
+    // moves push velocity proportional to delta — handled in pointermove.
+    if (velocityField) {
+      const rect = canvas.getBoundingClientRect();
+      velocityField.inject(
+        (e.clientX - rect.left) / rect.width,
+        1.0 - (e.clientY - rect.top) / rect.height,
+        0, 0, 1.2, 0.06,
+      );
+    }
+  });
+
+  // Pointer-MOVE injects velocity into the field proportional to cursor
+  // delta (so dragging stirs the field, not just clicking). Throttled to
+  // ~30 Hz to keep the inject pass cost negligible.
+  let _vfMoveMs = 0, _vfPrevX = -1, _vfPrevY = -1;
+  canvas.addEventListener("pointermove", (e) => {
+    if (!velocityField) return;
+    const now = performance.now();
+    if (now - _vfMoveMs < 33) return;
+    _vfMoveMs = now;
+    const rect = canvas.getBoundingClientRect();
+    const ux = (e.clientX - rect.left) / rect.width;
+    const uy = 1.0 - (e.clientY - rect.top) / rect.height;
+    if (_vfPrevX >= 0) {
+      const vx = (ux - _vfPrevX) * 60.0;   // pixels-per-frame → field-velocity
+      const vy = (uy - _vfPrevY) * 60.0;
+      velocityField.inject(ux, uy, vx, vy, 0.25, 0.05);
+    }
+    _vfPrevX = ux; _vfPrevY = uy;
   });
   canvas.addEventListener("pointermove", (e) => {
     if (!mouseBrushing || !brushParams.brush) return;
@@ -896,34 +1071,67 @@ async function loadSplat() {
     statusEl.textContent = `Hit (${r.hit.point.x.toFixed(2)}, ${r.hit.point.y.toFixed(2)}, ${r.hit.point.z.toFixed(2)})`;
   });
 
-  // ---- Auto-enable Echo Trails for click FX --------------------------------
-  // Each mouse-click flips Echo on, then auto-fades off after the effect's
-  // duration + fadeTail completes so trails dissipate naturally. Re-clicking
-  // resets the timer so consecutive clicks chain smoothly.
-  let _echoAutoTimer = null;
+  // ---- Auto Echo Trails for click FX  (frame-driven bell-curve lerp) ------
+  // Each interaction starts a "ramp session": echoPersist smoothly climbs
+  // from the user-set baseline up to a high peak (much longer trails),
+  // holds across the middle of the FX window, then decays back to baseline
+  // — and only then does Echo flip off. Bell envelope = smoothstep ramp-in
+  // × smoothstep ramp-out, so there are no hard kinks. Per-frame updates
+  // mean the GUI Persistence slider visibly tracks the ramp.
+  let _echoRamp = null;     // null when idle, else { startMs, durMs, baseline, peak }
+  const _echoGuiCtls = [];  // cached refs into the GUI so the per-frame
+                            // ramp doesn't walk the whole controller tree.
+  function _smoothstep01(a, b, x) {
+    const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+    return t * t * (3 - 2 * t);
+  }
   function refreshEchoGui() {
-    gui.controllersRecursive().forEach(c => {
-      if (c._name === "Enable" && c.object === postfx.params) c.updateDisplay();
-    });
+    if (_echoGuiCtls.length === 0) {
+      gui.controllersRecursive().forEach(c => {
+        if ((c._name === "Enable" || c._name === "Persistence") && c.object === postfx.params) {
+          _echoGuiCtls.push(c);
+        }
+      });
+    }
+    for (const c of _echoGuiCtls) c.updateDisplay();
   }
   function autoEnableEchoForClick() {
     if (!postfx?.params) return;
+    // Snapshot the user's baseline only on a FRESH start — mid-ramp clicks
+    // must NOT capture the inflated peak as the new baseline, or each
+    // consecutive click would walk persistence upward toward 1.0.
+    const baseline = _echoRamp ? _echoRamp.baseline : postfx.params.echoPersist;
+    const peak     = 0.998;     // "way more longer" trails at the bell crest
+    // Total ramp duration follows the live FX window so longer effects get
+    // longer trails automatically.
+    const fxDur    = effectUniforms?.duration?.value ?? 2.5;
+    const fadeTail = effects?.fadeTailS ?? 0.9;
+    const durMs    = (fxDur + fadeTail + 1.5) * 1000;
+    _echoRamp = { startMs: performance.now(), durMs, baseline, peak };
     postfx.params.echoOn = true;
     refreshEchoGui();
-    if (_echoAutoTimer) clearTimeout(_echoAutoTimer);
-    // Read LIVE values so changing FX Duration in the GUI extends the trail
-    // window automatically. uniforms.duration is the effect's animation life
-    // in seconds; effects.fadeTailS is the smooth ramp-down tail. Add 1.5 s
-    // of safety pad so trails finish fading after the FX itself ends.
-    const fxDur   = effectUniforms?.duration?.value ?? 2.5;
-    const fadeTail = effects?.fadeTailS ?? 0.9;
-    const durMs   = (fxDur + fadeTail + 1.5) * 1000;
-    _echoAutoTimer = setTimeout(() => {
-      postfx.params.echoOn = false;
-      refreshEchoGui();
-      _echoAutoTimer = null;
-    }, durMs);
   }
+  function _updateEchoRamp() {
+    if (!_echoRamp || !postfx?.params) return;
+    const t = (performance.now() - _echoRamp.startMs) / _echoRamp.durMs;
+    if (t >= 1.0) {
+      // Ramp complete — restore baseline persistence and turn echo off.
+      postfx.params.echoPersist = _echoRamp.baseline;
+      postfx.params.echoOn = false;
+      _echoRamp = null;
+      refreshEchoGui();
+      return;
+    }
+    // Bell: rise across first 20% → hold across middle 60% → fall across last 20%.
+    const rise = _smoothstep01(0.0, 0.20, t);
+    const fall = 1.0 - _smoothstep01(0.80, 1.0, t);
+    const env  = rise * fall;     // 0 → 1 → 0
+    postfx.params.echoPersist = _echoRamp.baseline
+      + (_echoRamp.peak - _echoRamp.baseline) * env;
+    refreshEchoGui();
+  }
+  // Expose so the render loop can tick the ramp each frame.
+  window.__updateEchoRamp = _updateEchoRamp;
   // Expose for the hand-tracking block below to share the same logic
   window.__brushParams = brushParams;
   window.__effects = effects;
@@ -1143,21 +1351,38 @@ async function loadSplat() {
     onePinchMoved  = false;
     onePinchStart.x = onePinchPrev.x = p.x;
     onePinchStart.y = onePinchPrev.y = p.y;
+    const ux = p.x / window.innerWidth;
+    const uy = 1.0 - p.y / window.innerHeight;
     // Hand pinch spawns a Surface Tension vortex at the hand's screen
     // position. The pass guards its own gates (postEnable, surfaceTensionOn,
     // stHandSpawn) so we can call unconditionally — it no-ops when off.
     if (postfx?.params?.stHandSpawn && postfx?.spawnSurfaceTensionVortex) {
-      postfx.spawnSurfaceTensionVortex(
-        p.x / window.innerWidth,
-        1.0 - p.y / window.innerHeight,
-      );
+      postfx.spawnSurfaceTensionVortex(ux, uy);
     }
+    // Pinch start also seeds the velocity field with a fresh impulse — same
+    // pattern as mouse press. Subsequent pinch-moves push velocity (handled
+    // in updateOnePinch).
+    if (velocityField) velocityField.inject(ux, uy, 0, 0, 1.5, 0.07);
   }
 
   let handBrushing = false;
   let _handBrushMs = 0, _handBrushX = -1e9, _handBrushY = -1e9;
   function updateOnePinch(p) {
     if (!onePinchActive) return;
+    // Pinch-drag stirs the velocity field — same pattern as mouse-move,
+    // velocity proportional to per-frame delta. Throttled implicitly by
+    // HandController's input rate; cheap enough to call every event.
+    if (velocityField) {
+      const ux = p.x / window.innerWidth;
+      const uy = 1.0 - p.y / window.innerHeight;
+      const ox = onePinchPrev.x / window.innerWidth;
+      const oy = 1.0 - onePinchPrev.y / window.innerHeight;
+      const vx = (ux - ox) * 60.0;
+      const vy = (uy - oy) * 60.0;
+      if (vx * vx + vy * vy > 1e-6) {
+        velocityField.inject(ux, uy, vx, vy, 0.30, 0.06);
+      }
+    }
     const brushOn = window.__brushParams?.brush;
     if (brushOn) {
       // Brush mode: pinch+move paints continuously at the palm hit point.
@@ -1416,6 +1641,15 @@ renderer.setAnimationLoop(() => {
   if (window.__camMoveTick) window.__camMoveTick(dt);
 
   controls.update();
+  // Tick the Echo-Trails bell-curve ramp (no-op when idle).
+  if (window.__updateEchoRamp) window.__updateEchoRamp();
+  // Convolve + advect the velocity field one step. Downstream readers
+  // (Phase 2 particles, Phase 3 voxel particles) sample its texture.
+  velocityField.step();
+  // Phase 2.5: pull live audio metrics; feed amp into the particle step
+  // so loud frames scale field-strength + point-size (per gpgpu shader).
+  const audioMetrics = audioReactor.update();
+  gpgpuParticles.step(dt, camera, velocityField.getTexture(), audioMetrics.amp);
   postfx.render(dt);
 
   frameCount++;
