@@ -292,6 +292,11 @@ export class SortedParticles {
   }
 
   step(dt) {
+    // Cheap-out gate: skip the 4-buffer sim entirely when the caller has
+    // signalled it's not consuming the output (e.g. display overlay is
+    // disabled). Saves ~40M ALU ops per frame at 128². Re-enable just
+    // re-starts the sim from scratch (iFrame=0 reseeds Buffer A).
+    if (this.skipUpdate) return;
     this.iFrame++;
     this.iTime += dt;
     const sz = this.size;

@@ -1669,6 +1669,9 @@ renderer.setAnimationLoop(() => {
   gpgpuParticles.step(dt, camera, velocityField.getTexture(), audioMetrics.amp);
   // Sorted-particles sim — 4 buffer passes. Output texture pushed into
   // the postfx display pass each frame (ping-pong swaps the texture ref).
+  // Skip the heavy 4-buffer sim when nothing is consuming it (display
+  // overlay off + master post-process off). Drops ~40M ALU ops/frame.
+  sortedParticles.skipUpdate = !(postfx.params.postEnable && postfx.params.sortedParticlesOn);
   sortedParticles.step(dt);
   postfx.setSortedParticlesTexture(sortedParticles.getOutputTexture());
   postfx.render(dt);

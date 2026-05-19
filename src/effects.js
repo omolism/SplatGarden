@@ -771,13 +771,10 @@ export function createScanModifier() {
 
                 // Per-splat seeded jitter so the trail isn't a uniform sheet.
                 center += (rand3 - 0.5) * 2.0 * 0.018 * ${inputs.uIntensity} * smMask * smEnv;
-
-                // Splats sitting on a vein bloom slightly (brighter, larger)
-                // — reads as the dense slime "growth" mass.
-                float smOnVein = smoothstep(0.55, 0.85, smV);
-                scales *= mix(1.0, 1.45, smOnVein * smMask * smEnv);
-                rgba.a *= mix(1.0, 1.0,  smOnVein * smMask * smEnv);
-                rgba.a *= mix(1.0, 0.65, (1.0 - smOnVein) * smMask * smEnv);
+                // Positional movement only — no scale or alpha overlays.
+                // (Removed the vein-bloom scale/alpha mods that previously
+                // tinted the background; per user request, Slime Molds is
+                // now strictly a displacement effect.)
 
               } else if (${inputs.uEffect} == 7) {
                 // ==============================================================
