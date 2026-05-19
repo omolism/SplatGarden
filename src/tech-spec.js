@@ -122,7 +122,7 @@ export const TECH_SPECS = [
       {
         name:      "Daffodil",
         location:  "Near gazebo",
-        worldPos:  [0.313, -0.773, 2.226],
+        worldPos:  [0.20, -0.773, 2.226],
         toolchain: ["Houdini", "VAT bake", "Unreal Engine (set dress)", "Python · OSC · MediaPipe", "AI texture stylization"],
         output:    "Mesh + VAT animation · interactively driven in Unreal",
         note:      "Animated procedurally in Houdini and VAT-baked, then set-dressed in Unreal. Inside the Unreal session, Python · OSC · MediaPipe drives the rig live (hand gesture → OSC → blueprint). Diffuse texture passes through the custom AI stylization tool.",
