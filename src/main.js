@@ -847,8 +847,12 @@ async function loadSplat() {
   // Brush on             → press + drag = continuous paint via effects.brushAt.
   // Same flow drives mouse pointer events AND hand-pinch (see hand block below).
   const brushParams = { brush: false, effector: false };
-  const brushParent = gui.fFX || gui;
-  brushParent.add(brushParams, "brush").name("Brush Mode")
+  // Interaction folder (top-level under Customize, not nested under FX) —
+  // these toggles control INPUT MODE (camera vs paint), which is a global
+  // behaviour, not a click-effect setting. Living next to FX keeps it
+  // discoverable but separates the concerns.
+  const fInteraction = (gui.fCustomize || gui).addFolder("Interaction");
+  fInteraction.add(brushParams, "brush").name("Brush Mode")
     .onChange(v => {
       canvas.style.cursor = v ? "crosshair" : "";
       // Lock OrbitControls while brushing so drag doesn't accidentally
@@ -856,6 +860,7 @@ async function loadSplat() {
       // as paint, not as a viewport rotation. Re-enables on toggle off.
       controls.enabled = !v;
     });
+  const brushParent = fInteraction;   // legacy local — Effector Mode below appends here
   // Effector Mode (TD-style sphere effector for Dissolve). When on, brush
   // press+drag drives a spatial mask that dissolves splats inside the sphere;
   // splats outside snap back to home. Auto-switches effect to "Dissolve &
@@ -877,9 +882,10 @@ async function loadSplat() {
     });
 
   // ---- GPGPU Particles (Phase 2) --------------------------------------------
-  // Multipass particle system driven by the Phase-1 velocity field. Off by
-  // default; user enables via the FX → Particles folder. All knobs dedicated
-  // (gpParticle* prefix) per the dedicated-params-per-fx preference.
+  // Top-level "Particles" folder under Customize — the particle system is a
+  // separate render layer from the click-FX (which modify the splat shader),
+  // so it lives outside FX to avoid conceptual blur. All knobs use the
+  // gpParticle* prefix per the dedicated-params-per-fx preference.
   const gpParticleParams = {
     enable:        true,
     pointSize:     16.0,
@@ -890,7 +896,7 @@ async function loadSplat() {
     colorCool:     "#4cbfff",
     colorHot:      "#ff8c33",
   };
-  const fGpParticles = brushParent.addFolder("Particles").close();
+  const fGpParticles = (gui.fCustomize || gui).addFolder("Particles").close();
   fGpParticles.add(gpParticleParams, "enable").name("Enable")
     .onChange(v => gpgpuParticles.setEnabled(v));
   // Apply the default-true state immediately (constructor inits visible=false).
