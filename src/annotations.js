@@ -290,15 +290,24 @@ export class AnnotationManager {
       // by half the bounds radius — a sane distance to scroll-zoom from.
       { name: "Center", pos: new THREE.Vector3(0, 0, 0),
                         targetOffset: new THREE.Vector3(0, 0, -boundsRadius * 0.5) },
+      // Gazebo — absolute world target on the gazebo asset (near the centre
+      // of the planter cluster). Camera placed at a Front-like offset from
+      // the target so framing is sensible; tune with C in-app to overwrite.
+      { name: "Gazebo", absoluteTarget: new THREE.Vector3(0.616, -0.937, 3.695) },
     ];
     let centerVp = null;
     for (const p of presets) {
-      const vp = this.addViewpoint({
-        name: p.name,
-        anchor: boundsCenter.clone().add(p.pos.clone().normalize().multiplyScalar(boundsRadius * 0.6)),
-        position: boundsCenter.clone().add(p.pos),
-        target: boundsCenter.clone().add(p.targetOffset ?? new THREE.Vector3()),
-      });
+      let position, target, anchor;
+      if (p.absoluteTarget) {
+        target   = p.absoluteTarget.clone();
+        position = target.clone().add(new THREE.Vector3(0, boundsRadius * 0.3, r));
+        anchor   = target.clone();
+      } else {
+        position = boundsCenter.clone().add(p.pos);
+        target   = boundsCenter.clone().add(p.targetOffset ?? new THREE.Vector3());
+        anchor   = boundsCenter.clone().add(p.pos.clone().normalize().multiplyScalar(boundsRadius * 0.6));
+      }
+      const vp = this.addViewpoint({ name: p.name, anchor, position, target });
       if (p.name === "Center") centerVp = vp;
     }
     // Center = the default startup pose. Mark it active in the sidebar so it
