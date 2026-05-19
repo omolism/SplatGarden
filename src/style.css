@@ -879,6 +879,207 @@ kbd {
 }
 
 /* ----------------------------------------------------------------------
+ * Tech Spec — research-bibliography overlay. Slides in from the right
+ * with a dimmed backdrop; matches the other HUDs' visual language
+ * (dark glass, monospace caps headers, dashed dividers).
+ * -------------------------------------------------------------------- */
+#tech-spec {
+  position: absolute;
+  inset: 0;
+  z-index: 5000;          /* above lil-gui (1001) so the bibliography reads cleanly */
+  display: none;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 0.04em;
+}
+#tech-spec.show { display: block; }
+#tech-spec .ts-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.50);
+  backdrop-filter: blur(3px);
+  opacity: 0;
+  transition: opacity 0.18s ease;
+}
+#tech-spec.show .ts-backdrop { opacity: 1; }
+#tech-spec .ts-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(440px, 92vw);
+  background: rgba(10, 14, 20, 0.94);
+  border-left: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.55);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(40px);
+  opacity: 0;
+  transition: transform 0.22s ease, opacity 0.22s ease;
+}
+#tech-spec.show .ts-panel {
+  transform: translateX(0);
+  opacity: 1;
+}
+#tech-spec .ts-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+#tech-spec .ts-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+#tech-spec .ts-title .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #6ad97c;
+  box-shadow: 0 0 6px #6ad97c;
+}
+#tech-spec .ts-title .t {
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: rgba(255, 255, 255, 0.95);
+}
+#tech-spec .ts-key {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 6px;
+  border-radius: 2px;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.55);
+  letter-spacing: 0.10em;
+}
+#tech-spec .ts-close {
+  appearance: none;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  width: 24px;
+  height: 24px;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+#tech-spec .ts-close:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.30);
+}
+#tech-spec .ts-sub {
+  padding: 8px 14px;
+  font-size: 9.5px;
+  color: rgba(255, 255, 255, 0.45);
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.10);
+}
+#tech-spec .ts-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.20) transparent;
+}
+#tech-spec .ts-body::-webkit-scrollbar { width: 6px; }
+#tech-spec .ts-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 3px;
+}
+#tech-spec .ts-sec {
+  padding: 10px 14px 8px;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+}
+#tech-spec .ts-sec-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  cursor: pointer;
+  user-select: none;
+}
+#tech-spec .ts-sec-name {
+  flex: 1;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.20em;
+  color: rgba(255, 255, 255, 0.92);
+}
+#tech-spec .ts-sec-count {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 6px;
+  border-radius: 2px;
+}
+#tech-spec .ts-caret {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.50);
+  transition: transform 0.18s;
+}
+#tech-spec .ts-sec.collapsed .ts-caret { transform: rotate(-90deg); }
+#tech-spec .ts-sec.collapsed .ts-list,
+#tech-spec .ts-sec.collapsed .ts-sec-desc { display: none; }
+#tech-spec .ts-sec-desc {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.42);
+  padding: 2px 0 6px;
+  letter-spacing: 0.06em;
+}
+#tech-spec .ts-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+#tech-spec .ts-item {
+  padding: 6px 0 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+#tech-spec .ts-item:first-child { border-top: none; }
+#tech-spec .ts-item-name {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.96);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+#tech-spec .ts-item-ref {
+  font-size: 9.5px;
+  color: rgba(140, 200, 255, 0.78);
+  padding-top: 1px;
+  letter-spacing: 0.02em;
+}
+#tech-spec .ts-item-note {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.55);
+  padding-top: 2px;
+  line-height: 1.45;
+}
+#tech-spec .ts-item-src {
+  font-size: 9px;
+  color: rgba(106, 217, 124, 0.78);
+  padding-top: 3px;
+  letter-spacing: 0.04em;
+}
+#tech-spec .ts-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 14px 10px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.10);
+  font-size: 9px;
+  background: rgba(255, 255, 255, 0.02);
+}
+#tech-spec .ts-foot-k {
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.10em;
+}
+#tech-spec .ts-foot-v {
+  color: rgba(255, 255, 255, 0.80);
+}
+
+/* ----------------------------------------------------------------------
  * Effect Callout — bottom-left card that pops in on click-FX trigger.
  * Visual continuity with PipelineHUD: same dark glass, mono font, dashed
  * dividers, hairline border, monospace caps for headings.

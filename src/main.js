@@ -7,6 +7,7 @@ import { createScanModifier, EffectController, buildGUI, params as effectParams 
 import { EffectCallout } from "./effect-callout.js";
 import { ABCompare } from "./ab-compare.js";
 import { Profiler } from "./profiler.js";
+import { TechSpec } from "./tech-spec.js";
 import { AnnotationManager } from "./annotations.js";
 import { HandController } from "./handtracking.js";
 import { setupPostFX } from "./postfx.js";
@@ -172,6 +173,15 @@ const profiler = new Profiler({
   mountEl: document.getElementById("app") || document.body,
 });
 window.__profiler = profiler;
+
+// Tech Spec — research-bibliography overlay. Toggle with T.
+// Mounted to <body> (not #app) so its z-index isn't trapped inside #app's
+// fixed-positioned stacking context — otherwise lil-gui (z-index 1001 on
+// <body>) would draw over it.
+const techSpec = new TechSpec({
+  mountEl: document.body,
+});
+window.__techSpec = techSpec;
 
 // Tech-Spec overlay scene — training cameras (and any future tech-spec 3D
 // gizmos) live here so they bypass the post-FX composer pipeline. Rendered
