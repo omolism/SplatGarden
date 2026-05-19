@@ -1660,13 +1660,22 @@ kbd {
   overflow: hidden;
   padding: 44px 44px 32px;
   opacity: 1;
-  transition: opacity 0.45s ease, visibility 0s linear 0s;
+  /* Initial fade-in on first paint; transition handles the fade-out once
+   * .hidden lands (animation is forced off in the hidden state so it
+   * doesn't fight the transition). */
+  animation: ld-fadein 0.7s ease both;
+  transition: opacity 0.5s ease, visibility 0s linear 0s;
 }
 #loading.hidden {
+  animation: none;
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
-  transition: opacity 0.45s ease, visibility 0s linear 0.45s;
+  transition: opacity 0.5s ease, visibility 0s linear 0.5s;
+}
+@keyframes ld-fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 /* Corner annotations */
