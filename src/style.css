@@ -625,14 +625,15 @@ kbd {
 }
 
 /* ----------------------------------------------------------------------
- * Pipeline HUD — tech-spec readout. Same Luma-glass language as the
- * sidebar and hand panel: deep blur, neutral grayscale, hairline borders.
+ * Pipeline HUD — slim RENDER readout. Hero splat count + subform
+ * composition bars (3DGS / Quad / Voxel) + draw/tris + GPU identity.
+ * Luma-glass surface.
  * -------------------------------------------------------------------- */
 #pipeline-hud {
   position: absolute;
   top: 18px;
   left: 274px;            /* sit clear of the Viewpoints sidebar */
-  width: 268px;
+  width: 244px;
   z-index: 21;
   background: var(--panel);
   backdrop-filter: blur(28px) saturate(140%);
@@ -683,95 +684,114 @@ kbd {
   transition: color 0.12s;
 }
 #pipeline-hud .hud-toggle:hover { color: var(--text); }
-#pipeline-hud .hud-body { padding: 4px 0 6px; }
-#pipeline-hud .hud-section { padding: 10px 14px; }
-#pipeline-hud .hud-section + .hud-section {
-  border-top: 1px solid var(--hair);
+#pipeline-hud .hud-body { padding: 0 0 4px; }
+
+/* Hero — big splat count */
+#pipeline-hud .hud-hero {
+  padding: 14px 14px 12px;
+  text-align: center;
+  border-bottom: 1px solid var(--hair);
 }
-#pipeline-hud .hud-shdr {
-  font-family: var(--font-ui);
-  font-size: 9px;
+#pipeline-hud .hero-num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 24px;
   font-weight: 500;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.02em;
+  color: var(--text);
+  line-height: 1.05;
+}
+#pipeline-hud .hero-label {
+  font-family: var(--font-ui);
+  font-size: 9.5px;
+  letter-spacing: 0.20em;
   text-transform: uppercase;
   color: var(--text-dim);
-  margin: 0 0 6px;
+  margin-top: 4px;
 }
-#pipeline-hud .hud-row {
+
+/* Subform composition — three rows, each = name | bar | percent */
+#pipeline-hud .hud-subforms {
+  padding: 12px 14px 10px;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 2px 0;
+  flex-direction: column;
+  gap: 7px;
 }
-#pipeline-hud .hud-row .k {
+#pipeline-hud .hud-sub {
+  display: grid;
+  grid-template-columns: 48px 1fr 36px;
+  align-items: center;
+  gap: 10px;
+}
+#pipeline-hud .hud-sub .sub-name {
   font-family: var(--font-ui);
   font-size: 10px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   color: var(--text-mid);
 }
-#pipeline-hud .hud-row .v {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
-  font-weight: 500;
-  color: var(--text);
-  text-align: right;
-  flex: 1 1 0;
-  min-width: 0;
-  margin-left: 10px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-#pipeline-hud .hud-bar-wrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  width: 130px;
-  justify-content: flex-end;
-}
-#pipeline-hud .hud-bar {
-  flex: 1;
-  height: 3px;
+#pipeline-hud .hud-sub .sub-bar {
+  height: 4px;
   background: rgba(255, 255, 255, 0.06);
   border-radius: 2px;
   position: relative;
   overflow: hidden;
 }
-#pipeline-hud .hud-bar::before {
-  content: "";
-  display: block;
-  height: 100%;
-  background: rgba(255, 255, 255, 0.62);
-  width: var(--w, 0%);
-  transition: width 0.12s ease;
+#pipeline-hud .hud-sub .sub-bar .fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  background: rgba(255, 255, 255, 0.78);
+  transition: width 0.18s ease;
 }
-#pipeline-hud .hud-bar-num {
+#pipeline-hud .hud-sub .sub-val {
   font-family: var(--font-mono);
-  font-size: 9.5px;
-  min-width: 30px;
+  font-variant-numeric: tabular-nums;
+  font-size: 10px;
+  text-align: right;
+  color: var(--text);
+  letter-spacing: 0.02em;
+}
+#pipeline-hud .hud-sub.off .sub-name { color: var(--text-dim); }
+#pipeline-hud .hud-sub.off .sub-val  { color: var(--text-dim); }
+#pipeline-hud .hud-sub.off .sub-bar .fill { background: rgba(255, 255, 255, 0.18); }
+
+/* Draw / Tris small inline footer */
+#pipeline-hud .hud-stats {
+  padding: 8px 14px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-top: 1px solid var(--hair);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.02em;
   color: var(--text-mid);
 }
-#pipeline-hud .hud-passlist {
-  margin-top: 6px;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-#pipeline-hud .hud-pass {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid transparent;
-  color: var(--text-dim);
-  letter-spacing: 0.04em;
-}
-#pipeline-hud .hud-pass.on {
+#pipeline-hud .hud-stats .k { color: var(--text-dim); }
+#pipeline-hud .hud-stats .v {
   color: var(--text);
-  background: rgba(255, 255, 255, 0.10);
-  border-color: var(--hair-strong);
+  font-variant-numeric: tabular-nums;
+}
+#pipeline-hud .hud-stats .sep { color: var(--text-faint); }
+
+/* GPU identity strap at the bottom */
+#pipeline-hud .hud-gpu {
+  padding: 8px 14px 12px;
+  border-top: 1px solid var(--hair);
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+#pipeline-hud .hud-gpu .gpu-name {
+  font-size: 10px;
+  color: var(--text-mid);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#pipeline-hud .hud-gpu .gpu-ctx {
+  font-size: 9px;
+  color: var(--text-dim);
+  margin-top: 2px;
 }
 
 /* ----------------------------------------------------------------------

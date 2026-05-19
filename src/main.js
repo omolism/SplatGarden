@@ -124,20 +124,18 @@ const particleScene = new THREE.Scene();
 particleScene.add(gpgpuParticles.points);
 window.__gpgpuParticles = gpgpuParticles;
 
-// Pipeline HUD — reads from renderer / postfx / refs each frame.
+// Pipeline HUD — slim RENDER readout: splat count + subform bars + GPU.
 // Refs may be null at construction; pipelineHUD reads them lazily via the
 // refs object so later assignments to splat / voxelizer / quadizer are
 // picked up automatically.
 const _hudRefs = {
-  splat:           null,
-  voxelizer:       null,
-  quadizer:        null,
-  gpgpuParticles,
+  splat:     null,
+  voxelizer: null,
+  quadizer:  null,
 };
 const pipelineHUD = new PipelineHUD({
   renderer,
-  postfx,
-  refs:   _hudRefs,
+  refs:    _hudRefs,
   mountEl: document.getElementById("app") || document.body,
 });
 window.__pipelineHUD = pipelineHUD;

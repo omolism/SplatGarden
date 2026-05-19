@@ -1,14 +1,14 @@
 // ---------------------------------------------------------------------------
-// PipelineHUD — top-left tech-spec HUD that reads live numbers off the
-// renderer, post-fx composer, and splat / voxel / quad / particle
-// subsystems. Refreshes ~2 Hz so the panel doesn't flicker per frame.
+// PipelineHUD — top-left "RENDER" readout. Just the runtime numbers that
+// aren't covered by other panels:
+//   - Splat count (hero number)
+//   - Subform composition bars (3DGS / Quad / Voxel) — each row shows the
+//     layer's current opacity as a bar + percent
+//   - Draw calls + triangles (small footer)
+//   - GPU identity (footer, static after init)
 //
-// Sections:
-//   ① RENDER    — splat / quad / voxel counts + draw calls + triangles
-//   ② POSTFX    — total / enabled pass count + per-pass list
-//   ③ PARTICLES — gpgpu count + visibility
-//   ④ FRAME     — fps + frame ms breakdown (Profiler integration if available)
-//   ⑤ GPU       — WebGL vendor / renderer / driver
+// FPS / DT moved to the Profiler (P), pass list lives in the lil-gui
+// Post-Process folder, audio reactor was removed. Refreshes ~2 Hz.
 // ---------------------------------------------------------------------------
 
 const UPDATE_HZ_MS = 500;
@@ -20,8 +20,8 @@ function compactInt(n) {
   return String(n);
 }
 
-// Exact integer with thousands separators — used for splat count, which is
-// the headline figure for 3DGS and deserves precision over compactness.
+// Splat count uses commas — it's the headline figure for 3DGS and small
+// differences matter (e.g. 2,987,341 vs "3.00M" hides 12k).
 function exactInt(n) {
   if (!Number.isFinite(n)) return "—";
   return n.toLocaleString("en-US");
@@ -39,16 +39,20 @@ function getGpuInfo(renderer) {
   } catch { return { vendor: "—", renderer: "—" }; }
 }
 
+// Trim the ANGLE wrapper string from WebGL renderer strings so the HUD
+// shows "NVIDIA GeForce RTX 4090" instead of
+// "ANGLE (NVIDIA, NVIDIA GeForce RTX 4090 Direct3D11 vs_5_0 ps_5_0, D3D11)".
+function shortRenderer(s) {
+  if (!s || s === "—") return s;
+  const ang = /^ANGLE\s*\(\s*[^,]+,\s*([^,]+?)\s*(?:Direct3D[^,)]*)?(?:,[^)]*)?\)$/i.exec(s);
+  if (ang) return ang[1].trim();
+  return s;
+}
+
 export class PipelineHUD {
-  constructor({ renderer, postfx, refs = {}, mountEl = document.body, profiler = null }) {
+  constructor({ renderer, refs = {}, mountEl = document.body }) {
     this.renderer = renderer;
-    this.postfx   = postfx;
-    this.refs     = refs;       // { splat, voxelizer, quadizer, gpgpuParticles }
-    this.profiler = profiler;
-    this._lastT   = 0;
-    this._frames  = 0;
-    this._fps     = 0;
-    this._fpsAccum = 0;
+    this.refs     = refs;       // { splat, voxelizer, quadizer }
     this._collapsed = false;
 
     const gpu = getGpuInfo(renderer);
@@ -58,55 +62,56 @@ export class PipelineHUD {
     this.el.innerHTML = `
       <div class="hud-title">
         <span class="dot"></span>
-        <span class="t">PIPELINE</span>
+        <span class="t">RENDER</span>
         <span class="hud-toggle" data-act="collapse" title="Collapse">─</span>
       </div>
       <div class="hud-body">
-        <div class="hud-section" data-key="render">
-          <div class="hud-shdr">RENDER</div>
-          <div class="hud-row"><span class="k">SPLATS</span><span class="v" data-k="splats">—</span></div>
-          <div class="hud-row"><span class="k">QUADS</span><span class="v" data-k="quads">— · off</span></div>
-          <div class="hud-row"><span class="k">VOXELS</span><span class="v" data-k="voxels">— · off</span></div>
-          <div class="hud-row"><span class="k">DRAW</span><span class="v" data-k="draw">—</span></div>
-          <div class="hud-row"><span class="k">TRIS</span><span class="v" data-k="tris">—</span></div>
+        <div class="hud-hero">
+          <div class="hero-num" data-k="splats">—</div>
+          <div class="hero-label">splats</div>
         </div>
 
-        <div class="hud-section" data-key="postfx">
-          <div class="hud-shdr">POST-FX</div>
-          <div class="hud-row"><span class="k">PASSES</span><span class="v" data-k="passcount">—</span></div>
-          <div class="hud-passlist" data-k="passlist"></div>
+        <div class="hud-subforms">
+          <div class="hud-sub" data-k="splatRow">
+            <span class="sub-name">3DGS</span>
+            <span class="sub-bar"><span class="fill" data-k="splatFill"></span></span>
+            <span class="sub-val" data-k="splatPct">—</span>
+          </div>
+          <div class="hud-sub" data-k="quadRow">
+            <span class="sub-name">Quad</span>
+            <span class="sub-bar"><span class="fill" data-k="quadFill"></span></span>
+            <span class="sub-val" data-k="quadPct">—</span>
+          </div>
+          <div class="hud-sub" data-k="voxelRow">
+            <span class="sub-name">Voxel</span>
+            <span class="sub-bar"><span class="fill" data-k="voxelFill"></span></span>
+            <span class="sub-val" data-k="voxelPct">—</span>
+          </div>
         </div>
 
-        <div class="hud-section" data-key="particles">
-          <div class="hud-shdr">PARTICLES</div>
-          <div class="hud-row"><span class="k">GPGPU</span><span class="v" data-k="gpgpuCount">—</span></div>
+        <div class="hud-stats">
+          <span class="k">Draw</span><span class="v" data-k="draw">—</span>
+          <span class="sep">·</span>
+          <span class="k">Tris</span><span class="v" data-k="tris">—</span>
         </div>
 
-        <div class="hud-section" data-key="frame">
-          <div class="hud-shdr">FRAME</div>
-          <div class="hud-row"><span class="k">FPS</span><span class="v" data-k="fps">—</span></div>
-          <div class="hud-row"><span class="k">DT</span><span class="v" data-k="dt">—</span></div>
-        </div>
-
-        <div class="hud-section" data-key="gpu">
-          <div class="hud-shdr">GPU</div>
-          <div class="hud-row"><span class="k">VEND</span><span class="v" data-k="vendor"></span></div>
-          <div class="hud-row"><span class="k">REND</span><span class="v" data-k="renderer"></span></div>
-          <div class="hud-row"><span class="k">CTX</span><span class="v">WebGL 2 · f32</span></div>
+        <div class="hud-gpu">
+          <div class="gpu-name" data-k="renderer">—</div>
+          <div class="gpu-ctx">WebGL 2 · f32</div>
         </div>
       </div>
     `;
     mountEl.appendChild(this.el);
 
-    // Seed static GPU fields
-    this._set("vendor",   gpu.vendor);
-    this._set("renderer", gpu.renderer);
+    this._set("renderer", shortRenderer(gpu.renderer));
+    this.el.querySelector('[data-k="renderer"]').title = gpu.renderer;
 
-    // Wire collapse toggle
     this.el.querySelector('[data-act="collapse"]').addEventListener("click", () => {
       this._collapsed = !this._collapsed;
       this.el.classList.toggle("collapsed", this._collapsed);
     });
+
+    this._lastT = 0;
   }
 
   _set(key, value) {
@@ -114,73 +119,49 @@ export class PipelineHUD {
     if (el) el.textContent = value;
   }
 
-  setProfiler(p)     { this.profiler = p; }
-
-  // Called every frame; updates internal counters but only rewrites DOM at
-  // UPDATE_HZ_MS to avoid layout thrash.
-  tick(nowMs, dtMs) {
-    this._frames++;
-    this._fpsAccum += dtMs;
-    if (nowMs - this._lastT < UPDATE_HZ_MS) return;
-    this._lastT = nowMs;
-    const fps = this._frames * 1000 / (this._fpsAccum || 16);
-    this._fps = fps;
-    this._frames = 0;
-    this._fpsAccum = 0;
-    this._update(fps);
+  _setBar(key, pct) {
+    const el = this.el.querySelector(`[data-k="${key}"]`);
+    if (el) el.style.width = `${Math.max(0, Math.min(100, pct))}%`;
   }
 
-  _update(fps) {
+  tick(nowMs /*, dtMs */) {
+    if (nowMs - this._lastT < UPDATE_HZ_MS) return;
+    this._lastT = nowMs;
+    this._update();
+  }
+
+  _update() {
     const r  = this.refs;
     const ri = this.renderer.info.render;
 
-    // ---- RENDER row ----
-    // Splat count uses exactInt — it's the headline figure for 3DGS and
-    // small differences matter (e.g. 2,987,341 vs "3.00M" hides 12k).
+    // Hero splat count
     const nSplats = r.splat?.packedSplats?.numSplats ?? null;
     this._set("splats", nSplats != null ? exactInt(nSplats) : "—");
 
+    // 3DGS row — splat layer either visible or hidden; bar reflects that.
+    const splatVisible = r.splat?.visible !== false && nSplats != null && nSplats > 0;
+    this._setBar("splatFill", splatVisible ? 100 : 0);
+    this._set("splatPct", splatVisible ? "100%" : "off");
+    this.el.querySelector('[data-k="splatRow"]')?.classList.toggle("off", !splatVisible);
+
+    // Quad row — opacity drives the bar; show "off" if no instances.
     const nQuads  = r.quadizer?.mesh?.geometry?.instanceCount ?? 0;
     const qVis    = r.quadizer?.opacity ?? 0;
-    this._set("quads",  nQuads > 0
-      ? `${exactInt(nQuads)} · ${(qVis*100).toFixed(0)}%`
-      : "— · off");
+    const quadActive = nQuads > 0 && qVis > 0.001;
+    this._setBar("quadFill", quadActive ? qVis * 100 : 0);
+    this._set("quadPct", quadActive ? `${(qVis * 100).toFixed(0)}%` : "off");
+    this.el.querySelector('[data-k="quadRow"]')?.classList.toggle("off", !quadActive);
 
+    // Voxel row — same shape as quad.
     const nVoxels = r.voxelizer?.mesh?.geometry?.instanceCount ?? 0;
     const vVis    = r.voxelizer?.opacity ?? 0;
-    this._set("voxels", nVoxels > 0
-      ? `${exactInt(nVoxels)} · ${(vVis*100).toFixed(0)}%`
-      : "— · off");
+    const voxActive = nVoxels > 0 && vVis > 0.001;
+    this._setBar("voxelFill", voxActive ? vVis * 100 : 0);
+    this._set("voxelPct", voxActive ? `${(vVis * 100).toFixed(0)}%` : "off");
+    this.el.querySelector('[data-k="voxelRow"]')?.classList.toggle("off", !voxActive);
 
+    // Draw + tris
     this._set("draw", compactInt(ri.calls));
     this._set("tris", compactInt(ri.triangles));
-
-    // ---- POSTFX row ----
-    const passes = this.postfx?.composer?.passes || [];
-    const enabledPasses = passes.filter(p => p.enabled !== false);
-    this._set("passcount",
-      `${enabledPasses.length} / ${passes.length}`);
-    const passlistEl = this.el.querySelector('[data-k="passlist"]');
-    if (passlistEl) {
-      passlistEl.innerHTML = passes.map(p => {
-        const name = (p.constructor?.name || "Pass").replace(/Pass$/, "");
-        const on = p.enabled !== false;
-        return `<span class="hud-pass ${on ? "on" : "off"}" title="${name}">${name}</span>`;
-      }).join("");
-    }
-
-    // ---- PARTICLES row ----
-    const pCount = r.gpgpuParticles?.particleCount
-                ?? r.gpgpuParticles?.count
-                ?? null;
-    const pVis = r.gpgpuParticles?.points?.visible ?? false;
-    this._set("gpgpuCount",
-      pCount != null
-        ? `${compactInt(pCount)} · ${pVis ? "on" : "off"}`
-        : "—");
-
-    // ---- FRAME row ----
-    this._set("fps", `${fps.toFixed(1)}`);
-    this._set("dt",  `${(1000 / Math.max(fps, 1)).toFixed(1)} ms`);
   }
 }
