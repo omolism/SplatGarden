@@ -194,21 +194,43 @@ export const TECH_SPECS = [
 ];
 
 function renderItem(it) {
-  const chain = it.toolchain
-    ? `<div class="ts-item-chain">${it.toolchain
-        .map(t => `<span class="ts-chip">${t}</span>`)
-        .join('<span class="ts-arrow">▸</span>')}</div>`
-    : "";
+  const isAsset = Array.isArray(it.toolchain) && it.toolchain.length > 0;
+
+  // 1. Title row — big asset name + optional location chip
   const head = `
-    <div class="ts-item-head">
-      <span class="ts-item-name">${it.name}</span>
+    <header class="ts-item-head">
+      <h3 class="ts-item-name">${it.name}</h3>
       ${it.location ? `<span class="ts-item-loc">${it.location}</span>` : ""}
-    </div>`;
-  const output = it.output ? `<div class="ts-item-output">${it.output}</div>` : "";
-  const ref    = it.ref    ? `<div class="ts-item-ref">${it.ref}</div>`       : "";
-  const note   = it.note   ? `<div class="ts-item-note">${it.note}</div>`     : "";
-  const source = it.source ? `<div class="ts-item-src">${it.source}</div>`    : "";
-  return `<li class="ts-item${it.toolchain ? " ts-item-asset" : ""}">${head}${chain}${output}${ref}${note}${source}</li>`;
+    </header>`;
+
+  // 2. Sub-line — short technical tagline (ref). Sits right under the title.
+  const sub = it.ref ? `<div class="ts-item-sub">${it.ref}</div>` : "";
+
+  // 3. Toolchain zone — explicit "TOOLCHAIN" label + chip row with arrows
+  let chain = "";
+  if (isAsset) {
+    const chips = it.toolchain
+      .map(t => `<span class="ts-chip">${t}</span>`)
+      .join('<span class="ts-arrow">▸</span>');
+    chain = `<div class="ts-zone">
+        <div class="ts-zone-label">Toolchain</div>
+        <div class="ts-chain">${chips}</div>
+      </div>`;
+  }
+
+  // 4. Output zone — explicit "OUTPUT" label + value
+  const output = it.output ? `<div class="ts-zone">
+        <div class="ts-zone-label">Output</div>
+        <div class="ts-zone-val">${it.output}</div>
+      </div>` : "";
+
+  // 5. Note — the readable prose paragraph
+  const note = it.note ? `<p class="ts-item-note">${it.note}</p>` : "";
+
+  // 6. Source — small mono footer with hairline rule above
+  const source = it.source ? `<div class="ts-item-src">${it.source}</div>` : "";
+
+  return `<li class="ts-item${isAsset ? " ts-item-asset" : ""}">${head}${sub}${chain}${output}${note}${source}</li>`;
 }
 
 export class TechSpec {

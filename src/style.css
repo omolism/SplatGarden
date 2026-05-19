@@ -1249,7 +1249,7 @@ kbd {
   border-radius: 3px;
 }
 #tech-spec .ts-sec {
-  padding: 12px 16px 10px;
+  padding: 16px 18px 14px;
   border-bottom: 1px solid var(--hair);
 }
 #tech-spec .ts-sec:last-child { border-bottom: none; }
@@ -1264,9 +1264,9 @@ kbd {
 #tech-spec .ts-sec-name {
   flex: 1;
   font-family: var(--font-ui);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.20em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--text);
 }
@@ -1287,99 +1287,142 @@ kbd {
 #tech-spec .ts-sec.collapsed .ts-list,
 #tech-spec .ts-sec.collapsed .ts-sec-desc { display: none; }
 #tech-spec .ts-sec-desc {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-dim);
-  padding: 4px 0 8px;
+  padding: 4px 0 10px;
   letter-spacing: 0.02em;
-  line-height: 1.45;
+  line-height: 1.55;
 }
 #tech-spec .ts-list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
+/* ---- Item card ----
+ * Visual hierarchy, top → bottom:
+ *   1. Title row    — h3 name + optional location chip
+ *   2. Subtitle     — short technical tagline (ref)
+ *   3. Toolchain    — labelled chip row (only for asset items)
+ *   4. Output       — labelled value line
+ *   5. Note         — readable prose paragraph
+ *   6. Source       — small mono footer with a hairline rule above
+ */
 #tech-spec .ts-item {
-  padding: 8px 0 10px;
+  padding: 16px 0 18px;
   border-top: 1px solid var(--hair);
 }
-#tech-spec .ts-item:first-child { border-top: none; }
+#tech-spec .ts-item:first-child { border-top: none; padding-top: 4px; }
+
+/* 1. Title row */
 #tech-spec .ts-item-head {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
+  align-items: flex-start;
+  gap: 10px;
 }
 #tech-spec .ts-item-name {
+  margin: 0;
   flex: 1;
   font-family: var(--font-ui);
-  font-size: 12px;
+  font-size: 17px;
   font-weight: 500;
   letter-spacing: 0.02em;
+  line-height: 1.2;
   color: var(--text);
 }
 #tech-spec .ts-item-loc {
+  align-self: flex-start;
+  margin-top: 2px;
   font-family: var(--font-mono);
   font-size: 9px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.10em;
   text-transform: uppercase;
   color: var(--text-dim);
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--hair);
-  padding: 2px 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--hair-strong);
+  padding: 3px 7px;
   border-radius: 3px;
   white-space: nowrap;
 }
-#tech-spec .ts-item-chain {
+
+/* 2. Subtitle — technical descriptor under the name */
+#tech-spec .ts-item-sub {
+  margin-top: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--text-mid);
+  line-height: 1.45;
+}
+
+/* 3 + 4. Labelled zone (Toolchain / Output) */
+#tech-spec .ts-zone {
+  margin-top: 14px;
+}
+#tech-spec .ts-zone-label {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+#tech-spec .ts-zone-val {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.01em;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+/* Chip row inside the Toolchain zone */
+#tech-spec .ts-chain {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
-  margin-top: 6px;
+  gap: 5px;
 }
 #tech-spec .ts-chip {
   font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.04em;
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
   color: var(--text);
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--hair-strong);
-  padding: 2px 7px;
-  border-radius: 4px;
+  padding: 4px 9px;
+  border-radius: 5px;
   white-space: nowrap;
 }
 #tech-spec .ts-arrow {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 12px;
   color: var(--text-faint);
-  padding: 0 1px;
+  padding: 0 2px;
+  user-select: none;
 }
-#tech-spec .ts-item-output {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.02em;
-  color: var(--text-mid);
-  margin-top: 6px;
-}
-#tech-spec .ts-item-ref {
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  color: var(--text-mid);
-  padding-top: 3px;
-  letter-spacing: 0.02em;
-}
+
+/* 5. Note — main reading paragraph */
 #tech-spec .ts-item-note {
+  margin: 14px 0 0;
   font-family: var(--font-ui);
-  font-size: 10.5px;
+  font-size: 12.5px;
+  line-height: 1.65;
+  letter-spacing: 0.005em;
   color: var(--text-mid);
-  padding-top: 4px;
-  line-height: 1.5;
-  letter-spacing: 0.01em;
 }
+#tech-spec .ts-item-note strong,
+#tech-spec .ts-item-note b { color: var(--text); font-weight: 500; }
+
+/* 6. Source — footnote with a hairline rule above */
 #tech-spec .ts-item-src {
+  margin-top: 14px;
+  padding-top: 8px;
+  border-top: 1px solid var(--hair);
   font-family: var(--font-mono);
-  font-size: 9px;
-  color: var(--text-dim);
-  padding-top: 5px;
+  font-size: 9.5px;
   letter-spacing: 0.04em;
+  color: var(--text-dim);
 }
 #tech-spec .ts-footer {
   display: flex;
