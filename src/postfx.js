@@ -585,19 +585,29 @@ const UnderwaterShader = {
 // SortedParticlesShader below now covers the multipass-particle look.
 
 // ---------------------------------------------------------------------------
-// SortedParticlesShader — display blend for the cornusammonis multipass
-// particle sim. tParticles is the simulator's output texture (RGBA where
-// w = smoothed minDist). We render an exp-falloff glow per pixel and
-// composite over the rendered splat scene via one of 3 blend modes.
+// WarpFxShader — clean-room "warped fractal" post-process.
+//
+// Generates an animated domain-warped fractal pattern (hash value-noise,
+// 4-octave fBm with 2D rotation, two nested warp passes, derivative-based
+// embossed lighting) and composites it over the scene via add / screen /
+// mix / replace. The warp + lighting recipe is a classic NPR / generative
+// approach (used in many public shadertoys); this implementation is
+// written from scratch using only public-domain noise techniques —
+// no third-party shader code is reproduced.
 // ---------------------------------------------------------------------------
-const SortedParticlesShader = {
+const WarpFxShader = {
   uniforms: {
-    tDiffuse:     { value: null },
-    tParticles:   { value: null },        // sortedParticles.getOutputTexture()
-    uSpIntensity: { value: 1.0 },         // overall overlay strength
-    uSpGlowFall:  { value: 80.0 },        // exp falloff steepness on minDist
-    uSpColor:     { value: new THREE.Vector3(0.55, 0.85, 1.0) },
-    uSpBlend:     { value: 0 },           // 0 add, 1 screen, 2 mix
+    tDiffuse:    { value: null },
+    uTime:       { value: 0.0 },
+    uResolution: { value: new THREE.Vector2(1, 1) },
+    uIntensity:  { value: 0.70 },       // overall overlay strength
+    uSpeed:      { value: 0.30 },       // time multiplier
+    uScale:      { value: 1.20 },       // noise frequency
+    uWarp:       { value: 2.40 },       // strength of the domain-warp feedback
+    uBlend:      { value: 1 },          // 0 add, 1 screen, 2 mix, 3 replace
+    uColorA:     { value: new THREE.Vector3(0.10, 0.06, 0.32) }, // deep
+    uColorB:     { value: new THREE.Vector3(0.78, 0.40, 0.18) }, // mid
+    uColorC:     { value: new THREE.Vector3(0.96, 0.94, 0.86) }, // highlight
   },
   vertexShader: /* glsl */`
     varying vec2 vUv;
@@ -607,29 +617,91 @@ const SortedParticlesShader = {
     }
   `,
   fragmentShader: /* glsl */`
+    #extension GL_OES_standard_derivatives : enable
     uniform sampler2D tDiffuse;
-    uniform sampler2D tParticles;
-    uniform float uSpIntensity;
-    uniform float uSpGlowFall;
-    uniform vec3  uSpColor;
-    uniform int   uSpBlend;
+    uniform float uTime, uIntensity, uSpeed, uScale, uWarp;
+    uniform vec2  uResolution;
+    uniform int   uBlend;
+    uniform vec3  uColorA, uColorB, uColorC;
     varying vec2 vUv;
-    void main() {
-      vec4 base = texture2D(tDiffuse, vUv);
-      vec4 p    = texture2D(tParticles, vUv);
-      // Buffer D output: w = EWMA-smoothed distance to nearest particle.
-      // exp falloff turns close particles into bright glows.
-      float glow = exp(-p.w * uSpGlowFall) * uSpIntensity;
-      vec3 tint  = uSpColor * glow;
-      vec3 final;
-      if (uSpBlend == 1) {
-        final = 1.0 - (1.0 - base.rgb) * (1.0 - tint);
-      } else if (uSpBlend == 2) {
-        final = mix(base.rgb, uSpColor, clamp(glow, 0.0, 1.0));
-      } else {
-        final = base.rgb + tint;
+
+    // ---- Public-domain hash & value-noise -------------------------------
+    float hash21(vec2 p) {
+      p = fract(p * vec2(123.34, 456.21));
+      p += dot(p, p + 45.32);
+      return fract(p.x * p.y);
+    }
+    float vnoise(vec2 p) {
+      vec2 i = floor(p);
+      vec2 f = fract(p);
+      f = f * f * (3.0 - 2.0 * f);
+      return mix(
+        mix(hash21(i + vec2(0.0, 0.0)), hash21(i + vec2(1.0, 0.0)), f.x),
+        mix(hash21(i + vec2(0.0, 1.0)), hash21(i + vec2(1.0, 1.0)), f.x),
+        f.y
+      );
+    }
+    // 4-octave fBm with 2D rotation between octaves — standard recipe
+    float fbm(vec2 p) {
+      const mat2 R = mat2(0.80, 0.60, -0.60, 0.80);
+      float v = 0.0;
+      float a = 0.50;
+      for (int i = 0; i < 4; i++) {
+        v += a * vnoise(p);
+        p = R * p * 2.03;
+        a *= 0.50;
       }
-      gl_FragColor = vec4(final, base.a);
+      return v;
+    }
+    vec2 fbm2(vec2 p) { return vec2(fbm(p), fbm(p + vec2(7.7, 3.3))); }
+
+    // Pattern function — domain-warped fBm with two nested levels.
+    float pattern(vec2 q, out vec2 warp) {
+      vec2 o = fbm2(q);
+      vec2 r = fbm2(q + o * uWarp);
+      warp   = r;
+      return fbm(q + r * uWarp);
+    }
+
+    void main() {
+      // Aspect-corrected coord around the screen centre
+      vec2 p = (vUv - 0.5);
+      p.x *= uResolution.x / uResolution.y;
+      p *= 2.0 * uScale;
+
+      float t = uTime * uSpeed;
+      // Slowly drift the field so the warp pattern crawls smoothly
+      p += vec2(sin(t * 0.41), cos(t * 0.37)) * 0.25;
+
+      vec2 warp;
+      float f = pattern(p + vec2(t * 0.04, -t * 0.05), warp);
+
+      // Colour palette: deep → mid → highlight gradient over f
+      vec3 col = mix(uColorA, uColorB, smoothstep(0.20, 0.55, f));
+      col = mix(col, uColorC, smoothstep(0.65, 0.92, f));
+      col *= 0.85 + 0.35 * length(warp);
+
+      // Derivative lighting for an embossed feel (cheap GPU dFdx/dFdy)
+      float fx = dFdx(f);
+      float fy = dFdy(f);
+      vec3 n = normalize(vec3(-fx * uResolution.x, 8.0, -fy * uResolution.y));
+      vec3 lig = normalize(vec3(0.6, 0.8, 0.3));
+      float dif = clamp(dot(n, lig), 0.0, 1.0);
+      col *= 0.5 + 0.5 * dif;
+      col = clamp(col, 0.0, 1.0);
+
+      vec3 base = texture2D(tDiffuse, vUv).rgb;
+      vec3 final;
+      if (uBlend == 0) {
+        final = base + col * uIntensity;                                  // Add
+      } else if (uBlend == 1) {
+        final = 1.0 - (1.0 - base) * (1.0 - col * uIntensity);            // Screen
+      } else if (uBlend == 2) {
+        final = mix(base, col, uIntensity);                               // Mix
+      } else {
+        final = col;                                                      // Replace
+      }
+      gl_FragColor = vec4(final, 1.0);
     }
   `,
 };
@@ -661,11 +733,11 @@ export function setupPostFX(renderer, scene, camera) {
   const underwaterPass = new ShaderPass(UnderwaterShader);
   composer.addPass(underwaterPass);
 
-  // Sorted Particles — cornusammonis multipass particle sim display blend.
-  // The simulation itself runs on main.js's animation loop; this pass just
-  // reads the sim's output texture and blends it over the scene.
-  const sortedParticlesPass = new ShaderPass(SortedParticlesShader);
-  composer.addPass(sortedParticlesPass);
+  // Warp FX — clean-room animated domain-warped fractal overlay (replaces
+  // SortedParticles). Pure shader, no companion sim — runs entirely in
+  // this single ShaderPass.
+  const warpFxPass = new ShaderPass(WarpFxShader);
+  composer.addPass(warpFxPass);
 
   // Echo / Trails — Notch-style motion smear via feedback texture
   const echoPass = new EchoPass();
@@ -717,17 +789,14 @@ export function setupPostFX(renderer, scene, camera) {
     underwaterWave:      0.0,    // UV-wave shimmer amount (0..2)
     underwaterDarken:    0.27,   // multiplicative darken before caustic (0..1)
 
-    // Sorted Particles — cornusammonis multipass particle sim overlay.
-    // Dedicated knobs per the dedicated-params-per-fx preference.
-    sortedParticlesOn:   false,
-    spIntensity:         1.0,         // overall overlay strength (0..2)
-    spGlowFall:          80.0,        // exp falloff steepness on minDist (20..200)
-    spColorR:            0.55,
-    spColorG:            0.85,
-    spColorB:            1.00,
-    spBlend:             "Additive",  // Additive | Screen | Mix
-
-    // Surface Tension params removed — feature deleted.
+    // Warp FX — clean-room animated domain-warped fractal overlay.
+    // Replaces the previous Sorted Particles pass.
+    warpFxOn:            false,
+    warpFxIntensity:     0.70,
+    warpFxSpeed:         0.30,
+    warpFxScale:         1.20,
+    warpFxWarp:          2.40,
+    warpFxBlend:         "Screen",
 
     painterly:           "None",   // None | Monet | Matisse | Van Gogh | Seurat
     monetRadius:         4.0,
@@ -767,7 +836,7 @@ export function setupPostFX(renderer, scene, camera) {
   // Note: Seurat keeps index 4 even after Van Gogh's removal — the shader
   // branches on the literal int, so reindexing would break the lookup.
   const PAINTERLY_INDEX = { None: 0, Monet: 1, Matisse: 2, Seurat: 4 };
-  const SP_BLEND_INDEX = { Additive: 0, Screen: 1, Mix: 2 };
+  const WARP_BLEND_INDEX = { Add: 0, Screen: 1, Mix: 2, Replace: 3 };
 
   let rotation = 0.0;
 
@@ -815,15 +884,16 @@ export function setupPostFX(renderer, scene, camera) {
       uw.uDarken.value          = params.underwaterDarken;
     }
 
-    // Sorted Particles — display blend. The sim runs in main.js; we just
-    // push the latest tunables into the pass uniforms each frame.
-    sortedParticlesPass.enabled = params.postEnable && params.sortedParticlesOn;
-    if (sortedParticlesPass.enabled) {
-      const sp = sortedParticlesPass.uniforms;
-      sp.uSpIntensity.value = params.spIntensity;
-      sp.uSpGlowFall.value  = params.spGlowFall;
-      sp.uSpColor.value.set(params.spColorR, params.spColorG, params.spColorB);
-      sp.uSpBlend.value     = SP_BLEND_INDEX[params.spBlend] ?? 0;
+    // Warp FX — animated domain-warped fractal overlay.
+    warpFxPass.enabled = params.postEnable && params.warpFxOn;
+    if (warpFxPass.enabled) {
+      const w = warpFxPass.uniforms;
+      w.uTime.value      = polishTime;
+      w.uIntensity.value = params.warpFxIntensity;
+      w.uSpeed.value     = params.warpFxSpeed;
+      w.uScale.value     = params.warpFxScale;
+      w.uWarp.value      = params.warpFxWarp;
+      w.uBlend.value     = WARP_BLEND_INDEX[params.warpFxBlend] ?? 1;
     }
 
     // Surface Tension update removed — pass and vortex pool deleted.
@@ -936,15 +1006,14 @@ export function setupPostFX(renderer, scene, camera) {
     fEcho.add(params, "echoMix",     0.0, 1.0,  0.01 ).name("Mix");
     fEcho.add(params, "echoFloor",   0.0, 0.05, 0.001).name("Floor (clean black)");
 
-    // Sorted Particles — cornusammonis multipass sim overlay.
-    const fSp = fPost.addFolder("Sorted Particles").close();
-    fSp.add(params, "sortedParticlesOn").name("Enable");
-    fSp.add(params, "spIntensity", 0.0, 2.0, 0.01).name("Intensity");
-    fSp.add(params, "spGlowFall", 10.0, 200.0, 1.0).name("Glow Falloff");
-    fSp.add(params, "spColorR", 0.0, 1.0, 0.01).name("Color R");
-    fSp.add(params, "spColorG", 0.0, 1.0, 0.01).name("Color G");
-    fSp.add(params, "spColorB", 0.0, 1.0, 0.01).name("Color B");
-    fSp.add(params, "spBlend", Object.keys(SP_BLEND_INDEX)).name("Blend Mode");
+    // Warp FX — animated domain-warped fractal overlay (replaces Sorted Particles).
+    const fWarp = fPost.addFolder("Warp FX").close();
+    fWarp.add(params, "warpFxOn").name("Enable");
+    fWarp.add(params, "warpFxIntensity", 0.0, 1.5,  0.01).name("Intensity");
+    fWarp.add(params, "warpFxSpeed",     0.0, 2.0,  0.01).name("Speed");
+    fWarp.add(params, "warpFxScale",     0.3, 4.0,  0.05).name("Scale");
+    fWarp.add(params, "warpFxWarp",      0.0, 5.0,  0.05).name("Warp Amount");
+    fWarp.add(params, "warpFxBlend", Object.keys(WARP_BLEND_INDEX)).name("Blend Mode");
 
     // Underwater — Dave_Hoskins tileable water caustic + tint + UV waves.
     const fUw = fPost.addFolder("Underwater").close();
@@ -993,13 +1062,5 @@ export function setupPostFX(renderer, scene, camera) {
     return f;
   }
 
-  // Push the latest sorted-particles sim texture into the display pass.
-  // Sim runs in main.js's animation loop; this setter is invoked each
-  // frame with the simulator's current output (ping-pong target swaps).
-  function setSortedParticlesTexture(tex) {
-    sortedParticlesPass.uniforms.tParticles.value = tex;
-  }
-
-  return { composer, params, render, setSize, attachGUI,
-           setSortedParticlesTexture };
+  return { composer, params, render, setSize, attachGUI };
 }

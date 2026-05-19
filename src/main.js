@@ -11,7 +11,7 @@ import { DataLabelLayer } from "./datalabels.js";
 import { VelocityField } from "./velocity-field.js";
 import { GPGPUParticles } from "./gpgpu-particles.js";
 import { AudioReactor } from "./audio-reactor.js";
-import { SortedParticles } from "./sorted-particles.js";
+// SortedParticles removed — replaced by the WarpFx post-process pass.
 import { Voxelizer } from "./voxelizer.js";
 import { Quadizer }  from "./quadizer.js";
 import { uniforms as effectUniforms } from "./effects.js";
@@ -124,12 +124,6 @@ window.__gpgpuParticles = gpgpuParticles;
 // source; particles still work without audio (uAudioAmp stays at 0).
 const audioReactor = new AudioReactor();
 window.__audioReactor = audioReactor;
-
-// Sorted-particles sim — 4-buffer cornusammonis simulation. Sim runs every
-// frame regardless of overlay enable so the field stays coherent; the
-// display blend in postfx is what actually shows it.
-const sortedParticles = new SortedParticles(renderer, { resolution: 128 });
-window.__sortedParticles = sortedParticles;
 
 // Tech-Spec overlay scene — training cameras (and any future tech-spec 3D
 // gizmos) live here so they bypass the post-FX composer pipeline. Rendered
@@ -1667,13 +1661,8 @@ renderer.setAnimationLoop(() => {
   // so loud frames scale field-strength + point-size (per gpgpu shader).
   const audioMetrics = audioReactor.update();
   gpgpuParticles.step(dt, camera, velocityField.getTexture(), audioMetrics.amp);
-  // Sorted-particles sim — 4 buffer passes. Output texture pushed into
-  // the postfx display pass each frame (ping-pong swaps the texture ref).
-  // Skip the heavy 4-buffer sim when nothing is consuming it (display
-  // overlay off + master post-process off). Drops ~40M ALU ops/frame.
-  sortedParticles.skipUpdate = !(postfx.params.postEnable && postfx.params.sortedParticlesOn);
-  sortedParticles.step(dt);
-  postfx.setSortedParticlesTexture(sortedParticles.getOutputTexture());
+  // Sorted-particles sim removed — Warp FX is a pure-shader post-pass with
+  // no companion sim, so the composer just renders directly.
   postfx.render(dt);
   // GPGPU particles + Tech-Spec gizmos live in their own scenes rendered
   // AFTER the composer so they bypass every post-FX pass (Echo, Bloom,
