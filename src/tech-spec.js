@@ -15,41 +15,76 @@
 export const TECH_SPECS = [
   {
     section: "ASSETS",
-    desc:    "Per-object authoring pipelines — all baked into the captured 3DGS",
+    desc:    "Per-object authoring — set-dressed in Unreal (Perforce version control), then captured together as one 3DGS",
     items: [
-      {
-        name:      "Garden Environment",
-        location:  "Whole scene",
-        toolchain: ["Unreal Engine", "Litchfield Studio", "Postshot"],
-        output:    "3DGS · 990 COLMAP poses",
-        note:      "Scene assembled in Unreal, trained as a single 3D Gaussian Splat",
-        source:    "public/Whole_With_Statue.splat",
-      },
-      {
-        name:      "Tree",
-        location:  "Near gazebo",
-        toolchain: ["SpeedTree", "Unreal Engine", "Postshot"],
-        output:    "Baked into env 3DGS",
-        note:      "Procedural tree authored in SpeedTree, dressed into the Unreal scene before capture",
-        source:    "in-scene",
-      },
       {
         name:      "Grape Hyacinth",
         location:  "Near gazebo",
         worldPos:  [0.313, -0.773, 2.226],
-        toolchain: ["Houdini (procedural)", "Unreal Engine", "Postshot"],
-        output:    "Baked into env 3DGS",
-        note:      "Houdini-generated cluster scattered across the gazebo planters",
+        toolchain: ["Houdini (procedural)", "Unreal Engine (set dress · Perforce)"],
+        output:    "Mesh dressed into env scene",
+        note:      "Houdini-generated cluster scattered across the gazebo planters; placed into the Unreal scene with Perforce-tracked iteration",
         source:    "in-scene",
       },
       {
         name:      "Daffodil",
         location:  "Near gazebo",
         worldPos:  [-0.195, -0.730, 2.379],
-        toolchain: ["Houdini", "VAT bake", "Python · OSC · MediaPipe", "AI texture stylization", "Unreal Engine", "Postshot"],
-        output:    "Baked into env 3DGS · animation captured per frame",
-        note:      "Animated procedurally in Houdini, VAT-baked, MediaPipe/OSC drove the rig at capture time, AI stylization on the diffuse",
+        toolchain: ["Houdini", "VAT bake", "Unreal Engine (set dress · Perforce)", "Python · OSC · MediaPipe", "AI texture stylization"],
+        output:    "Mesh + VAT animation · interactively driven in Unreal",
+        note:      "Animated procedurally in Houdini and VAT-baked, then set-dressed in Unreal. Inside the Unreal session, Python · OSC · MediaPipe drives the rig live (hand gesture → OSC → blueprint). Diffuse texture passes through the custom AI stylization tool (see below).",
         source:    "in-scene",
+      },
+      {
+        name:      "Tree",
+        location:  "Near gazebo",
+        toolchain: ["SpeedTree", "Unreal Engine (set dress · Perforce)"],
+        output:    "Mesh dressed into env scene",
+        note:      "Procedural tree authored in SpeedTree, dressed into the Unreal scene before the env capture",
+        source:    "in-scene",
+      },
+      {
+        name:      "Landscape",
+        location:  "Whole scene base",
+        toolchain: ["Unreal Engine (terrain authoring · Perforce)", "AI texture stylization"],
+        output:    "Landscape mesh + AI-stylized ground textures",
+        note:      "Terrain authored directly in Unreal; ground textures passed through the custom AI stylization tool to land the painterly look in the final 3DGS.",
+        source:    "in-scene",
+      },
+      {
+        name:      "Garden Environment",
+        location:  "Whole scene",
+        toolchain: ["Unreal Engine (assembly)", "Litchfield Studio (capture)", "Postshot (training)"],
+        output:    "3DGS · 990 COLMAP poses",
+        note:      "All set-dressed assets composited in Unreal, then captured at Litchfield Studio and trained as a single 3D Gaussian Splat in Postshot. The only stage where Postshot enters the pipeline.",
+        source:    "public/Whole_With_Statue.splat",
+      },
+    ],
+  },
+
+  {
+    section: "AI STYLIZATION",
+    desc:    "Custom diffusion-based texture tool driving the painterly look on Daffodil + Landscape",
+    items: [
+      {
+        name:      "Artist-Directed Style Transfer",
+        ref:       "Itim Kongsakulvatanasook · SCAD M.F.A. Visual Effects (SIGGRAPH 2026)",
+        toolchain: ["IP-Adapter (Ye 2023)", "ControlNet (Zhang 2023)", "AdaIN (Huang & Belongie 2017)", "Diffusion"],
+        output:    "Painterly textures with preserved palette",
+        note:      "Two artist-selectable modes — Full Style Transfer (color + texture + tone from a reference) and Texture-Only Transfer (auto-grayscale reference + AdaIN to apply painterly brushwork while keeping the original color palette intact). Per-channel histogram matching + patch-wise AdaIN run post-generation to deterministically correct residual color drift — output stays faithful to the pre-approved palette across runs.",
+        source:    "off-repo",
+      },
+      {
+        name:      "Generation Parameters",
+        ref:       "Artist-controllable knobs",
+        note:      "ControlNet Mode — Tile (colored renders, preserves pixel structure) / Canny (sketches, preserves edges) · ControlNet Strength · IP-Adapter Strength · Inference Steps · Guidance Scale.",
+        source:    "Gradio interface",
+      },
+      {
+        name:      "Implementation",
+        ref:       "PyTorch 2.11 · CUDA 13.0 · Python",
+        note:      "Runs on NVIDIA RTX PRO 6000 Blackwell (96 GB VRAM); generates a 4K image in ≈ 20 s at 20 inference steps.",
+        source:    "off-repo",
       },
     ],
   },
@@ -102,16 +137,17 @@ export const TECH_SPECS = [
 
   {
     section: "CAPTURE & TRAIN",
-    desc:    "How the garden became Gaussian splats",
+    desc:    "Pipeline that turns the assembled Unreal scene into the 3DGS rendered here",
     items: [
       {
         name:   "Scene assembly",
-        ref:    "Unreal Engine — procedural + authored assets dressed into env",
+        ref:    "Unreal Engine — every asset set-dressed into one scene",
+        note:   "Perforce-backed version control across artists",
         source: "off-repo",
       },
       {
-        name:   "Production",
-        ref:    "Litchfield Studio pipeline",
+        name:   "Capture",
+        ref:    "Litchfield Studio capture pipeline",
         source: "off-repo",
       },
       {
