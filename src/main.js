@@ -22,7 +22,12 @@ import { SceneLayers } from "./scene-layers.js";
 import { uniforms as effectUniforms } from "./effects.js";
 import { loadColmapImages, buildColmapFrustums } from "./colmap-loader.js";
 
-const SPLAT_URL = "/Whole_With_Statue.splat";
+// All public-folder assets resolve against BASE_URL so the same build
+// works at the root (Cloudflare Pages, `npm run dev`) and under a sub-
+// path (GitHub Pages — `/SplatGarden-WebViewer/`). BASE_URL always ends
+// with "/" so plain concatenation is safe.
+const BASE = import.meta.env.BASE_URL;
+const SPLAT_URL = `${BASE}Whole_With_Statue.splat`;
 
 // ---------------------------------------------------------------------------
 // DOM
@@ -457,7 +462,7 @@ async function loadSplat() {
   // Coordinate alignment: the splat mesh is rotated 180° around X to bring
   // Postshot's Y-down convention into Three.js's Y-up. We apply the same
   // mirror to the COLMAP positions so they sit in the same world frame.
-  loadColmapImages("/colmap/images.bin")
+  loadColmapImages(`${BASE}colmap/images.bin`)
     .then(images => {
       // Subsample for a less-cluttered overlay (target ~150 frustums).
       const TARGET = 150;
@@ -558,7 +563,7 @@ async function loadSplat() {
       if (!hdrTex && !hdrLoading) {
         hdrLoading = true;
         try {
-          const tex = await new RGBELoader().loadAsync("/Skybox.hdr");
+          const tex = await new RGBELoader().loadAsync(`${BASE}Skybox.hdr`);
           tex.mapping = THREE.EquirectangularReflectionMapping;
           hdrTex = tex;
         } catch (err) {
@@ -777,7 +782,7 @@ async function loadSplat() {
     camMoveLoading = true;
     camLoadPromise = (async () => {
       try {
-        const fbx = await new FBXLoader().loadAsync("/Shot4B_GS-FX_Camera_V01.fbx");
+        const fbx = await new FBXLoader().loadAsync(`${BASE}Shot4B_GS-FX_Camera_V01.fbx`);
         fbx.visible = false;
         scene.add(fbx);
         camFbxRoot = fbx;
@@ -1691,7 +1696,7 @@ async function loadSplat() {
 async function loadAdditionalSplatLayers() {
   let list = [];
   try {
-    const res = await fetch("/manifest.json", { cache: "no-cache" });
+    const res = await fetch(`${BASE}manifest.json`, { cache: "no-cache" });
     if (!res.ok) return;
     list = await res.json();
   } catch { return; }
@@ -1702,7 +1707,7 @@ async function loadAdditionalSplatLayers() {
 
   for (const fname of secondaries) {
     try {
-      const built = await createSplat({ url: "/" + fname });
+      const built = await createSplat({ url: `${BASE}${fname}` });
       const layer = sceneLayers.add({ mesh: built.splat, name: fname });
       if (layer) sceneLayers.setVisible(layer.id, false);   // hidden so it doesn't double-render
     } catch (err) {
