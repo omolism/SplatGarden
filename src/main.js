@@ -130,6 +130,11 @@ window.__audioReactor = audioReactor;
 // display blend in postfx is what actually shows it.
 const sortedParticles = new SortedParticles(renderer, { resolution: 128 });
 window.__sortedParticles = sortedParticles;
+
+// Tech-Spec overlay scene — training cameras (and any future tech-spec 3D
+// gizmos) live here so they bypass the post-FX composer pipeline. Rendered
+// AFTER postfx.render() with autoClear=false so they sit cleanly on top.
+const techOverlayScene = new THREE.Scene();
 // Mobile: kill post-processing by default — Bloom is the biggest GPU tax,
 // and the Polish pass is fill-rate heavy on mobile GPUs.
 if (IS_MOBILE) {
@@ -394,7 +399,12 @@ async function loadSplat() {
         depth: Math.max(0.03,  radius * 0.0035),
       });
       cameraFrustums.visible = false;
-      scene.add(cameraFrustums);
+      // Training cameras live in a SEPARATE scene rendered AFTER the
+      // composer (same pattern as gpgpu particles), so they're not bloomed,
+      // painterly'd, underwater'd, or smeared by Echo trails. The overlay
+      // renders with depthTest=false (already set in colmap-loader) on top
+      // of the composed frame.
+      techOverlayScene.add(cameraFrustums);
       installFrustumHover(cameraFrustums);
 
       // ----- Tighter bbox for the data-label overlay --------------------
@@ -928,20 +938,11 @@ async function loadSplat() {
   fAudio.add(audioActions, "useMic").name("🎤 Use Microphone");
   fAudio.add(audioActions, "stop").name("⏹ Stop");
 
-  // ---- Default audio source: Forest_Ambience from /public ----------------
-  // Browsers block autoplay until a user gesture, so we don't try to play
-  // immediately. The first pointerdown / keydown on the page kicks off the
-  // connect attempt (idempotent — re-fires safely if the file is missing).
-  // Drop Forest_Ambience.mp3 into /public to use it; if absent, this fails
-  // silently and the user can pick another via the GUI button.
-  const DEFAULT_AUDIO_URL = "/Forest_Ambience.mp3";
-  const tryDefaultAudio = async () => {
-    if (audioReactor.mode !== "none") return;
-    try { await audioReactor.connectUrl(DEFAULT_AUDIO_URL); }
-    catch (err) { /* file missing or play blocked — user can pick manually */ }
-  };
-  window.addEventListener("pointerdown", tryDefaultAudio);
-  window.addEventListener("keydown", tryDefaultAudio);
+  // Audio auto-load disabled per user request. Forest_Ambience is still
+  // bundled in /public and can be picked manually via 📁 Load Audio File…
+  // (or use the 🎤 mic toggle for live input). Reactor stays dormant on
+  // launch — uAudioAmp = 0 in the particle update path until something
+  // is connected.
 
   // ---- Phase 3: Seed particles from USD voxel layer --------------------
   // Voxelizer caches cellPositions/cellCount/cellBoundsMin/Max after each
@@ -955,20 +956,39 @@ async function loadSplat() {
         statusEl.textContent = "Voxel layer has no data yet — enable Voxel layer first";
         return;
       }
-      // Add a 10% margin around the voxel AABB so drift doesn't trigger
-      // immediate respawn at the boundary.
+      // 10% margin around voxel AABB so drift doesn't respawn at boundary.
       const mn = voxelizer.cellBoundsMin.clone();
       const mx = voxelizer.cellBoundsMax.clone();
       const pad = mx.clone().sub(mn).multiplyScalar(0.10);
       mn.sub(pad); mx.add(pad);
       gpgpuParticles.setBounds(mn, mx);
       gpgpuParticles.seedFromPositions(voxelizer.cellPositions, voxelizer.cellCount);
+
+      // Clear any accumulated velocity-field impulses so the freshly-seeded
+      // particles read at the voxel positions instead of being immediately
+      // blown away by leftover mass from earlier cursor / pinch interaction.
+      velocityField.clear();
+
+      // HIDE the voxel layer — the voxel cubes have been "transformed" into
+      // particles; leaving the bright instanced cubes visible drowns out the
+      // additive particle sprites. effects.params.voxelLayer drives the
+      // animated voxelVis uniform → voxelizer.setOpacity() fades the cubes
+      // out smoothly. (The voxel data itself stays cached on voxelizer so
+      // re-toggling Voxel rebuilds without re-iterating splats.)
+      const fxParams = effects?.params;
+      if (fxParams && fxParams.voxelLayer) {
+        fxParams.voxelLayer = false;
+        gui.controllersRecursive().forEach(c => {
+          if (c.property === "voxelLayer" && c.object === fxParams) c.updateDisplay();
+        });
+      }
+
       gpgpuParticles.setEnabled(true);
       gpParticleParams.enable = true;
       gui.controllersRecursive().forEach(c => {
         if (c.property === "enable" && c.object === gpParticleParams) c.updateDisplay();
       });
-      statusEl.textContent = `Seeded ${gpgpuParticles.N} particles from ${voxelizer.cellCount} voxels`;
+      statusEl.textContent = `Seeded ${gpgpuParticles.N} particles from ${voxelizer.cellCount} voxels — voxel layer hidden`;
     },
   };
   fGpParticles.add(voxelSeedActions, "seedFromVoxels").name("🎲 Seed from USD Voxels");
@@ -1669,15 +1689,19 @@ renderer.setAnimationLoop(() => {
   sortedParticles.step(dt);
   postfx.setSortedParticlesTexture(sortedParticles.getOutputTexture());
   postfx.render(dt);
-  // GPGPU particles live in their own scene rendered AFTER the composer
-  // so the additive sprites don't get smeared by Echo trails or any other
-  // post-FX pass. autoClear=false preserves the composed pixels underneath.
+  // GPGPU particles + Tech-Spec gizmos live in their own scenes rendered
+  // AFTER the composer so they bypass every post-FX pass (Echo, Bloom,
+  // Painterly, Underwater, etc.). autoClear=false preserves the composed
+  // pixels underneath; both scenes are additive/overlay-style.
+  const prevAutoClear = renderer.autoClear;
+  renderer.autoClear = false;
   if (gpgpuParticles.points.visible) {
-    const prevAutoClear = renderer.autoClear;
-    renderer.autoClear = false;
     renderer.render(particleScene, camera);
-    renderer.autoClear = prevAutoClear;
   }
+  if (techOverlayScene.children.length > 0) {
+    renderer.render(techOverlayScene, camera);
+  }
+  renderer.autoClear = prevAutoClear;
 
   frameCount++;
   fpsAccum += dt;

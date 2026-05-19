@@ -182,6 +182,24 @@ export class VelocityField {
     return this.read.texture;
   }
 
+  // Force the field back to zero. Used when an unrelated action (e.g.
+  // seeding particles from voxels) needs to start from a clean state so
+  // accumulated mouse/pinch impulses don't immediately blow the new
+  // particles around.
+  clear() {
+    const prevTarget = this.renderer.getRenderTarget();
+    const prevColor = new THREE.Color();
+    this.renderer.getClearColor(prevColor);
+    const prevAlpha = this.renderer.getClearAlpha();
+    this.renderer.setClearColor(0x000000, 0);
+    this.renderer.setRenderTarget(this.rtA); this.renderer.clear(true, false, false);
+    this.renderer.setRenderTarget(this.rtB); this.renderer.clear(true, false, false);
+    this.renderer.setRenderTarget(prevTarget);
+    this.renderer.setClearColor(prevColor, prevAlpha);
+    this.read = this.rtA;
+    this.write = this.rtB;
+  }
+
   // Per-frame tunables exposed so a GUI can twiddle them live.
   get params() {
     return {
