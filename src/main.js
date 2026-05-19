@@ -14,6 +14,7 @@ import { AudioReactor } from "./audio-reactor.js";
 // SortedParticles removed — replaced by the WarpFx post-process pass.
 import { Voxelizer } from "./voxelizer.js";
 import { Quadizer }  from "./quadizer.js";
+import { PipelineHUD } from "./pipeline-hud.js";
 import { uniforms as effectUniforms } from "./effects.js";
 import { loadColmapImages, buildColmapFrustums } from "./colmap-loader.js";
 
@@ -125,6 +126,26 @@ window.__gpgpuParticles = gpgpuParticles;
 const audioReactor = new AudioReactor();
 window.__audioReactor = audioReactor;
 
+// Tech-spec HUD — reads from renderer / postfx / refs each frame.
+// Refs may be null at construction; pipelineHUD reads them lazily via the
+// refs object so later assignments to splat / voxelizer / quadizer are picked
+// up automatically. setAudioReactor wires the audio metrics once the panel
+// is up and the reactor has been kicked alive by a user gesture.
+const _hudRefs = {
+  splat:           null,
+  voxelizer:       null,
+  quadizer:        null,
+  gpgpuParticles,
+  audioReactor,
+};
+const pipelineHUD = new PipelineHUD({
+  renderer,
+  postfx,
+  refs:   _hudRefs,
+  mountEl: document.getElementById("app") || document.body,
+});
+window.__pipelineHUD = pipelineHUD;
+
 // Tech-Spec overlay scene — training cameras (and any future tech-spec 3D
 // gizmos) live here so they bypass the post-FX composer pipeline. Rendered
 // AFTER postfx.render() with autoClear=false so they sit cleanly on top.
@@ -191,6 +212,7 @@ async function loadSplat() {
   const built = await createSplat({ url: SPLAT_URL });
   splat = built.splat;
   scene.add(splat);
+  _hudRefs.splat = splat;
 
   // Wireframe sphere overlay for Effector Mode. Parented to splat so its
   // position can be copied straight from uniforms.maskCenter (already in
@@ -248,6 +270,8 @@ async function loadSplat() {
     quadSize: effectUniforms.quadSize.value,
     fxUniforms: effectUniforms,
   });
+  _hudRefs.voxelizer = voxelizer;
+  _hudRefs.quadizer  = quadizer;
   gui.controllersRecursive().forEach(ctrl => {
     if (ctrl._name === "Voxel Size") {
       const prev = ctrl._onChange;
@@ -1522,6 +1546,7 @@ async function loadSplat() {
     if (effects)    effects.mesh    = splat;
     if (voxelizer)  voxelizer.splatMesh = splat;
     if (quadizer)   quadizer.splatMesh  = splat;
+    _hudRefs.splat  = splat;     // keep Pipeline HUD pointed at live splat
 
     // Reframe + reset annotations / labels / raycast threshold
     const { center: c2, size: s2, radius: r2 } = built;
@@ -1677,6 +1702,10 @@ renderer.setAnimationLoop(() => {
     renderer.render(techOverlayScene, camera);
   }
   renderer.autoClear = prevAutoClear;
+
+  // Pipeline HUD — read live render-info / pass counts / particle / audio
+  // and refresh DOM at ~2 Hz inside the module.
+  pipelineHUD.tick(performance.now(), dt * 1000);
 
   // FPS readout — uses raw performance.now() (NOT the clamped dt, which
   // pegs at 20 fps because dt is capped at 50 ms). One decimal place so

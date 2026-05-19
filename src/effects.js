@@ -1413,15 +1413,19 @@ export function buildGUI(controller) {
   }
   function installPopover(wrap, tip) {
     if (!wrap || !tip) return;
-    // Start hidden — toggle via display so no CSS opacity/visibility cascade
-    // can keep it invisible. Show is `display:grid` because the tip uses a
-    // 2-column k/v layout; hide is `display:none`.
-    tip.style.display = "none";
+    // CSS already hides the tooltip by default (opacity:0 + visibility:hidden).
+    // Toggle the `.show` class — its `!important` rules win over the defaults.
+    // Measure layout BEFORE adding .show so the box has dimensions, then pin.
     const show = () => {
-      tip.style.display = "grid";
-      pinPopover(wrap, tip);          // measure AFTER it's laid out
+      // Force a layout pass: temporarily make it measurable without flashing.
+      tip.style.visibility = "hidden";
+      tip.style.opacity    = "0";
+      tip.classList.add("show");
+      pinPopover(wrap, tip);
+      tip.style.visibility = "";
+      tip.style.opacity    = "";
     };
-    const hide = () => { tip.style.display = "none"; };
+    const hide = () => { tip.classList.remove("show"); };
     wrap.addEventListener("mouseenter", show);
     wrap.addEventListener("mouseleave", hide);
     tip .addEventListener("mouseleave", hide);
