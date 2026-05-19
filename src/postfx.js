@@ -689,7 +689,7 @@ export function setupPostFX(renderer, scene, camera) {
     bloomThreshold: 0.82,
 
     echoOn:        false,
-    echoPersist:   0.97,    // 0.90 → 0.97 = much longer trails before they fade
+    echoPersist:   0.99,    // 0.99 ≈ 5 s visible trail; was 0.97 (~2 s)
     echoMix:       1.00,
 
     // Underwater — Dave_Hoskins tileable water caustic + tint + UV waves.
@@ -918,7 +918,8 @@ export function setupPostFX(renderer, scene, camera) {
 
     const fEcho = fPost.addFolder("Echo Trails").close();
     fEcho.add(params, "echoOn").name("Enable");
-    fEcho.add(params, "echoPersist", 0.5, 0.99, 0.005).name("Persistence");
+    // Extended max from 0.99 → 0.998 for very long trails (~10 s+).
+    fEcho.add(params, "echoPersist", 0.5, 0.998, 0.001).name("Persistence");
     fEcho.add(params, "echoMix",     0.0, 1.0,  0.01 ).name("Mix");
 
     // Sorted Particles — cornusammonis multipass sim overlay.

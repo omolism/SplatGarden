@@ -590,10 +590,12 @@ export function createScanModifier() {
                 // Per-splat seeded phase so neighbouring splats don't lockstep.
                 float vdPhase = 1.0 + 0.5 * sin(${inputs.uTime} * ${inputs.uSpeed} * 0.35 + rand1 * 6.2831);
 
-                // Time envelope (ease-in ~25%, ease-out from ~75%) so the
-                // effect blooms in and out across uDuration.
+                // Time envelope: ease-in across first 25%, then a GENTLE
+                // ease-out across the last 55% so splats drift back to home
+                // smoothly instead of snapping. The earlier 75-100% window
+                // felt too quick — slow tail reads as natural settle.
                 float vdEnv = smoothstep(0.0, 0.25, tNorm)
-                            * (1.0 - smoothstep(0.75, 1.0, tNorm));
+                            * (1.0 - smoothstep(0.45, 1.0, tNorm));
 
                 vec3 vdDrift = vdFlow * ${inputs.uIntensity} * ${inputs.uRadius} * 0.45
                              * vMask * vdPhase * vdEnv;
@@ -679,8 +681,10 @@ export function createScanModifier() {
 
                 // Time envelope: ease in/out across uDuration so the effect
                 // blooms gracefully on a one-shot trigger.
+                // Gentle ease-out: fall window widened to 50% so splats
+                // unspool from their voxel-cluster targets without snapping.
                 float cpEnv = smoothstep(0.0, 0.20, tNorm)
-                            * (1.0 - smoothstep(0.80, 1.0, tNorm));
+                            * (1.0 - smoothstep(0.50, 1.0, tNorm));
 
                 // Pull magnitude — clamp the per-frame step so splats don't
                 // teleport on huge cells; uIntensity caps the maximum.
@@ -753,8 +757,10 @@ export function createScanModifier() {
 
                 // Pull TOWARD high-vein values (gradient points up the ridge).
                 // Magnitude bounded so splats don't shoot off on noisy frames.
+                // Gentle ease-out: long 50% tail so the slime trail releases
+                // its grip on veins gradually as the FX winds down.
                 float smEnv = smoothstep(0.0, 0.20, tNorm)
-                            * (1.0 - smoothstep(0.80, 1.0, tNorm));
+                            * (1.0 - smoothstep(0.50, 1.0, tNorm));
 
                 vec3 smPull = smGrad * (${inputs.uIntensity} * 0.30 / smScale)
                              * smMask * smEnv;
@@ -836,8 +842,10 @@ export function createScanModifier() {
                 // propagating outward instead of a static cloud.
                 float frShell = sin(frR * 1.5 - ${inputs.uTime} * ${inputs.uSpeed} * 0.5);
 
+                // Gentle ease-out: long 52% tail so branches collapse back
+                // into the seed point without an abrupt snap.
                 float frEnv = smoothstep(0.0, 0.18, tNorm)
-                            * (1.0 - smoothstep(0.82, 1.0, tNorm));
+                            * (1.0 - smoothstep(0.48, 1.0, tNorm));
 
                 float frSpeed = ${inputs.uSpeed} * 0.28
                               * (0.30 + 1.5 * frFeath)
