@@ -16,12 +16,19 @@
 const UPDATE_HZ_MS = 250;     // refresh DOM 4× / sec to read calmly
 const SAMPLE_WINDOW = 30;     // ~0.5s rolling avg @ 60 fps
 
+// Labels named for what they actually do in the SplatGarden render flow,
+// not for generic engine phases. Frame work order:
+//   JS UPDATE       — controls.update + camera-move tick + effects uniforms
+//   FIELD+PARTICLES — velocity field convolve/advect + GPGPU particle step
+//   SPLAT RENDER    — Spark's 3DGS rasterisation (+ post-FX composer if on)
+//   GIZMOS          — particle scene + Tech-Spec overlay (frustums, labels)
+//   PANELS          — DOM updates for the Pipeline HUD, hover hotspots, etc.
 const PHASE_DEFS = [
-  { key: "logic",    label: "JS LOGIC" },
-  { key: "step",     label: "VEL+PART STEP" },
-  { key: "compose",  label: "POST-FX COMPOSE" },
-  { key: "overlay",  label: "OVERLAY SCENES" },
-  { key: "hud",      label: "HUD" },
+  { key: "logic",   label: "JS UPDATE" },
+  { key: "step",    label: "FIELD + PARTICLES" },
+  { key: "compose", label: "SPLAT RENDER" },
+  { key: "overlay", label: "GIZMOS" },
+  { key: "hud",     label: "PANELS" },
 ];
 
 class Ring {
