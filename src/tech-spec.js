@@ -68,7 +68,7 @@ export const TECH_SPECS = [
     items: [
       {
         name:      "Artist-Directed Style Transfer",
-        ref:       "Itim Kongsakulvatanasook · SCAD M.F.A. Visual Effects (SIGGRAPH 2026)",
+        ref:       "Diffusion-based style transfer with controllable color preservation",
         toolchain: ["IP-Adapter (Ye 2023)", "ControlNet (Zhang 2023)", "AdaIN (Huang & Belongie 2017)", "Diffusion"],
         output:    "Painterly textures with preserved palette",
         note:      "Two artist-selectable modes — Full Style Transfer (color + texture + tone from a reference) and Texture-Only Transfer (auto-grayscale reference + AdaIN to apply painterly brushwork while keeping the original color palette intact). Per-channel histogram matching + patch-wise AdaIN run post-generation to deterministically correct residual color drift — output stays faithful to the pre-approved palette across runs.",
