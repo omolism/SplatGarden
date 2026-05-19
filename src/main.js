@@ -1109,25 +1109,17 @@ async function loadSplat() {
     statusEl.textContent = `Hit (${r.hit.point.x.toFixed(2)}, ${r.hit.point.y.toFixed(2)}, ${r.hit.point.z.toFixed(2)})`;
   });
 
-  // ---- Auto Echo Trails for click FX  (frame-driven bell-curve lerp) ------
-  // Each interaction starts a "ramp session": echoPersist smoothly climbs
-  // from the user-set baseline up to a high peak (much longer trails),
-  // holds across the middle of the FX window, then decays back to baseline
-  // — and only then does Echo flip off. Bell envelope = smoothstep ramp-in
-  // × smoothstep ramp-out, so there are no hard kinks. Per-frame updates
-  // mean the GUI Persistence slider visibly tracks the ramp.
-  let _echoRamp = null;     // null when idle, else { startMs, durMs, baseline, peak, baselineMix }
-  const _echoGuiCtls = [];  // cached refs into the GUI so the per-frame
-                            // ramp doesn't walk the whole controller tree.
-  function _smoothstep01(a, b, x) {
-    const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
-    return t * t * (3 - 2 * t);
-  }
+  // ---- Auto Echo Trails for click FX  (simple on/off, no lerp) ------------
+  // Click → echoOn = true. A single setTimeout flips it off once the FX
+  // window (fxDur + fadeTail) closes. Persistence and Mix are NOT
+  // modulated — the user's GUI values are used as-is the whole time, so
+  // there's zero surprise. Consecutive clicks reset the timer.
+  let _echoAutoTimer = null;
+  const _echoGuiCtls = [];
   function refreshEchoGui() {
     if (_echoGuiCtls.length === 0) {
       gui.controllersRecursive().forEach(c => {
-        if ((c._name === "Enable" || c._name === "Persistence" || c._name === "Mix")
-            && c.object === postfx.params) {
+        if (c._name === "Enable" && c.object === postfx.params) {
           _echoGuiCtls.push(c);
         }
       });
@@ -1136,61 +1128,18 @@ async function loadSplat() {
   }
   function autoEnableEchoForClick() {
     if (!postfx?.params) return;
-    // Snapshot the user's persistence baseline only on a FRESH start —
-    // mid-ramp clicks must NOT capture the inflated peak, or consecutive
-    // clicks would walk values upward toward 1.0.
-    const baseline = _echoRamp ? _echoRamp.baseline : postfx.params.echoPersist;
-    const peak     = 0.998;
-    const peakMix  = 1.0;
+    postfx.params.echoOn = true;
+    refreshEchoGui();
+    if (_echoAutoTimer) clearTimeout(_echoAutoTimer);
     const fxDur    = effectUniforms?.duration?.value ?? 2.5;
     const fadeTail = effects?.fadeTailS ?? 0.9;
-    // Two phases aligned with the FX timing — feels like natural echo physics:
-    //   sustainMs : trail at peak while splats are still in motion
-    //   fadeMs    : ~1.2 s smooth dissipation after the motion settles
-    const sustainMs = (fxDur + fadeTail) * 1000;
-    const fadeMs    = 1200;
-    const durMs     = sustainMs + fadeMs;
-    _echoRamp = { startMs: performance.now(), durMs, sustainMs, baseline, peak, peakMix };
-    // INSTANT snap to peak on click — no rise-in latency. Echo emits on
-    // event like a real-world echo, not a wave that builds up first.
-    postfx.params.echoPersist = peak;
-    postfx.params.echoMix     = peakMix;
-    postfx.params.echoOn      = true;
-    refreshEchoGui();
-  }
-  function _updateEchoRamp() {
-    if (!_echoRamp || !postfx?.params) return;
-    const elapsed = performance.now() - _echoRamp.startMs;
-    if (elapsed >= _echoRamp.durMs) {
-      // Ramp complete — restore baselines and disable echo so subsequent
-      // clicks start with a fresh feedback buffer instead of stale trails.
-      postfx.params.echoPersist = _echoRamp.baseline;
-      postfx.params.echoMix     = 0.0;
-      postfx.params.echoOn      = false;
-      _echoRamp = null;
+    const durMs    = (fxDur + fadeTail) * 1000;
+    _echoAutoTimer = setTimeout(() => {
+      postfx.params.echoOn = false;
       refreshEchoGui();
-      return;
-    }
-    if (elapsed < _echoRamp.sustainMs) {
-      // Sustain phase — trails are at peak while splats are still moving.
-      // Values stay constant here so the trail buffer accumulates fully
-      // over the FX duration without any modulation flicker.
-      postfx.params.echoPersist = _echoRamp.peak;
-      postfx.params.echoMix     = _echoRamp.peakMix;
-    } else {
-      // Fade phase — splats have settled; trails dissipate over fadeMs.
-      // Smoothstep both persist and mix so the dissipation feels physical.
-      const fadeT = (elapsed - _echoRamp.sustainMs)
-                  / (_echoRamp.durMs - _echoRamp.sustainMs);
-      const env   = 1.0 - _smoothstep01(0.0, 1.0, fadeT);   // 1 → 0
-      postfx.params.echoPersist = _echoRamp.baseline
-        + (_echoRamp.peak - _echoRamp.baseline) * env;
-      postfx.params.echoMix = _echoRamp.peakMix * env;
-    }
-    refreshEchoGui();
+      _echoAutoTimer = null;
+    }, durMs);
   }
-  // Expose so the render loop can tick the ramp each frame.
-  window.__updateEchoRamp = _updateEchoRamp;
   // Expose for the hand-tracking block below to share the same logic
   window.__brushParams = brushParams;
   window.__effects = effects;
@@ -1701,7 +1650,7 @@ renderer.setAnimationLoop(() => {
 
   controls.update();
   // Tick the Echo-Trails bell-curve ramp (no-op when idle).
-  if (window.__updateEchoRamp) window.__updateEchoRamp();
+  // (Echo auto-toggle handled by setTimeout in autoEnableEchoForClick — no per-frame tick needed.)
   // Convolve + advect the velocity field one step. Downstream readers
   // (Phase 2 particles, Phase 3 voxel particles) sample its texture.
   velocityField.step();
