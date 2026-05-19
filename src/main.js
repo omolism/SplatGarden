@@ -11,6 +11,7 @@ import { DataLabelLayer } from "./datalabels.js";
 import { VelocityField } from "./velocity-field.js";
 import { GPGPUParticles } from "./gpgpu-particles.js";
 import { AudioReactor } from "./audio-reactor.js";
+import { SortedParticles } from "./sorted-particles.js";
 import { Voxelizer } from "./voxelizer.js";
 import { Quadizer }  from "./quadizer.js";
 import { uniforms as effectUniforms } from "./effects.js";
@@ -106,7 +107,15 @@ const gpgpuParticles = new GPGPUParticles(renderer, {
   bounds: { min: [-6, -2, -6], max: [6, 6, 6] },
   maxAge: 4.0,
 });
-scene.add(gpgpuParticles.points);
+// Particles live in a SEPARATE scene rendered AFTER the composer with
+// autoClear=false, so they bypass every post-FX pass (Echo trails, Bloom,
+// Underwater, etc.) — they always read as crisp additive sprites on top
+// of the finished frame. depthTest is off since the screen depth buffer
+// isn't reliable post-composer; tradeoff = particles never occlude behind
+// scene geometry (additive overlay only).
+gpgpuParticles.renderMat.depthTest = false;
+const particleScene = new THREE.Scene();
+particleScene.add(gpgpuParticles.points);
 window.__gpgpuParticles = gpgpuParticles;
 
 // Phase 2.5: Audio reactor — feeds an amplitude uniform into the particle
@@ -115,6 +124,12 @@ window.__gpgpuParticles = gpgpuParticles;
 // source; particles still work without audio (uAudioAmp stays at 0).
 const audioReactor = new AudioReactor();
 window.__audioReactor = audioReactor;
+
+// Sorted-particles sim — 4-buffer cornusammonis simulation. Sim runs every
+// frame regardless of overlay enable so the field stays coherent; the
+// display blend in postfx is what actually shows it.
+const sortedParticles = new SortedParticles(renderer, { resolution: 128 });
+window.__sortedParticles = sortedParticles;
 // Mobile: kill post-processing by default — Bloom is the biggest GPU tax,
 // and the Polish pass is fill-rate heavy on mobile GPUs.
 if (IS_MOBILE) {
@@ -824,7 +839,13 @@ async function loadSplat() {
   const brushParams = { brush: false, effector: false };
   const brushParent = gui.fFX || gui;
   brushParent.add(brushParams, "brush").name("🖌 Brush Mode")
-    .onChange(v => { canvas.style.cursor = v ? "crosshair" : ""; });
+    .onChange(v => {
+      canvas.style.cursor = v ? "crosshair" : "";
+      // Lock OrbitControls while brushing so drag doesn't accidentally
+      // tumble the camera — the user wants the brush stroke to register
+      // as paint, not as a viewport rotation. Re-enables on toggle off.
+      controls.enabled = !v;
+    });
   // Effector Mode (TD-style sphere effector for Dissolve). When on, brush
   // press+drag drives a spatial mask that dissolves splats inside the sphere;
   // splats outside snap back to home. Auto-switches effect to "Dissolve &
@@ -1000,15 +1021,6 @@ async function loadSplat() {
       brushAtScreen(e.clientX, e.clientY);
       mouseBrushing = true;
     }
-    // Mouse press spawns a Surface Tension vortex at the cursor (gated on
-    // stMouseSpawn + the surface-tension toggle inside the pass).
-    if (postfx?.params?.stMouseSpawn && postfx?.spawnSurfaceTensionVortex) {
-      const rect = canvas.getBoundingClientRect();
-      postfx.spawnSurfaceTensionVortex(
-        (e.clientX - rect.left) / rect.width,
-        1.0 - (e.clientY - rect.top) / rect.height,
-      );
-    }
     // Inject mass + velocity into the global velocity field at the cursor.
     // Velocity vector is zero on press (no cursor delta yet); subsequent
     // moves push velocity proportional to delta — handled in pointermove.
@@ -1078,7 +1090,7 @@ async function loadSplat() {
   // — and only then does Echo flip off. Bell envelope = smoothstep ramp-in
   // × smoothstep ramp-out, so there are no hard kinks. Per-frame updates
   // mean the GUI Persistence slider visibly tracks the ramp.
-  let _echoRamp = null;     // null when idle, else { startMs, durMs, baseline, peak }
+  let _echoRamp = null;     // null when idle, else { startMs, durMs, baseline, peak, baselineMix }
   const _echoGuiCtls = [];  // cached refs into the GUI so the per-frame
                             // ramp doesn't walk the whole controller tree.
   function _smoothstep01(a, b, x) {
@@ -1088,7 +1100,8 @@ async function loadSplat() {
   function refreshEchoGui() {
     if (_echoGuiCtls.length === 0) {
       gui.controllersRecursive().forEach(c => {
-        if ((c._name === "Enable" || c._name === "Persistence") && c.object === postfx.params) {
+        if ((c._name === "Enable" || c._name === "Persistence" || c._name === "Mix")
+            && c.object === postfx.params) {
           _echoGuiCtls.push(c);
         }
       });
@@ -1097,17 +1110,16 @@ async function loadSplat() {
   }
   function autoEnableEchoForClick() {
     if (!postfx?.params) return;
-    // Snapshot the user's baseline only on a FRESH start — mid-ramp clicks
-    // must NOT capture the inflated peak as the new baseline, or each
-    // consecutive click would walk persistence upward toward 1.0.
-    const baseline = _echoRamp ? _echoRamp.baseline : postfx.params.echoPersist;
+    // Snapshot user-set baselines only on a FRESH start — mid-ramp clicks
+    // must NOT capture the inflated peak / ramped mix as the new baseline,
+    // or each consecutive click would walk values upward toward 1.0.
+    const baseline    = _echoRamp ? _echoRamp.baseline    : postfx.params.echoPersist;
+    const baselineMix = _echoRamp ? _echoRamp.baselineMix : postfx.params.echoMix;
     const peak     = 0.998;     // "way more longer" trails at the bell crest
-    // Total ramp duration follows the live FX window so longer effects get
-    // longer trails automatically.
     const fxDur    = effectUniforms?.duration?.value ?? 2.5;
     const fadeTail = effects?.fadeTailS ?? 0.9;
     const durMs    = (fxDur + fadeTail + 1.5) * 1000;
-    _echoRamp = { startMs: performance.now(), durMs, baseline, peak };
+    _echoRamp = { startMs: performance.now(), durMs, baseline, baselineMix, peak };
     postfx.params.echoOn = true;
     refreshEchoGui();
   }
@@ -1115,9 +1127,14 @@ async function loadSplat() {
     if (!_echoRamp || !postfx?.params) return;
     const t = (performance.now() - _echoRamp.startMs) / _echoRamp.durMs;
     if (t >= 1.0) {
-      // Ramp complete — restore baseline persistence and turn echo off.
+      // Ramp complete — restore persistence baseline AND drop mix to 0
+      // (user request: "mix should go back to 0" at end of interaction).
+      // The user's GUI-set baseline is preserved on _echoRamp until next
+      // click; mix being zero means echo contributes nothing visually
+      // until a new interaction restarts the ramp.
       postfx.params.echoPersist = _echoRamp.baseline;
-      postfx.params.echoOn = false;
+      postfx.params.echoMix     = 0.0;
+      postfx.params.echoOn      = false;
       _echoRamp = null;
       refreshEchoGui();
       return;
@@ -1128,6 +1145,9 @@ async function loadSplat() {
     const env  = rise * fall;     // 0 → 1 → 0
     postfx.params.echoPersist = _echoRamp.baseline
       + (_echoRamp.peak - _echoRamp.baseline) * env;
+    // Mix follows the same bell scaled by the user's GUI baseline — so it
+    // grows from 0 to baseline at the peak, then returns to 0 cleanly.
+    postfx.params.echoMix = _echoRamp.baselineMix * env;
     refreshEchoGui();
   }
   // Expose so the render loop can tick the ramp each frame.
@@ -1353,12 +1373,6 @@ async function loadSplat() {
     onePinchStart.y = onePinchPrev.y = p.y;
     const ux = p.x / window.innerWidth;
     const uy = 1.0 - p.y / window.innerHeight;
-    // Hand pinch spawns a Surface Tension vortex at the hand's screen
-    // position. The pass guards its own gates (postEnable, surfaceTensionOn,
-    // stHandSpawn) so we can call unconditionally — it no-ops when off.
-    if (postfx?.params?.stHandSpawn && postfx?.spawnSurfaceTensionVortex) {
-      postfx.spawnSurfaceTensionVortex(ux, uy);
-    }
     // Pinch start also seeds the velocity field with a fresh impulse — same
     // pattern as mouse press. Subsequent pinch-moves push velocity (handled
     // in updateOnePinch).
@@ -1650,7 +1664,20 @@ renderer.setAnimationLoop(() => {
   // so loud frames scale field-strength + point-size (per gpgpu shader).
   const audioMetrics = audioReactor.update();
   gpgpuParticles.step(dt, camera, velocityField.getTexture(), audioMetrics.amp);
+  // Sorted-particles sim — 4 buffer passes. Output texture pushed into
+  // the postfx display pass each frame (ping-pong swaps the texture ref).
+  sortedParticles.step(dt);
+  postfx.setSortedParticlesTexture(sortedParticles.getOutputTexture());
   postfx.render(dt);
+  // GPGPU particles live in their own scene rendered AFTER the composer
+  // so the additive sprites don't get smeared by Echo trails or any other
+  // post-FX pass. autoClear=false preserves the composed pixels underneath.
+  if (gpgpuParticles.points.visible) {
+    const prevAutoClear = renderer.autoClear;
+    renderer.autoClear = false;
+    renderer.render(particleScene, camera);
+    renderer.autoClear = prevAutoClear;
+  }
 
   frameCount++;
   fpsAccum += dt;

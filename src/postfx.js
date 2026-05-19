@@ -569,42 +569,24 @@ const UnderwaterShader = {
   `,
 };
 
+// SurfaceTensionShader (xenn-style oscillating-membrane overlay + 8-slot
+// vortex pool) was removed per user request. The cornusammonis-based
+// SortedParticlesShader below now covers the multipass-particle look.
+
 // ---------------------------------------------------------------------------
-// SurfaceTensionShader — visual port of xenn's "surface tension phase shift
-// osci" (Shadertoy, 2020). The original is a multi-pass cellular automaton
-// where mouse clicks spawn vortices that propagate through a particle field.
-// Replicating the CA in screen space would need feedback render targets;
-// instead we approximate the look with a single fragment pass:
-//   - Cellular-Voronoi domain with per-cell animated jitter
-//   - Phase-shifted oscillation read off the cell distance
-//   - Iridescent rainbow band at the cell edges (the "tension lines")
-//   - Optional click-driven swirl warp of the UV before sampling
-// Dedicated knobs (NOT reused from Underwater) so the look is tunable
-// independently per the user's "different param if needed" preference.
+// SortedParticlesShader — display blend for the cornusammonis multipass
+// particle sim. tParticles is the simulator's output texture (RGBA where
+// w = smoothed minDist). We render an exp-falloff glow per pixel and
+// composite over the rendered splat scene via one of 3 blend modes.
 // ---------------------------------------------------------------------------
-// Max simultaneous vortices in the Surface Tension overlay. 8 is plenty —
-// past that the loop cost climbs without much added visual richness.
-const ST_MAX_VORTEX = 8;
-const SurfaceTensionShader = {
+const SortedParticlesShader = {
   uniforms: {
-    tDiffuse:           { value: null },
-    uTime:              { value: 0.0 },
-    uStStrength:        { value: 0.6 },     // overlay intensity
-    uStScale:           { value: 6.0 },     // cell density (higher = smaller bubbles)
-    uStOscSpeed:        { value: 1.0 },     // cell-jitter animation rate
-    uStPhase:           { value: 0.0 },     // global phase offset
-    uStEdgeWidth:       { value: 0.35 },    // bubble-edge band width
-    uStHueShift:        { value: 0.0 },     // iridescent hue rotation
-    uStBlendMode:       { value: 0 },       // 0=add, 1=screen, 2=multiply
-    // ---- Vortex pool — driven by hand-pinch / mouse-press events --------
-    // Each vortex is a (uv, strength) pair. Strength includes life-decay so
-    // we don't need a separate age uniform; when strength reaches ~0 the
-    // pool slot is freed by the JS side.
-    uStVortexPos:       { value: Array.from({ length: ST_MAX_VORTEX }, () => new THREE.Vector2(-2, -2)) },
-    uStVortexStrength:  { value: new Float32Array(ST_MAX_VORTEX) },
-    uStVortexCount:     { value: 0 },
-    uStVortexRadius:    { value: 0.18 },    // falloff radius in UV space per vortex
-    uStVortexTwist:     { value: 1.0 },     // global twist multiplier
+    tDiffuse:     { value: null },
+    tParticles:   { value: null },        // sortedParticles.getOutputTexture()
+    uSpIntensity: { value: 1.0 },         // overall overlay strength
+    uSpGlowFall:  { value: 80.0 },        // exp falloff steepness on minDist
+    uSpColor:     { value: new THREE.Vector3(0.55, 0.85, 1.0) },
+    uSpBlend:     { value: 0 },           // 0 add, 1 screen, 2 mix
   },
   vertexShader: /* glsl */`
     varying vec2 vUv;
@@ -615,105 +597,27 @@ const SurfaceTensionShader = {
   `,
   fragmentShader: /* glsl */`
     uniform sampler2D tDiffuse;
-    uniform float uTime;
-    uniform float uStStrength;
-    uniform float uStScale;
-    uniform float uStOscSpeed;
-    uniform float uStPhase;
-    uniform float uStEdgeWidth;
-    uniform float uStHueShift;
-    uniform int   uStBlendMode;
-    // Vortex pool — driven by hand-pinch / mouse-press events from JS.
-    // Length must match the JS-side ST_MAX_VORTEX constant.
-    uniform vec2  uStVortexPos[${ST_MAX_VORTEX}];
-    uniform float uStVortexStrength[${ST_MAX_VORTEX}];
-    uniform int   uStVortexCount;
-    uniform float uStVortexRadius;
-    uniform float uStVortexTwist;
+    uniform sampler2D tParticles;
+    uniform float uSpIntensity;
+    uniform float uSpGlowFall;
+    uniform vec3  uSpColor;
+    uniform int   uSpBlend;
     varying vec2 vUv;
-
-    // Animated cellular distance — Voronoi with sine-jittered cell centres
-    // (cheap, gives smooth bubble-edge oscillation). Returns the distance to
-    // the nearest centre (cellular "f1" value).
-    float stCellular(vec2 p, float t) {
-      vec2 gi = floor(p);
-      vec2 gf = fract(p);
-      float minDist = 1e9;
-      for (int x = -1; x <= 1; x++) {
-        for (int y = -1; y <= 1; y++) {
-          vec2 nb = vec2(float(x), float(y));
-          vec2 jit = vec2(
-            0.5 + 0.5 * sin(t * uStOscSpeed + dot(gi + nb, vec2(4.7, 1.7))),
-            0.5 + 0.5 * cos(t * uStOscSpeed + dot(gi + nb, vec2(5.3, 9.1)))
-          );
-          vec2 d = nb + jit - gf;
-          minDist = min(minDist, dot(d, d));
-        }
-      }
-      return sqrt(minDist);
-    }
-
-    // Walk the vortex pool, applying each as a localised rotational warp
-    // of the UV (composed sequentially — later vortices twist the
-    // already-warped UV, which feels more "fluid" than blending offsets).
-    vec2 stApplyVortices(vec2 uv) {
-      vec2 warped = uv;
-      for (int i = 0; i < ${ST_MAX_VORTEX}; i++) {
-        if (i >= uStVortexCount) break;
-        vec2 c = uStVortexPos[i];
-        if (c.x < -1.0) continue;        // sentinel = empty slot
-        vec2 toC = warped - c;
-        float r  = length(toC);
-        float fall = exp(-r / max(uStVortexRadius, 0.005));
-        float ang  = uStVortexStrength[i] * uStVortexTwist * fall * 4.0;
-        float ca = cos(ang), sa = sin(ang);
-        mat2 rot = mat2(ca, -sa, sa, ca);
-        warped = c + rot * toC;
-      }
-      return warped;
-    }
-
     void main() {
-      // ---- Vortex UV warp ---------------------------------------------
-      // Sample-coords pass through the active vortex pool. Each vortex
-      // rotates the local UV neighbourhood; falloff = exp(-r / radius)
-      // so distant pixels are untouched.
-      vec2 uv = uStVortexCount > 0 ? stApplyVortices(vUv) : vUv;
-      vec4 base = texture2D(tDiffuse, clamp(uv, vec2(0.0), vec2(1.0)));
-
-      // ---- Surface-tension pattern -------------------------------------
-      vec2 p = vUv * uStScale;
-      float cd = stCellular(p, uTime);
-
-      // Phase-shifted oscillation off the cell distance — drives both the
-      // alpha band ("tension line") and the hue.
-      float phase = sin(cd * 10.0 - uTime * 2.0 + uStPhase);
-
-      // Edge band: narrow ring where cd is near the "membrane" radius.
-      float bandCenter = 0.55;
-      float band = 1.0 - smoothstep(uStEdgeWidth * 0.5, uStEdgeWidth,
-                                    abs(cd - bandCenter));
-
-      // Iridescent gradient: rotating RGB triple driven by phase + a hue
-      // shift knob so the user can pick a colour family.
-      vec3 iris = 0.5 + 0.5 * cos(
-        vec3(0.0, 2.094, 4.188) + phase * 3.14 + uStHueShift * 6.28);
-
-      vec3 stPattern = iris * band * uStStrength;
-
-      // ---- Blend modes -------------------------------------------------
+      vec4 base = texture2D(tDiffuse, vUv);
+      vec4 p    = texture2D(tParticles, vUv);
+      // Buffer D output: w = EWMA-smoothed distance to nearest particle.
+      // exp falloff turns close particles into bright glows.
+      float glow = exp(-p.w * uSpGlowFall) * uSpIntensity;
+      vec3 tint  = uSpColor * glow;
       vec3 final;
-      if (uStBlendMode == 1) {
-        // Screen blend
-        final = 1.0 - (1.0 - base.rgb) * (1.0 - stPattern);
-      } else if (uStBlendMode == 2) {
-        // Multiply blend
-        final = base.rgb * (vec3(1.0) - stPattern * 0.5);
+      if (uSpBlend == 1) {
+        final = 1.0 - (1.0 - base.rgb) * (1.0 - tint);
+      } else if (uSpBlend == 2) {
+        final = mix(base.rgb, uSpColor, clamp(glow, 0.0, 1.0));
       } else {
-        // Additive (default)
-        final = base.rgb + stPattern;
+        final = base.rgb + tint;
       }
-
       gl_FragColor = vec4(final, base.a);
     }
   `,
@@ -746,9 +650,11 @@ export function setupPostFX(renderer, scene, camera) {
   const underwaterPass = new ShaderPass(UnderwaterShader);
   composer.addPass(underwaterPass);
 
-  // Surface Tension — xenn-style oscillating Voronoi membrane overlay.
-  const surfaceTensionPass = new ShaderPass(SurfaceTensionShader);
-  composer.addPass(surfaceTensionPass);
+  // Sorted Particles — cornusammonis multipass particle sim display blend.
+  // The simulation itself runs on main.js's animation loop; this pass just
+  // reads the sim's output texture and blends it over the scene.
+  const sortedParticlesPass = new ShaderPass(SortedParticlesShader);
+  composer.addPass(sortedParticlesPass);
 
   // Echo / Trails — Notch-style motion smear via feedback texture
   const echoPass = new EchoPass();
@@ -777,7 +683,7 @@ export function setupPostFX(renderer, scene, camera) {
     // saturation bumps give splats a polished cinema look without crushing
     // detail or oversaturating. Bloom on, vignette/chroma/grain off so the
     // baseline is clean and the user adds them in only when they want them.
-    bloomEnable:    true,
+    bloomEnable:    false,
     bloomStrength:  0.3,
     bloomRadius:    0.84,
     bloomThreshold: 0.82,
@@ -799,24 +705,17 @@ export function setupPostFX(renderer, scene, camera) {
     underwaterWave:      0.0,    // UV-wave shimmer amount (0..2)
     underwaterDarken:    0.27,   // multiplicative darken before caustic (0..1)
 
-    // Surface Tension — independent params, NOT reused from Underwater.
-    // Vortex-pool model: hand pinch + mouse press spawn vortices, each
-    // with its own life. Up to ST_MAX_VORTEX active at once.
-    surfaceTensionOn:    false,
-    stStrength:          0.6,    // overlay opacity (0..2)
-    stScale:             6.0,    // cell density (2..24)
-    stOscSpeed:          1.0,    // animation rate (0..3)
-    stEdgeWidth:         0.35,   // membrane band thickness (0.05..0.8)
-    stPhase:             0.0,    // global phase offset (0..6.28)
-    stHueShift:          0.0,    // rotate iridescent hue (0..1)
-    stBlend:             "Additive",   // Additive | Screen | Multiply
-    // Vortex behaviour — spawned by interaction, decayed by JS each frame.
-    stVortexSpawn:       1.0,    // strength of each new vortex (0..3)
-    stVortexLifetime:    1.5,    // seconds for a vortex to decay to zero
-    stVortexRadius:      0.18,   // UV-space falloff radius per vortex (0.02..0.6)
-    stVortexTwist:       1.0,    // global twist multiplier (0..3)
-    stMouseSpawn:        true,   // mouse press spawns a vortex
-    stHandSpawn:         true,   // hand pinch spawns a vortex (when surfaceTensionOn)
+    // Sorted Particles — cornusammonis multipass particle sim overlay.
+    // Dedicated knobs per the dedicated-params-per-fx preference.
+    sortedParticlesOn:   false,
+    spIntensity:         1.0,         // overall overlay strength (0..2)
+    spGlowFall:          80.0,        // exp falloff steepness on minDist (20..200)
+    spColorR:            0.55,
+    spColorG:            0.85,
+    spColorB:            1.00,
+    spBlend:             "Additive",  // Additive | Screen | Mix
+
+    // Surface Tension params removed — feature deleted.
 
     painterly:           "None",   // None | Monet | Matisse | Van Gogh | Seurat
     monetRadius:         4.0,
@@ -853,7 +752,7 @@ export function setupPostFX(renderer, scene, camera) {
   // Note: Seurat keeps index 4 even after Van Gogh's removal — the shader
   // branches on the literal int, so reindexing would break the lookup.
   const PAINTERLY_INDEX = { None: 0, Monet: 1, Matisse: 2, Seurat: 4 };
-  const ST_BLEND_INDEX = { Additive: 0, Screen: 1, Multiply: 2 };
+  const SP_BLEND_INDEX = { Additive: 0, Screen: 1, Mix: 2 };
 
   let rotation = 0.0;
 
@@ -867,23 +766,7 @@ export function setupPostFX(renderer, scene, camera) {
 
   let polishTime = 0;
 
-  // ---- Surface Tension vortex pool --------------------------------------
-  // Each entry { x, y, strength } — x,y in [0,1] UV space (Y-up), strength
-  // decays toward 0 each frame in update(). Hand-pinch and mouse-press
-  // call spawnSurfaceTensionVortex() to push new entries; dead entries
-  // are spliced out during update so the pool stays compact.
-  const stVortexPool = [];
-  function spawnSurfaceTensionVortex(uvX, uvY, strengthMul = 1.0) {
-    if (!params.surfaceTensionOn) return;
-    stVortexPool.push({
-      x: uvX,
-      y: uvY,
-      strength: params.stVortexSpawn * strengthMul,
-    });
-    // Cap pool length at ST_MAX_VORTEX — drop the oldest if exceeded so
-    // the newest interaction always wins.
-    while (stVortexPool.length > ST_MAX_VORTEX) stVortexPool.shift();
-  }
+  // Surface Tension vortex pool + spawn API removed.
   function update(dt) {
     rotation += params.rotationSpeed * dt;
     kaleidoPass.uniforms.uEnable.value   = params.enable ? 1.0 : 0.0;
@@ -916,51 +799,18 @@ export function setupPostFX(renderer, scene, camera) {
       uw.uDarken.value          = params.underwaterDarken;
     }
 
-    // Surface Tension — independent uniform drive + vortex-pool decay.
-    surfaceTensionPass.enabled = params.postEnable && params.surfaceTensionOn;
-    if (surfaceTensionPass.enabled) {
-      const st = surfaceTensionPass.uniforms;
-      st.uTime.value          = polishTime;
-      st.uStStrength.value    = params.stStrength;
-      st.uStScale.value       = params.stScale;
-      st.uStOscSpeed.value    = params.stOscSpeed;
-      st.uStEdgeWidth.value   = params.stEdgeWidth;
-      st.uStPhase.value       = params.stPhase;
-      st.uStHueShift.value    = params.stHueShift;
-      st.uStBlendMode.value   = ST_BLEND_INDEX[params.stBlend] ?? 0;
-      st.uStVortexRadius.value = params.stVortexRadius;
-      st.uStVortexTwist.value  = params.stVortexTwist;
-
-      // ---- Vortex pool decay -----------------------------------------
-      // Each active vortex loses strength linearly toward zero over
-      // stVortexLifetime seconds. Dead vortices (strength <= 0) are
-      // skipped during packing — their slot is reusable for new spawns.
-      const decayPerSec = 1.0 / Math.max(params.stVortexLifetime, 0.05);
-      for (const v of stVortexPool) v.strength -= decayPerSec * dt;
-
-      // Pack live vortices into the uniform arrays in stable order.
-      let live = 0;
-      for (const v of stVortexPool) {
-        if (v.strength <= 0.0) continue;
-        if (live >= ST_MAX_VORTEX) break;
-        st.uStVortexPos.value[live].set(v.x, v.y);
-        st.uStVortexStrength.value[live] = v.strength;
-        live++;
-      }
-      // Sentinel out the remaining slots so the shader's guard `c.x < -1`
-      // ignores them even if the loop counter is wrong.
-      for (let i = live; i < ST_MAX_VORTEX; i++) {
-        st.uStVortexPos.value[i].set(-2, -2);
-        st.uStVortexStrength.value[i] = 0.0;
-      }
-      st.uStVortexCount.value = live;
-
-      // Compact the pool (drop dead entries) so spawnSurfaceTensionVortex
-      // can reuse slots without bloating the array.
-      for (let i = stVortexPool.length - 1; i >= 0; i--) {
-        if (stVortexPool[i].strength <= 0.0) stVortexPool.splice(i, 1);
-      }
+    // Sorted Particles — display blend. The sim runs in main.js; we just
+    // push the latest tunables into the pass uniforms each frame.
+    sortedParticlesPass.enabled = params.postEnable && params.sortedParticlesOn;
+    if (sortedParticlesPass.enabled) {
+      const sp = sortedParticlesPass.uniforms;
+      sp.uSpIntensity.value = params.spIntensity;
+      sp.uSpGlowFall.value  = params.spGlowFall;
+      sp.uSpColor.value.set(params.spColorR, params.spColorG, params.spColorB);
+      sp.uSpBlend.value     = SP_BLEND_INDEX[params.spBlend] ?? 0;
     }
+
+    // Surface Tension update removed — pass and vortex pool deleted.
 
     const styleIdx = PAINTERLY_INDEX[params.painterly] ?? 0;
     // Painterly is a 2D post-process — operates on every pixel of the framebuffer.
@@ -1068,6 +918,16 @@ export function setupPostFX(renderer, scene, camera) {
     fEcho.add(params, "echoPersist", 0.5, 0.99, 0.005).name("Persistence");
     fEcho.add(params, "echoMix",     0.0, 1.0,  0.01 ).name("Mix");
 
+    // Sorted Particles — cornusammonis multipass sim overlay.
+    const fSp = fPost.addFolder("Sorted Particles").close();
+    fSp.add(params, "sortedParticlesOn").name("Enable");
+    fSp.add(params, "spIntensity", 0.0, 2.0, 0.01).name("Intensity");
+    fSp.add(params, "spGlowFall", 10.0, 200.0, 1.0).name("Glow Falloff");
+    fSp.add(params, "spColorR", 0.0, 1.0, 0.01).name("Color R");
+    fSp.add(params, "spColorG", 0.0, 1.0, 0.01).name("Color G");
+    fSp.add(params, "spColorB", 0.0, 1.0, 0.01).name("Color B");
+    fSp.add(params, "spBlend", Object.keys(SP_BLEND_INDEX)).name("Blend Mode");
+
     // Underwater — Dave_Hoskins tileable water caustic + tint + UV waves.
     const fUw = fPost.addFolder("Underwater").close();
     fUw.add(params, "underwaterOn").name("Enable");
@@ -1080,26 +940,7 @@ export function setupPostFX(renderer, scene, camera) {
     fUw.add(params, "underwaterWave",    0.0, 2.0,  0.01 ).name("Wave Shimmer");
     fUw.add(params, "underwaterDarken",  0.0, 1.0,  0.01 ).name("Darken");
 
-    // Surface Tension — xenn-style oscillating Voronoi membrane overlay.
-    // Vortex-pool model: hand pinch + mouse press spawn vortices that
-    // decay over time. Up to ST_MAX_VORTEX live at once.
-    const fSt = fPost.addFolder("Surface Tension").close();
-    fSt.add(params, "surfaceTensionOn").name("Enable");
-    fSt.add(params, "stStrength",   0.0, 2.0,  0.01).name("Strength");
-    fSt.add(params, "stScale",      2.0, 24.0, 0.5 ).name("Cell Scale");
-    fSt.add(params, "stOscSpeed",   0.0, 3.0,  0.05).name("Osc Speed");
-    fSt.add(params, "stEdgeWidth",  0.05, 0.8, 0.01).name("Edge Width");
-    fSt.add(params, "stPhase",      0.0, 6.28, 0.05).name("Phase");
-    fSt.add(params, "stHueShift",   0.0, 1.0,  0.01).name("Hue Shift");
-    fSt.add(params, "stBlend", Object.keys(ST_BLEND_INDEX)).name("Blend Mode");
-    // Vortex sub-folder so the pool knobs cluster together.
-    const fStVortex = fSt.addFolder("Vortices").close();
-    fStVortex.add(params, "stMouseSpawn").name("Mouse Spawn");
-    fStVortex.add(params, "stHandSpawn").name("Hand Spawn");
-    fStVortex.add(params, "stVortexSpawn",    0.0, 3.0,  0.05).name("Spawn Strength");
-    fStVortex.add(params, "stVortexLifetime", 0.1, 6.0,  0.05).name("Lifetime (s)");
-    fStVortex.add(params, "stVortexRadius",   0.02, 0.6, 0.005).name("Falloff Radius");
-    fStVortex.add(params, "stVortexTwist",    0.0, 3.0,  0.05).name("Twist Mul");
+    // Surface Tension GUI removed — feature deleted.
 
     const fLens = fPost.addFolder("Lens Distortion").close();
     fLens.add(params, "lensOn").name("Enable");
@@ -1134,5 +975,13 @@ export function setupPostFX(renderer, scene, camera) {
     return f;
   }
 
-  return { composer, params, render, setSize, attachGUI, spawnSurfaceTensionVortex };
+  // Push the latest sorted-particles sim texture into the display pass.
+  // Sim runs in main.js's animation loop; this setter is invoked each
+  // frame with the simulator's current output (ping-pong target swaps).
+  function setSortedParticlesTexture(tex) {
+    sortedParticlesPass.uniforms.tParticles.value = tex;
+  }
+
+  return { composer, params, render, setSize, attachGUI,
+           setSortedParticlesTexture };
 }
