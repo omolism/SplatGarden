@@ -1133,7 +1133,16 @@ async function loadSplat() {
     if (_echoAutoTimer) clearTimeout(_echoAutoTimer);
     const fxDur    = effectUniforms?.duration?.value ?? 2.5;
     const fadeTail = effects?.fadeTailS ?? 0.9;
-    const durMs    = (fxDur + fadeTail) * 1000;
+    // Extra grace period so the persistence buffer can decay to invisibility
+    // BEFORE we disable echoPass. Without this, the pass turning off snaps
+    // any remaining trail content to black — looks like the trail vanished
+    // in the middle of a fade-out. Solve for the time it takes persistence
+    // to decay the trail to ~5% visibility at 60 fps; clamp the result so a
+    // wild persistence value doesn't keep echo running forever.
+    const persist  = Math.max(postfx.params.echoPersist, 0.5);
+    const fadeOutS = Math.max(1, Math.min(15,
+                       Math.log(0.05) / Math.log(persist) / 60));
+    const durMs    = (fxDur + fadeTail + fadeOutS) * 1000;
     _echoAutoTimer = setTimeout(() => {
       postfx.params.echoOn = false;
       refreshEchoGui();
