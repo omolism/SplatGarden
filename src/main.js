@@ -1135,15 +1135,12 @@ async function loadSplat() {
     // clicks would walk values upward toward 1.0.
     const baseline = _echoRamp ? _echoRamp.baseline : postfx.params.echoPersist;
     const peak     = 0.998;     // "way more longer" trails at the bell crest
-    const peakMix  = 1.0;       // mix snaps to full on interaction start
+    const peakMix  = 1.0;       // bell crest for the mix lerp
     const fxDur    = effectUniforms?.duration?.value ?? 2.5;
     const fadeTail = effects?.fadeTailS ?? 0.9;
     const durMs    = (fxDur + fadeTail + 1.5) * 1000;
     _echoRamp = { startMs: performance.now(), durMs, baseline, peakMix, peak };
-    // Snap mix to 1 immediately so the very first frame of the interaction
-    // already shows a full-strength echo overlay (no rise-in latency).
-    postfx.params.echoMix = peakMix;
-    postfx.params.echoOn  = true;
+    postfx.params.echoOn = true;
     refreshEchoGui();
   }
   function _updateEchoRamp() {
@@ -1162,20 +1159,16 @@ async function loadSplat() {
       refreshEchoGui();
       return;
     }
-    // Bell: rise across first 20% → hold across middle 60% → fall across last 20%.
-    const rise = _smoothstep01(0.0, 0.20, t);
-    const fall = 1.0 - _smoothstep01(0.80, 1.0, t);
-    const env  = rise * fall;     // 0 → 1 → 0
+    // 0-1-0 lerp for BOTH persist and mix: quick rise so the trail
+    // appears nearly instantly on click, slow fall so it eases out
+    // smoothly instead of cutting off abruptly at the end. Persist's
+    // peak is 0.998 (long trails), mix peaks at 1.0 (full overlay).
+    const rise = _smoothstep01(0.0, 0.05, t);     // ~5% of duration to crest
+    const fall = 1.0 - _smoothstep01(0.50, 1.0, t); // last 50% smoothly decays
+    const env  = rise * fall;
     postfx.params.echoPersist = _echoRamp.baseline
       + (_echoRamp.peak - _echoRamp.baseline) * env;
-    // Mix curve: snap to peakMix (1.0) on click, HOLD across the first
-    // 80% of the interaction, then smoothstep decay to 0 over the last
-    // 20%. So mix=1 the instant the interaction starts, stays 1 while
-    // the trail is at its strongest, and cleanly returns to 0 at the
-    // end (per user: "when interaction starts mix should be 1" and the
-    // earlier "mix should go back to 0 when the interaction finishes").
-    postfx.params.echoMix = _echoRamp.peakMix
-      * (1.0 - _smoothstep01(0.80, 1.0, t));
+    postfx.params.echoMix = _echoRamp.peakMix * env;
     refreshEchoGui();
   }
   // Expose so the render loop can tick the ramp each frame.
