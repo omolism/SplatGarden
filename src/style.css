@@ -1144,16 +1144,15 @@ kbd {
   letter-spacing: 0.01em;
 }
 #tech-spec.show { display: block; }
+/* Backdrop stays transparent so the 3DGS scene reads sharply behind the
+ * panel — the drawer is a live document, not a modal. Click on the
+ * backdrop area still closes the drawer (handler wired in tech-spec.js). */
 #tech-spec .ts-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
-  opacity: 0;
-  transition: opacity 0.18s ease;
+  background: transparent;
+  pointer-events: auto;
 }
-#tech-spec.show .ts-backdrop { opacity: 1; }
 #tech-spec .ts-panel {
   position: absolute;
   top: 0;
