@@ -34,7 +34,7 @@ Right-side slide-in. The information-design centerpiece of the showcase — orga
 
 | Section | Contents |
 |---|---|
-| **Assets** | Per-asset cards with tool-chain chip rows. Each asset ends at Unreal set dress (Perforce version control); only the final Garden Environment touches Litchfield + Postshot. Covers Grape Hyacinth, Daffodil, Tree, Landscape, Garden Environment. |
+| **Assets** | Per-asset cards with tool-chain chip rows. Each asset ends at Unreal set dress; only the final Garden Environment touches Litchfield + Postshot. Covers Grape Hyacinth, Daffodil, Tree, Landscape, Garden Environment. |
 | **AI Stylization** | Custom diffusion-based texture tool — IP-Adapter + ControlNet (Tile / Canny) + AdaIN. Drives the painterly look on Daffodil + Landscape textures. Two modes: Full Style Transfer or Texture-Only. PyTorch 2.11 / CUDA 13.0 / RTX PRO 6000 Blackwell. |
 | **Render Primitives** | The four interchangeable subforms — 3DGS / Point / Quad / Voxel — with USD analogues |
 | **Camera Track** | The Houdini-authored 25 s FBX + 990 COLMAP poses |

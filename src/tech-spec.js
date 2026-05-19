@@ -15,22 +15,22 @@
 export const TECH_SPECS = [
   {
     section: "ASSETS",
-    desc:    "Per-object authoring — set-dressed in Unreal (Perforce version control), then captured together as one 3DGS",
+    desc:    "Per-object authoring — set-dressed in Unreal, then captured together as one 3DGS",
     items: [
       {
         name:      "Grape Hyacinth",
         location:  "Near gazebo",
         worldPos:  [0.313, -0.773, 2.226],
-        toolchain: ["Houdini (procedural)", "Unreal Engine (set dress · Perforce)"],
+        toolchain: ["Houdini (procedural)", "Unreal Engine (set dress)"],
         output:    "Mesh dressed into env scene",
-        note:      "Houdini-generated cluster scattered across the gazebo planters; placed into the Unreal scene with Perforce-tracked iteration",
+        note:      "Houdini-generated cluster scattered across the gazebo planters",
         source:    "in-scene",
       },
       {
         name:      "Daffodil",
         location:  "Near gazebo",
         worldPos:  [-0.195, -0.730, 2.379],
-        toolchain: ["Houdini", "VAT bake", "Unreal Engine (set dress · Perforce)", "Python · OSC · MediaPipe", "AI texture stylization"],
+        toolchain: ["Houdini", "VAT bake", "Unreal Engine (set dress)", "Python · OSC · MediaPipe", "AI texture stylization"],
         output:    "Mesh + VAT animation · interactively driven in Unreal",
         note:      "Animated procedurally in Houdini and VAT-baked, then set-dressed in Unreal. Inside the Unreal session, Python · OSC · MediaPipe drives the rig live (hand gesture → OSC → blueprint). Diffuse texture passes through the custom AI stylization tool (see below).",
         source:    "in-scene",
@@ -38,7 +38,7 @@ export const TECH_SPECS = [
       {
         name:      "Tree",
         location:  "Near gazebo",
-        toolchain: ["SpeedTree", "Unreal Engine (set dress · Perforce)"],
+        toolchain: ["SpeedTree", "Unreal Engine (set dress)"],
         output:    "Mesh dressed into env scene",
         note:      "Procedural tree authored in SpeedTree, dressed into the Unreal scene before the env capture",
         source:    "in-scene",
@@ -46,7 +46,7 @@ export const TECH_SPECS = [
       {
         name:      "Landscape",
         location:  "Whole scene base",
-        toolchain: ["Unreal Engine (terrain authoring · Perforce)", "AI texture stylization"],
+        toolchain: ["Unreal Engine (terrain authoring)", "AI texture stylization"],
         output:    "Landscape mesh + AI-stylized ground textures",
         note:      "Terrain authored directly in Unreal; ground textures passed through the custom AI stylization tool to land the painterly look in the final 3DGS.",
         source:    "in-scene",
