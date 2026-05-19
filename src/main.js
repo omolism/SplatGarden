@@ -942,7 +942,7 @@ async function loadSplat() {
   // so it lives outside FX to avoid conceptual blur. All knobs use the
   // gpParticle* prefix per the dedicated-params-per-fx preference.
   const gpParticleParams = {
-    enable:        true,
+    enable:        false,
     pointSize:     16.0,
     fieldStrength: 3.0,
     damping:       0.94,
@@ -954,7 +954,6 @@ async function loadSplat() {
   const fGpParticles = (gui.fCustomize || gui).addFolder("Particles").close();
   fGpParticles.add(gpParticleParams, "enable").name("Enable")
     .onChange(v => gpgpuParticles.setEnabled(v));
-  // Apply the default-true state immediately (constructor inits visible=false).
   gpgpuParticles.setEnabled(gpParticleParams.enable);
   fGpParticles.add(gpParticleParams, "pointSize", 1, 60, 0.5).name("Point Size")
     .onChange(v => gpgpuParticles.setPointSize(v));
