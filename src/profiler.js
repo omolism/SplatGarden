@@ -154,11 +154,7 @@ export class Profiler {
       const pct = fAvg > 0 ? (ms / fAvg) * 100 : 0;
       const fill = row.querySelector('[data-k="bar"]');
       fill.style.width = `${Math.min(pct, 100).toFixed(1)}%`;
-      // Color tint based on cost: <30% green, 30-60% amber, 60+ red
-      fill.style.background =
-        pct < 30 ? "rgba(106, 217, 124, 0.65)" :
-        pct < 60 ? "rgba(255, 214, 106, 0.65)" :
-                   "rgba(255, 123, 106, 0.65)";
+      // Bar colour is set in CSS (neutral white); no cost-based tint.
     }
   }
 

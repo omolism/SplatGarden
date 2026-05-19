@@ -47,6 +47,7 @@ export class ABCompare {
         <div class="abc-title">
           <span class="dot"></span>
           <span class="t">A/B COMPARE</span>
+          <button class="abc-close" type="button" title="Close (\`, Esc)">×</button>
         </div>
         <div class="abc-buttons">
           <button class="abc-cap" data-slot="a">▶ Capture A</button>
@@ -57,7 +58,7 @@ export class ABCompare {
           <label>B label <input class="abc-lbl" data-slot="b" value="State B" maxlength="32"></label>
         </div>
         <div class="abc-hint">
-          Drag handle to wipe · backtick (\`) to close
+          Click "Capture A" → change a setting → "Capture B" → drag the handle to wipe between the two. Backtick (\`) or Esc to close.
         </div>
       </div>`;
     mountEl.appendChild(this.el);
@@ -99,11 +100,19 @@ export class ABCompare {
       setSplit(e.clientX);
     });
 
-    // Keyboard: backtick toggles
+    // Close button + click on the dimmed backdrop both close.
+    this.el.querySelector(".abc-close")?.addEventListener("click", () => this.close());
+    this.el.querySelector(".abc-shade")?.addEventListener("click", () => this.close());
+
+    // Keyboard: backtick toggles, Esc closes (only when open).
     window.addEventListener("keydown", (e) => {
-      if (e.key === "`" && !this._isTyping(e.target)) {
+      if (this._isTyping(e.target)) return;
+      if (e.key === "`") {
         e.preventDefault();
         this.toggle();
+      } else if (e.key === "Escape" && this.open) {
+        e.preventDefault();
+        this.close();
       }
     });
   }

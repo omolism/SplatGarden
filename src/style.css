@@ -796,10 +796,11 @@ kbd {
 
 /* ----------------------------------------------------------------------
  * Profiler — per-phase frame-time breakdown. Toggle via P. Luma-glass.
+ * Sits above the bottom toolbar so it doesn't overlap on toggle.
  * -------------------------------------------------------------------- */
 #profiler {
   position: absolute;
-  bottom: 18px;
+  bottom: 80px;
   right: 18px;
   width: 300px;
   z-index: 22;
@@ -1039,12 +1040,32 @@ kbd {
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.35);
 }
 #ab-compare .abc-title .t {
+  flex: 1;
   font-family: var(--font-ui);
   font-weight: 500;
   font-size: 10px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--text-mid);
+}
+#ab-compare .abc-close {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--hair-strong);
+  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  color: var(--text-mid);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+#ab-compare .abc-close:hover {
+  background: var(--hover-strong);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: var(--text);
 }
 #ab-compare .abc-buttons {
   display: flex;

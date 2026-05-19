@@ -245,6 +245,14 @@ export class TechSpec {
   }
 
   toggle()      { this.open ? this.close() : this.openOverlay(); }
-  openOverlay() { this.open = true;  this.el.classList.add("show"); }
-  close()       { this.open = false; this.el.classList.remove("show"); }
+  openOverlay() {
+    this.open = true;
+    this.el.classList.add("show");
+    this.onOpenChange?.(true);
+  }
+  close() {
+    this.open = false;
+    this.el.classList.remove("show");
+    this.onOpenChange?.(false);
+  }
 }

@@ -134,15 +134,37 @@ export class PipelineHUD {
     const r  = this.refs;
     const ri = this.renderer.info.render;
 
-    // Hero splat count
-    const nSplats = r.splat?.packedSplats?.numSplats ?? null;
-    this._set("splats", nSplats != null ? exactInt(nSplats) : "—");
+    // Hero splat count — sum across all visible Scene layers so toggling
+    // a secondary splat on doubles the headline number, not just adds a
+    // second mesh nobody sees in the HUD.
+    const layers = r.sceneLayers?.layers || [];
+    let totalSplats = 0;
+    let visibleLayers = 0;
+    for (const l of layers) {
+      if (l.visible) {
+        visibleLayers++;
+        const n = l.mesh?.packedSplats?.numSplats;
+        if (Number.isFinite(n)) totalSplats += n;
+      }
+    }
+    // Fallback to the legacy refs.splat path when SceneLayers isn't wired.
+    if (layers.length === 0) {
+      const n = r.splat?.packedSplats?.numSplats ?? 0;
+      if (r.splat?.visible !== false && n > 0) {
+        totalSplats = n;
+        visibleLayers = 1;
+      }
+    }
+    this._set("splats", visibleLayers > 0 ? exactInt(totalSplats) : "—");
 
-    // 3DGS row — splat layer either visible or hidden; bar reflects that.
-    const splatVisible = r.splat?.visible !== false && nSplats != null && nSplats > 0;
-    this._setBar("splatFill", splatVisible ? 100 : 0);
-    this._set("splatPct", splatVisible ? "100%" : "off");
-    this.el.querySelector('[data-k="splatRow"]')?.classList.toggle("off", !splatVisible);
+    // 3DGS row — bar = "fraction of layers visible", value = "N / M".
+    const totalLayers = Math.max(layers.length, visibleLayers);
+    const splatActive = visibleLayers > 0;
+    this._setBar("splatFill", splatActive ? (visibleLayers / Math.max(totalLayers, 1)) * 100 : 0);
+    this._set("splatPct", splatActive
+      ? (totalLayers > 1 ? `${visibleLayers}/${totalLayers}` : "100%")
+      : "off");
+    this.el.querySelector('[data-k="splatRow"]')?.classList.toggle("off", !splatActive);
 
     // Quad row — opacity drives the bar; show "off" if no instances.
     const nQuads  = r.quadizer?.mesh?.geometry?.instanceCount ?? 0;

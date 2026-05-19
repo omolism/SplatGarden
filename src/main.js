@@ -130,9 +130,10 @@ window.__gpgpuParticles = gpgpuParticles;
 // refs object so later assignments to splat / voxelizer / quadizer are
 // picked up automatically.
 const _hudRefs = {
-  splat:     null,
-  voxelizer: null,
-  quadizer:  null,
+  splat:       null,
+  voxelizer:   null,
+  quadizer:    null,
+  sceneLayers: null,   // wired below once SceneLayers is instantiated
 };
 const pipelineHUD = new PipelineHUD({
   renderer,
@@ -172,6 +173,7 @@ const sceneLayers = new SceneLayers({
   mountEl: document.getElementById("left-stack") || document.body,
 });
 window.__sceneLayers = sceneLayers;
+_hudRefs.sceneLayers = sceneLayers;   // RENDER HUD sums splats across visible layers
 
 // Asset hover hotspots — project each TECH_SPECS asset's worldPos onto the
 // viewport. Hover a dot for the poster-style info card.
@@ -491,11 +493,18 @@ async function loadSplat() {
   // together. Future tech-breakdown rows (AI Stylization / VAT Anim / GPU /
   // Postshot Pipeline) will sit under the same parent.
   const dataParams = { enabled: false, dataLabels: false };
-  const techParams = { techEnable: true };
+  const techParams = { techEnable: false };
   const fTechSpec = gui.addFolder("Tech Spec");
+  // Master Enable cascades to both sub-toggles so flipping it (via lil-gui
+  // OR via opening the Pipeline drawer with T) lights up Training Cameras
+  // and Data Labels together.
   const techEnableCtrl = fTechSpec.add(techParams, "techEnable").name("Enable").onChange((v) => {
-    if (dataLabels) dataLabels.setEnabled(v && dataParams.dataLabels);
-    if (cameraFrustums) cameraFrustums.visible = v && dataParams.enabled;
+    dataParams.enabled    = v;
+    dataParams.dataLabels = v;
+    if (camCtrl)        camCtrl.updateDisplay();
+    if (dataLabelsCtrl) dataLabelsCtrl.updateDisplay();
+    if (cameraFrustums) cameraFrustums.visible = v;
+    if (dataLabels)     dataLabels.setEnabled(v);
   });
 
   const camCtrl = fTechSpec.add(dataParams, "enabled").name("Training Cameras").onChange(v => {
@@ -516,6 +525,13 @@ async function loadSplat() {
     if (dataLabels) dataLabels.setEnabled(v && techParams.techEnable);
   });
   dataLabelsCtrl.domElement.title = "Surveillance-card overlay showing per-viewpoint metadata.";
+
+  // Tie the Pipeline drawer (T key) to the Tech Spec master Enable. Opening
+  // the drawer lights up Training Cameras + Data Labels; closing turns them
+  // off again. The setValue() call routes through the onChange cascade above.
+  techSpec.onOpenChange = (open) => {
+    if (techEnableCtrl) techEnableCtrl.setValue(!!open);
+  };
 
   // ---- HDR sky toggle (inside Customize) ---------------------------------
   // Loads /Skybox.hdr lazily on first activation, applies as scene.background
@@ -1748,7 +1764,14 @@ renderer.setAnimationLoop(() => {
   // Sorted-particles sim removed — Warp FX is a pure-shader post-pass with
   // no companion sim, so the composer just renders directly.
   profiler.mark("compose");
-  postfx.render(dt);
+  // Bypass the EffectComposer entirely when Post-Process is disabled —
+  // otherwise the composer still runs RenderPass + every passthrough pass,
+  // which lights up the compose phase for nothing.
+  if (postfx.params?.postEnable === false) {
+    renderer.render(scene, camera);
+  } else {
+    postfx.render(dt);
+  }
   // GPGPU particles + Tech-Spec gizmos live in their own scenes rendered
   // AFTER the composer so they bypass every post-FX pass (Echo, Bloom,
   // Painterly, Underwater, etc.). autoClear=false preserves the composed
