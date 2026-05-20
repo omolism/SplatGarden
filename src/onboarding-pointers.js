@@ -47,13 +47,16 @@ const TIPS_DESKTOP = [
 
 // On touch the desktop panels are CSS-hidden — point at the bottom-bar
 // tabs instead, since that's the canonical mobile entry point for the
-// same actions.
+// same actions. The top-right Studio button is the showcase surface
+// (3DGS / USD layer modes — the *core* of the project), so it gets
+// the first callout to draw the eye there before users notice the
+// bottom-bar tabs.
 const TIPS_TOUCH = [
   {
-    label: "Views",
-    sub: "Jump between viewpoints",
-    selector: '#mobile-bottombar [data-tab="views"]',
-    side: "above",
+    label: "3DGS / USD",
+    sub: "Toggle layers · swap subforms",
+    selector: "#mobile-studio-btn",
+    side: "below",
   },
   {
     label: "Effects",

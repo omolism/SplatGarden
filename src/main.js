@@ -746,6 +746,7 @@ async function loadSplat() {
       postfx,
       assetHover,
       splat,
+      usdLayers,           // floating Studio panel re-parents this DOM
     });
     window.__mobileUI = mobileUI;
   }

@@ -4040,6 +4040,142 @@ body.touch #intro-overlay .io-phase {
 }
 
 /* ============================================================
+ * MobileStudioPanel — top-right floating 3DGS / USD entry point.
+ * The button slot is the same spot the (now-empty) hamburger used to
+ * occupy — keeps the top corners symmetric. The drop-down panel hosts
+ * the live #usd-layers-panel (re-parented at open time) so all its
+ * existing eye toggles + subform pills + size sliders work as-is.
+ * ============================================================ */
+#mobile-studio-btn {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(13, 14, 17, 0.84);
+  color: rgba(255, 255, 255, 0.84);
+  cursor: pointer;
+  display: none;            /* shown on body.touch only */
+  align-items: center;
+  justify-content: center;
+  z-index: 1502;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.45),
+              inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+body.touch #mobile-studio-btn { display: flex; }
+#mobile-studio-btn svg { width: 22px; height: 22px; display: block; }
+#mobile-studio-btn:active { transform: scale(0.96); background: rgba(28, 30, 34, 0.92); }
+#mobile-studio-btn[aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.32);
+  color: #fff;
+}
+
+#mobile-studio-panel {
+  position: fixed;
+  top: 66px;
+  right: 14px;
+  width: min(330px, calc(100vw - 28px));
+  max-height: min(560px, calc(100vh - 100px - (54px + env(safe-area-inset-bottom, 0px))));
+  z-index: 1501;            /* below the trigger (1502), above bottom-bar (1500) */
+  background: rgba(13, 14, 17, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-ui);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  box-shadow: 0 20px 56px rgba(0, 0, 0, 0.55),
+              inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  opacity: 0;
+  transform: translateY(-12px);
+  pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  overflow: hidden;
+}
+#mobile-studio-panel[hidden] { display: none; }
+#mobile-studio-panel.open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+#mobile-studio-panel .msp-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 14px 10px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex: 0 0 auto;
+}
+#mobile-studio-panel .msp-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+#mobile-studio-panel .msp-sub {
+  margin-top: 3px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.48);
+}
+#mobile-studio-panel .msp-close {
+  flex: 0 0 auto;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+#mobile-studio-panel .msp-close svg { width: 16px; height: 16px; }
+#mobile-studio-panel .msp-close:active { background: rgba(255, 255, 255, 0.06); }
+#mobile-studio-panel .msp-body {
+  padding: 6px 4px 10px;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  flex: 1 1 auto;
+}
+/* The re-parented #usd-layers-panel needs to drop its standalone
+   floating chrome (it was originally positioned fixed at top-right
+   on its own). Inside our Studio frame it flows like normal content. */
+#mobile-studio-panel #usd-layers-panel {
+  position: static !important;
+  width: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: block !important;
+}
+/* The panel's own header text is redundant — our own .msp-head already
+   announces "3DGS / USD". Hide just the title, keep the Use My Own
+   upload button which is genuinely useful. */
+#mobile-studio-panel #usd-layers-panel > header > .title { display: none !important; }
+#mobile-studio-panel #usd-layers-panel > header {
+  padding: 8px 12px 4px !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+/* ============================================================
  * Responsive — phone (<768px) and tablet (768-1024px) tuning
  * ============================================================ */
 @media (max-width: 767px) {

@@ -24,6 +24,15 @@ import { renderCard as renderAssetCard } from "./asset-hover.js";
 
 // Lucide-style line icons. Stroke 1.7 reads crisp at the rendered ~22 px.
 const ICONS = {
+  studio:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2.5L3 7l9 4.5L21 7l-9-4.5z"/>
+            <path d="M3 12l9 4.5L21 12"/>
+            <path d="M3 17l9 4.5L21 17"/>
+          </svg>`,
+  close: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+            <line x1="6"  y1="6" x2="18" y2="18"/>
+            <line x1="18" y1="6" x2="6"  y2="18"/>
+          </svg>`,
   views: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"/>
             <path d="M2.5 12C4.5 7.5 8 5.5 12 5.5s7.5 2 9.5 6.5c-2 4.5-5.5 6.5-9.5 6.5S4.5 16.5 2.5 12z"/>
@@ -144,6 +153,102 @@ class BottomSheet {
 }
 
 // ----------------------------------------------------------------------
+// MobileStudioPanel — top-right floating Studio button + drop-down panel
+// that hosts the 3DGS / USD layer controls (the *core* showcase surface
+// of the project: toggle Splat ↔ Billboard ↔ Voxel rendering modes,
+// swap each one's USD prototype subform, tweak sizes inline).
+//
+// We don't rebuild the controls — we re-parent the existing
+// `#usd-layers-panel` DOM into our panel body so all its event handlers
+// + internal state come along intact. On close we put it back where it
+// came from (inside lil-gui's children container) so the Effects →
+// "Open Advanced" path that moves the whole lil-gui still works.
+// ----------------------------------------------------------------------
+class MobileStudioPanel {
+  constructor(usdLayersEl) {
+    this.usdLayersEl    = usdLayersEl ?? null;
+    this.originalParent = usdLayersEl?.parentNode ?? null;
+    this.open           = false;
+
+    // Trigger button — top-right, same coordinate the hamburger used.
+    this.btn = document.createElement("button");
+    this.btn.id = "mobile-studio-btn";
+    this.btn.setAttribute("aria-label", "3DGS / USD studio");
+    this.btn.setAttribute("aria-expanded", "false");
+    this.btn.innerHTML = ICONS.studio;
+    this.btn.addEventListener("click", () => this.toggle());
+    document.body.appendChild(this.btn);
+
+    // Drop-down panel — anchored under the button, slides down from
+    // top-right on open. No backdrop: the panel intentionally leaves
+    // the rest of the scene interactive so the user can see the
+    // splat update live as they flip Splat/Billboard/Voxel.
+    this.panel = document.createElement("aside");
+    this.panel.id = "mobile-studio-panel";
+    this.panel.setAttribute("hidden", "");
+    this.panel.setAttribute("role", "dialog");
+    this.panel.innerHTML = `
+      <header class="msp-head">
+        <div class="msp-titles">
+          <div class="msp-title">3DGS / USD</div>
+          <div class="msp-sub">Toggle layers · swap subforms</div>
+        </div>
+        <button class="msp-close" aria-label="Close">${ICONS.close}</button>
+      </header>
+      <div class="msp-body"></div>
+    `;
+    document.body.appendChild(this.panel);
+    this.bodyEl = this.panel.querySelector(".msp-body");
+    this.panel.querySelector(".msp-close").addEventListener("click", () => this.close());
+
+    // Outside-tap dismissal. Capture phase so we run before the
+    // tapped element's own pointerdown handler can dispatch anything.
+    document.addEventListener("pointerdown", (e) => {
+      if (!this.open) return;
+      const t = e.target;
+      if (this.panel.contains(t) || this.btn.contains(t)) return;
+      this.close();
+    }, true);
+  }
+
+  toggle() { this.open ? this.close() : this._show(); }
+
+  _show() {
+    if (!this.usdLayersEl) return;
+    this.open = true;
+    // Move the LIVE panel DOM into our body so existing event listeners
+    // + reactive state keep working. The panel was originally mounted
+    // inside lil-gui's `.children`; that lil-gui is CSS-hidden on touch,
+    // so the panel itself isn't visible anywhere right now.
+    this.bodyEl.appendChild(this.usdLayersEl);
+    this.panel.removeAttribute("hidden");
+    // Force reflow so the .open transition actually animates rather
+    // than jumping straight to the final state.
+    void this.panel.offsetHeight;
+    this.panel.classList.add("open");
+    this.btn.setAttribute("aria-expanded", "true");
+  }
+
+  close() {
+    if (!this.open) return;
+    this.open = false;
+    this.panel.classList.remove("open");
+    this.btn.setAttribute("aria-expanded", "false");
+    // Restore the panel to its original parent IMMEDIATELY so any
+    // subsequent UI that expects it there (Effects → Open Advanced
+    // moves the entire lil-gui, including this panel) sees it in the
+    // right place. The empty Studio frame fades out separately.
+    if (this.originalParent && this.usdLayersEl) {
+      this.originalParent.appendChild(this.usdLayersEl);
+    }
+    setTimeout(() => {
+      if (this.open) return;
+      this.panel.setAttribute("hidden", "");
+    }, 240);
+  }
+}
+
+// ----------------------------------------------------------------------
 // MobileUI — main entry point. Wires the toolbar to the sheet, builds
 // each section lazily so its DOM reflects current state at open time.
 // ----------------------------------------------------------------------
@@ -160,6 +265,13 @@ export class MobileUI {
   constructor(refs) {
     this.refs = refs;
     this.sheet = new BottomSheet();
+    // The Studio panel is the project's "core showcase" surface on
+    // mobile — toggling 3DGS layers + their USD subform is the most
+    // visually-striking interaction in the app. Promoting it from
+    // "buried inside Advanced" to its own top-right affordance.
+    if (refs.usdLayers?.el) {
+      this.studio = new MobileStudioPanel(refs.usdLayers.el);
+    }
     this._buildBar();
     this._buildContents();
     this._wireAssetTouch();
