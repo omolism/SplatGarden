@@ -16,6 +16,8 @@ export const TECH_SPECS = [
   // ============== Three pillars: 3DGS / USD / AI ==============
   {
     section: "3DGS",
+    group:   "pillar",
+    pillarIdx: 1,
     desc:    "The render primitive and the pipeline that produces it",
     items: [
       {
@@ -61,6 +63,8 @@ export const TECH_SPECS = [
 
   {
     section: "USD",
+    group:   "pillar",
+    pillarIdx: 2,
     desc:    "OpenUSD interop — alternative subforms expressed as PointInstancer prims",
     items: [
       {
@@ -80,6 +84,8 @@ export const TECH_SPECS = [
 
   {
     section: "AI",
+    group:   "pillar",
+    pillarIdx: 3,
     desc:    "Custom diffusion-based texture tool driving the painterly look on Daffodil + Landscape",
     items: [
       {
@@ -108,6 +114,7 @@ export const TECH_SPECS = [
   // ============== Per-asset cards (consume the three pillars above) ==============
   {
     section: "ASSETS",
+    group:   "main",
     desc:    "Per-object authoring — set-dressed in Unreal, then captured together as one 3DGS",
     items: [
       {
@@ -157,6 +164,7 @@ export const TECH_SPECS = [
 
   {
     section: "INPUT & SENSING",
+    group:   "main",
     desc:    "MediaPipe-driven interaction surface",
     items: [
       { name: "Hand tracking", ref: "MediaPipe HandLandmarker (tasks-vision 0.10.35)", source: "src/handtracking.js:1" },
@@ -165,6 +173,7 @@ export const TECH_SPECS = [
 
   {
     section: "POST-PROCESSING",
+    group:   "play",
     desc:    "Toy chain — view via Customize ▸ Play ▸ Post-Process",
     items: [
       { name: "Echo Trails",              ref: "Notch-style motion-blur accumulator",      source: "src/postfx.js:18"  },
@@ -179,6 +188,7 @@ export const TECH_SPECS = [
 
   {
     section: "CLICK FX",
+    group:   "play",
     desc:    "Toy interaction — view via Customize ▸ Play ▸ FX",
     items: [
       { name: "Wave & Tint",       ref: "sin(t·ω − dist·5) · e^(−0.7t) · ringMask",          source: "src/effects.js:307" },
@@ -252,19 +262,26 @@ export class TechSpec {
         </header>
         <div class="ts-sub">How everything in this scene was made · click a section to fold</div>
         <div class="ts-body">
-          ${TECH_SPECS.map((s, i) => `
-            <section class="ts-sec" data-idx="${i}">
-              <header class="ts-sec-head">
-                <span class="ts-sec-name">${s.section}</span>
-                <span class="ts-sec-count">${s.items.length}</span>
-                <span class="ts-caret">▾</span>
-              </header>
-              <div class="ts-sec-desc">${s.desc}</div>
-              <ul class="ts-list">
-                ${s.items.map(renderItem).join("")}
-              </ul>
-            </section>
-          `).join("")}
+          ${TECH_SPECS.map((s, i) => {
+            const groupCls = s.group ? ` ts-sec-${s.group}` : "";
+            const numChip  = s.pillarIdx
+              ? `<span class="ts-sec-num">${String(s.pillarIdx).padStart(2, "0")}</span>`
+              : "";
+            const itemLbl  = s.items.length === 1 ? "item" : "items";
+            return `
+              <section class="ts-sec${groupCls}" data-idx="${i}">
+                <header class="ts-sec-head">
+                  ${numChip}
+                  <span class="ts-sec-name">${s.section}</span>
+                  <span class="ts-sec-count">${s.items.length} ${itemLbl}</span>
+                  <span class="ts-caret">▾</span>
+                </header>
+                <div class="ts-sec-desc">${s.desc}</div>
+                <ul class="ts-list">
+                  ${s.items.map(renderItem).join("")}
+                </ul>
+              </section>`;
+          }).join("")}
         </div>
         <footer class="ts-footer">
           <span class="ts-foot-k">Total</span>

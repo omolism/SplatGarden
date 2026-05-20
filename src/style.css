@@ -1261,6 +1261,16 @@ kbd {
   cursor: pointer;
   user-select: none;
 }
+/* Pillar number prefix (01 / 02 / 03) — only on 3DGS / USD / AI */
+#tech-spec .ts-sec-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.10em;
+  color: var(--text-dim);
+  min-width: 22px;
+  text-align: left;
+}
 #tech-spec .ts-sec-name {
   flex: 1;
   font-family: var(--font-ui);
@@ -1273,10 +1283,37 @@ kbd {
 #tech-spec .ts-sec-count {
   font-family: var(--font-mono);
   font-size: 9px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* Pillar sections — left accent rail for visual prominence */
+#tech-spec .ts-sec-pillar {
+  border-left: 1px solid rgba(255, 255, 255, 0.18);
+  padding-left: 17px;       /* original 18 minus the 1px rail */
+}
+
+/* Main sections (Assets, Input & Sensing) — slight extra top gap so they
+ * read as a separate band below the three pillars */
+#tech-spec .ts-sec-main + .ts-sec,
+#tech-spec .ts-sec-pillar + .ts-sec-main {
+  margin-top: 4px;
+}
+
+/* Play sections (Post-Processing, Click FX) — dimmer, "toy" treatment */
+#tech-spec .ts-sec-play .ts-sec-name {
   color: var(--text-mid);
-  background: rgba(255, 255, 255, 0.06);
-  padding: 1px 6px;
-  border-radius: 3px;
+  font-weight: 400;
+}
+#tech-spec .ts-sec-play .ts-sec-count {
+  color: var(--text-faint);
+}
+#tech-spec .ts-sec-main + .ts-sec-play {
+  margin-top: 6px;
+  border-top: 1px solid var(--hair-strong);
+  padding-top: 22px;        /* extra breathing room before the toy band */
 }
 #tech-spec .ts-caret {
   font-size: 10px;
