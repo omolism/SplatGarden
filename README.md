@@ -144,6 +144,19 @@ Visibility is gated by the Tech Spec `Enable` master toggle plus the per-asset O
 
 ---
 
+## Cinematic FX
+
+Top-level folder grouping the character-defining effects so they're separate from colour-grading.
+
+| Effect | Knobs |
+|---|---|
+| Lens Distortion | Fisheye blend / FOV / Distortion / Zoom / Dispersion / Center / Anamorphic squeeze |
+| Underwater | Caustic strength + scale, tint RGB + amount, wave shimmer, darken |
+| Kaleidoscope | Segments / rotation speed / zoom / mix / center |
+| Particles | Enable shortcut (knobs live in the `Particles` folder under Customize) |
+
+The Particles checkbox mirrors the main Particles folder — toggling either updates both.
+
 ## Customize
 
 ### FX
@@ -162,7 +175,7 @@ Eight GPU shader effects in a single `dyno.Dyno` branched on a uniform `int` —
 **Brush Mode** — press + drag continuously paints the active effect. OrbitControls is locked while on.
 
 ### Post-Process
-Master `Enable` kills every pass at once. Bloom defaults off.
+Master `Enable` kills every pass at once. Bloom defaults off. Colour-grading and polish passes only — the character-defining effects live in the top-level `Cinematic FX` folder.
 
 | Pass | Knobs |
 |---|---|
@@ -171,10 +184,8 @@ Master `Enable` kills every pass at once. Bloom defaults off.
 | Colour | Exposure / Contrast / Saturation |
 | Painterly | Monet (Kuwahara) / Matisse (posterize + Sobel) / Seurat (pointillism) — auto-disables when Quad or Voxel is visible |
 | Echo Trails | Bell-curve auto-ramp on click |
-| Underwater | Caustic + tint + UV shimmer |
-| Lens Distortion | Fisheye + dispersion |
+| Warp FX | Domain-warped fractal overlay |
 | Vignette · Chromatic Aberration · Film Grain | Standard knobs |
-| Kaleidoscope (under FX) | Mirrored repetition |
 
 Defaults: `exposure 1.10 · contrast 1.08 · saturation 1.15`.
 

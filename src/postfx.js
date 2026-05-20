@@ -956,11 +956,9 @@ export function setupPostFX(renderer, scene, camera) {
   }
 
   function attachGUI(parentGui) {
-    // Post-Process lives under Customize > Play (toy section), Kaleidoscope
-    // under FX. Fall back through older buildGUI shapes if those refs aren't
-    // exposed.
+    // Post-Process lives under Customize > Play. Fall back through older
+    // buildGUI shapes if those refs aren't exposed.
     const customizeParent = parentGui.fPlay || parentGui.fCustomize || parentGui;
-    const fxParent        = parentGui.fFX                          || parentGui;
 
     // Post-Process — Sketchfab-style finishing effects, all under one folder.
     // The master "Enable" checkbox at the top kills every pass at once.
@@ -1020,30 +1018,12 @@ export function setupPostFX(renderer, scene, camera) {
     fWarp.add(params, "warpFxWarp",      0.0, 5.0,  0.05).name("Warp Amount");
     fWarp.add(params, "warpFxBlend", Object.keys(WARP_BLEND_INDEX)).name("Blend Mode");
 
-    // Underwater — Dave_Hoskins tileable water caustic + tint + UV waves.
-    const fUw = fPost.addFolder("Underwater").close();
-    fUw.add(params, "underwaterOn").name("Enable");
-    fUw.add(params, "underwaterCaustic", 0.0, 1.5,  0.01 ).name("Caustic Strength");
-    fUw.add(params, "underwaterScale",   2.0, 32.0, 0.5  ).name("Caustic Scale");
-    fUw.add(params, "underwaterTintR",   0.0, 1.0,  0.01 ).name("Tint R");
-    fUw.add(params, "underwaterTintG",   0.0, 1.0,  0.01 ).name("Tint G");
-    fUw.add(params, "underwaterTintB",   0.0, 1.0,  0.01 ).name("Tint B");
-    fUw.add(params, "underwaterTintAmt", 0.0, 1.0,  0.01 ).name("Tint Amount");
-    fUw.add(params, "underwaterWave",    0.0, 2.0,  0.01 ).name("Wave Shimmer");
-    fUw.add(params, "underwaterDarken",  0.0, 1.0,  0.01 ).name("Darken");
-
     // Surface Tension GUI removed — feature deleted.
-
-    const fLens = fPost.addFolder("Lens Distortion").close();
-    fLens.add(params, "lensOn").name("Enable");
-    fLens.add(params, "lensFisheye",     0.0, 1.0, 0.01 ).name("Fisheye Blend");
-    fLens.add(params, "lensFOV",         0.1, 2.5, 0.01 ).name("Fisheye FOV");
-    fLens.add(params, "lensAmt",        -1.0, 2.0, 0.01 ).name("Distortion");
-    fLens.add(params, "lensZoom",        0.5, 2.0, 0.01 ).name("Zoom");
-    fLens.add(params, "lensDispersion", -0.15, 0.15, 0.005).name("Dispersion");
-    fLens.add(params, "lensCenterX",     0.0, 1.0, 0.005).name("Center X");
-    fLens.add(params, "lensCenterY",     0.0, 1.0, 0.005).name("Center Y");
-    fLens.add(params, "lensSqueeze",     0.5, 2.0, 0.01 ).name("Anamorphic Squeeze");
+    //
+    // Lens Distortion + Underwater + Kaleidoscope used to live here but were
+    // promoted into the top-level "Cinematic FX" folder by attachFeaturedFX()
+    // (see below + main.js). Post-Process now keeps only color-grading
+    // / polish passes.
 
     const fVig = fPost.addFolder("Vignette").close();
     fVig.add(params, "vignetteOn").name("Enable");
@@ -1055,17 +1035,47 @@ export function setupPostFX(renderer, scene, camera) {
     const fGrain = fPost.addFolder("Film Grain").close();
     fGrain.add(params, "grainOn").name("Enable");
     fGrain.add(params, "grainAmt", 0.0, 0.4, 0.005).name("Amount");
-
-    const f = fxParent.addFolder("Kaleidoscope").close();
-    f.add(params, "enable").name("Enable");
-    f.add(params, "segments", 3, 24, 1).name("Segments");
-    f.add(params, "rotationSpeed", 0, 1.5, 0.02).name("Rotation Speed");
-    f.add(params, "zoom", 0.4, 3.0, 0.05).name("Zoom");
-    f.add(params, "mix", 0.0, 1.0, 0.02).name("Mix");
-    f.add(params, "centerX", 0.0, 1.0, 0.01).name("Center X");
-    f.add(params, "centerY", 0.0, 1.0, 0.01).name("Center Y");
-    return f;
   }
 
-  return { composer, params, render, setSize, attachGUI };
+  // attachFeaturedFX — populates a host folder (typically a top-level
+  // "Cinematic FX") with the three character-defining effects: Lens
+  // Distortion, Underwater, Kaleidoscope. Pulled out of attachGUI so main.js
+  // can decide where they sit in the GUI tree (the goal is to keep them
+  // visually separate from the colour-grading passes in Post-Process).
+  function attachFeaturedFX(parent) {
+    const fLens = parent.addFolder("Lens Distortion").close();
+    fLens.add(params, "lensOn").name("Enable");
+    fLens.add(params, "lensFisheye",     0.0, 1.0, 0.01 ).name("Fisheye Blend");
+    fLens.add(params, "lensFOV",         0.1, 2.5, 0.01 ).name("Fisheye FOV");
+    fLens.add(params, "lensAmt",        -1.0, 2.0, 0.01 ).name("Distortion");
+    fLens.add(params, "lensZoom",        0.5, 2.0, 0.01 ).name("Zoom");
+    fLens.add(params, "lensDispersion", -0.15, 0.15, 0.005).name("Dispersion");
+    fLens.add(params, "lensCenterX",     0.0, 1.0, 0.005).name("Center X");
+    fLens.add(params, "lensCenterY",     0.0, 1.0, 0.005).name("Center Y");
+    fLens.add(params, "lensSqueeze",     0.5, 2.0, 0.01 ).name("Anamorphic Squeeze");
+
+    // Underwater — Dave_Hoskins tileable water caustic + tint + UV waves.
+    const fUw = parent.addFolder("Underwater").close();
+    fUw.add(params, "underwaterOn").name("Enable");
+    fUw.add(params, "underwaterCaustic", 0.0, 1.5,  0.01 ).name("Caustic Strength");
+    fUw.add(params, "underwaterScale",   2.0, 32.0, 0.5  ).name("Caustic Scale");
+    fUw.add(params, "underwaterTintR",   0.0, 1.0,  0.01 ).name("Tint R");
+    fUw.add(params, "underwaterTintG",   0.0, 1.0,  0.01 ).name("Tint G");
+    fUw.add(params, "underwaterTintB",   0.0, 1.0,  0.01 ).name("Tint B");
+    fUw.add(params, "underwaterTintAmt", 0.0, 1.0,  0.01 ).name("Tint Amount");
+    fUw.add(params, "underwaterWave",    0.0, 2.0,  0.01 ).name("Wave Shimmer");
+    fUw.add(params, "underwaterDarken",  0.0, 1.0,  0.01 ).name("Darken");
+
+    const fKal = parent.addFolder("Kaleidoscope").close();
+    fKal.add(params, "enable").name("Enable");
+    fKal.add(params, "segments", 3, 24, 1).name("Segments");
+    fKal.add(params, "rotationSpeed", 0, 1.5, 0.02).name("Rotation Speed");
+    fKal.add(params, "zoom", 0.4, 3.0, 0.05).name("Zoom");
+    fKal.add(params, "mix", 0.0, 1.0, 0.02).name("Mix");
+    fKal.add(params, "centerX", 0.0, 1.0, 0.01).name("Center X");
+    fKal.add(params, "centerY", 0.0, 1.0, 0.01).name("Center Y");
+    return { fLens, fUw, fKal };
+  }
+
+  return { composer, params, render, setSize, attachGUI, attachFeaturedFX };
 }

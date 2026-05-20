@@ -320,6 +320,14 @@ async function loadSplat() {
   splat.updateGenerator();
   const gui = buildGUI(effects);
   postfx.attachGUI(gui);
+  // Top-level "Cinematic FX" — promotes the character-defining post-FX
+  // (Lens Distortion / Underwater / Kaleidoscope) out of the colour-grading
+  // Post-Process folder so they're immediately discoverable. The Particles
+  // toggle is mirrored in here later once gpgpuParticles is built (see the
+  // particles section below).
+  const fCine = gui.addFolder("Cinematic FX");
+  postfx.attachFeaturedFX(fCine);
+  gui.fCine = fCine;
   // Mobile: auto-collapse every folder so the panel doesn't eat the viewport.
   if (IS_MOBILE) {
     gui.foldersRecursive().forEach(f => f.close());
@@ -1074,9 +1082,21 @@ async function loadSplat() {
     colorHot:      "#ff8c33",
   };
   const fGpParticles = (gui.fCustomize || gui).addFolder("Particles").close();
-  fGpParticles.add(gpParticleParams, "enable").name("Enable")
-    .onChange(v => gpgpuParticles.setEnabled(v));
+  const particlesEnableMain = fGpParticles.add(gpParticleParams, "enable").name("Enable")
+    .onChange(v => {
+      gpgpuParticles.setEnabled(v);
+      particlesEnableCine?.updateDisplay();
+    });
   gpgpuParticles.setEnabled(gpParticleParams.enable);
+  // Mirror the Particles toggle inside Cinematic FX so the four "fun"
+  // effects all sit in one folder. Both controllers bind to the same
+  // gpParticleParams.enable; cross-updateDisplay keeps the checkboxes in
+  // sync without lil-gui knowing about each other.
+  const particlesEnableCine = gui.fCine?.add(gpParticleParams, "enable").name("Particles")
+    .onChange(v => {
+      gpgpuParticles.setEnabled(v);
+      particlesEnableMain.updateDisplay();
+    });
   fGpParticles.add(gpParticleParams, "pointSize", 1, 60, 0.5).name("Point Size")
     .onChange(v => gpgpuParticles.setPointSize(v));
   fGpParticles.add(gpParticleParams, "fieldStrength", 0, 12, 0.1).name("Field Strength")
