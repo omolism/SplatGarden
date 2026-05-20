@@ -1086,19 +1086,6 @@ kbd {
   padding-top: 22px;
 }
 
-/* Play sections (Post-Processing, Click FX) — dimmer, "toy" treatment */
-#tech-spec .ts-sec-play .ts-sec-name {
-  color: var(--text-mid);
-  font-weight: 400;
-}
-#tech-spec .ts-sec-play .ts-sec-count {
-  color: var(--text-faint);
-}
-#tech-spec .ts-sec-assets + .ts-sec-play {
-  margin-top: 6px;
-  border-top: 1px solid var(--hair-strong);
-  padding-top: 22px;
-}
 #tech-spec .ts-caret {
   font-size: 10px;
   color: var(--text-dim);

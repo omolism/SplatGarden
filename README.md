@@ -39,7 +39,6 @@ Right-side slide-in. The information-design centerpiece of the showcase — orga
 | **AI** | Custom diffusion-based texture tool — IP-Adapter + ControlNet (Tile / Canny) + AdaIN. Drives the painterly look on Daffodil + Landscape textures. Full vs Texture-Only modes. PyTorch 2.11 / CUDA 13.0 / RTX PRO 6000 Blackwell. |
 | **Assets** | Per-asset cards with tool-chain chip rows. Each asset ends at Unreal set dress; only the final Garden Environment touches Litchfield + Postshot. Covers Grape Hyacinth, Daffodil, Tree, Landscape, Garden Environment. |
 | **Input & Sensing** | MediaPipe hand tracking |
-| Post-Processing · Click FX | Demoted to bottom — labelled "toy" sections |
 
 ### Pipeline HUD — RENDER (`top-left`)
 Always-on live render readout, slimmed to what isn't covered elsewhere:

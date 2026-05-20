@@ -213,36 +213,6 @@ export const TECH_SPECS = [
     ],
   },
 
-  {
-    section: "POST-PROCESSING",
-    group:   "play",
-    desc:    "Toy chain — view via Customize ▸ Play ▸ Post-Process",
-    items: [
-      { name: "Echo Trails",              ref: "Notch-style motion-blur accumulator",      source: "src/postfx.js:18"  },
-      { name: "Unreal Bloom",             ref: "UnrealBloomPass (Three.js addons)",         source: "src/postfx.js:715" },
-      { name: "Polish (chroma+vignette)", ref: "Custom ShaderPass — RGB shift + vignette",  source: "src/postfx.js:121" },
-      { name: "Painterly",                ref: "Anisotropic edge-aware smoothing",          source: "src/postfx.js:295" },
-      { name: "Warp FX",                  ref: "Barrel lens + chromatic warp",              source: "src/postfx.js:598" },
-      { name: "Underwater",               ref: "Wavy refraction + cast caustics",           source: "src/postfx.js:500" },
-      { name: "Kaleidoscope",             ref: "N-fold mirrored UV sampling",               source: "src/postfx.js:427" },
-    ],
-  },
-
-  {
-    section: "CLICK FX",
-    group:   "play",
-    desc:    "Toy interaction — view via Customize ▸ Play ▸ FX",
-    items: [
-      { name: "Wave & Tint",       ref: "sin(t·ω − dist·5) · e^(−0.7t) · ringMask",          source: "src/effects.js:307" },
-      { name: "Dissolve & Reform", ref: "FBM-warped burn front · TouchDesigner SOP Effector", source: "src/effects.js:339" },
-      { name: "Scan Line",         ref: "Tron-style sweeping wavefront + afterglow",          source: "src/effects.js:874" },
-      { name: "Spiral Smear",      ref: "Anisotropic 3DGS streak via clamped scales mix",     source: "src/effects.js:419" },
-      { name: "Vortex Drift",      ref: "Bridson et al. (2007) curl-noise potential flow",    source: "src/effects.js:540" },
-      { name: "Chaotic Particles", ref: "Worley (1996) Voronoi · per-cell coherent migration", source: "src/effects.js:619" },
-      { name: "Slime Molds",       ref: "Jones (2010) · Sage (2017) Physarum polycephalum sim", source: "src/effects.js:710" },
-      { name: "Feather Roots",     ref: "Stochastic L-system radial branching",               source: "src/effects.js:781" },
-    ],
-  },
 ];
 
 function renderItem(it) {
