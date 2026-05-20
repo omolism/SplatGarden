@@ -190,6 +190,21 @@ export const TECH_SPECS = [
         source:    "in-scene",
       },
       {
+        name:      "Vine",
+        location:  "Near gazebo",
+        worldPos:  [0.793, -0.926, 3.258],
+        toolchain: ["Unreal Engine — Motion Graphics", "Unreal Engine — WPO shader"],
+        output:    "Animated vine growth · flowers driven by Motion Graphics, stems by WPO",
+        note:      "Vine growth render. The bloom heads use Unreal's Motion Graphics system for keyframed flowering. The vine stems run a custom material whose World Position Offset (WPO) drives the procedural growth path along the gazebo's framework.",
+        // Drop the rendered Vimeo / .mp4 URL into embed.src once it's ready.
+        embed: {
+          src:   null,
+          label: "Vine growth · Unreal MG + WPO shader",
+          title: "vine-growth",
+        },
+        source:    "in-scene",
+      },
+      {
         name:      "Tree",
         location:  "Near gazebo",
         toolchain: ["SpeedTree", "Unreal Engine (set dress)"],
