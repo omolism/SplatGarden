@@ -20,6 +20,28 @@ function escapeHtml(s) {
   }[c]));
 }
 
+function renderSimVideo(v) {
+  if (!v) return "";
+  const flags = [
+    v.autoplay ? "autoplay" : "",
+    v.muted    ? "muted"    : "",
+    v.loop     ? "loop"     : "",
+    "playsinline",
+  ].filter(Boolean).join(" ");
+  const poster = v.poster ? ` poster="${escapeHtml(v.poster)}"` : "";
+  const inner = v.url
+    ? `<video class="ah-sim-video" src="${escapeHtml(v.url)}" ${flags}${poster}></video>`
+    : `<div class="ah-sim-ph">
+         <div class="ah-sim-ph-eyebrow">Houdini 3DGS SIM</div>
+         <div class="ah-sim-ph-body">drop a .mp4 / .webm into <code>simVideo.url</code></div>
+       </div>`;
+  return `
+    <section class="ah-section ah-sim">
+      <div class="ah-sec-title">${escapeHtml(v.label || "Simulation")}</div>
+      <div class="ah-sim-frame">${inner}</div>
+    </section>`;
+}
+
 function renderToolchain(items) {
   if (!Array.isArray(items) || items.length === 0) return "";
   return items.map(t => `<span class="ah-chip">${escapeHtml(t)}</span>`)
@@ -42,6 +64,8 @@ function renderCard(it) {
       <div class="ah-sec-title">Toolchain</div>
       <div class="ah-chain">${tc}</div>
     </section>` : ""}
+
+    ${it.simVideo ? renderSimVideo(it.simVideo) : ""}
 
     <section class="ah-section ah-media-row">
       <div class="ah-sec-title">Texture Stylization</div>

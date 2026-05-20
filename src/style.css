@@ -2479,6 +2479,61 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   text-align: center;
 }
 
+/* Houdini SIM video — autoplay loop hero embed (Gazebo + future sim items) */
+#asset-hover-card .ah-sim-frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--hair);
+  overflow: hidden;
+}
+#asset-hover-card .ah-sim-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #000;
+}
+#asset-hover-card .ah-sim-ph {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background:
+    radial-gradient(120% 80% at 50% 30%, rgba(255, 200, 130, 0.10), transparent 65%),
+    linear-gradient(180deg, rgba(140, 160, 180, 0.06), rgba(40, 60, 90, 0.08));
+  text-align: center;
+  padding: 14px;
+}
+#asset-hover-card .ah-sim-ph-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+#asset-hover-card .ah-sim-ph-body {
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  color: var(--text-mid);
+  letter-spacing: 0.02em;
+}
+#asset-hover-card .ah-sim-ph-body code {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  padding: 1px 5px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--hair);
+  border-radius: 3px;
+  color: var(--text);
+}
+
 /* Pipeline strip — n-wide image row */
 #asset-hover-card .ah-strip {
   display: grid;

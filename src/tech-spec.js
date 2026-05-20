@@ -138,6 +138,25 @@ export const TECH_SPECS = [
     desc:    "Per-object inventory — set-dressed in Unreal, then captured together as one 3DGS.",
     items: [
       {
+        name:      "Gazebo",
+        location:  "Centerpiece",
+        worldPos:  [0.594, -0.561, 3.774],
+        toolchain: ["Houdini (3DGS SIM)", "Unreal Engine (set dress)"],
+        output:    "3DGS centerpiece · Houdini-simulated splat dynamics",
+        note:      "The garden's central architecture. Built in Houdini as a 3DGS simulation — splat positions are driven by a sim graph, then baked and dressed into the Unreal scene before capture.",
+        // Drop a real .mp4 / .webm URL into `simVideo.url` once it's rendered;
+        // placeholder card shows a gradient + label until then.
+        simVideo: {
+          url:      null,
+          label:    "Houdini 3DGS simulation",
+          autoplay: true,
+          loop:     true,
+          muted:    true,
+          poster:   null,
+        },
+        source: "in-scene",
+      },
+      {
         name:      "Grape Hyacinth",
         location:  "Near gazebo",
         worldPos:  [-0.195, -0.730, 2.379],
