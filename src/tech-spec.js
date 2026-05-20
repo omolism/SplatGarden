@@ -144,15 +144,10 @@ export const TECH_SPECS = [
         toolchain: ["Houdini (3DGS SIM)", "Unreal Engine (set dress)"],
         output:    "3DGS centerpiece · Houdini-simulated splat dynamics",
         note:      "The garden's central architecture. Built in Houdini as a 3DGS simulation — splat positions are driven by a sim graph, then baked and dressed into the Unreal scene before capture.",
-        // Drop a real .mp4 / .webm URL into `simVideo.url` once it's rendered;
-        // placeholder card shows a gradient + label until then.
-        simVideo: {
-          url:      null,
-          label:    "Houdini 3DGS simulation",
-          autoplay: true,
-          loop:     true,
-          muted:    true,
-          poster:   null,
+        embed: {
+          src:   "https://player.vimeo.com/video/1193797863?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
+          label: "Houdini 3DGS simulation",
+          title: "Shot4B_GS-FX_V08",
         },
         source: "in-scene",
       },
