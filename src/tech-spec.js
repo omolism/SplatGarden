@@ -178,6 +178,14 @@ export const TECH_SPECS = [
         toolchain: ["Houdini", "VAT bake", "Unreal Engine (set dress)", "Python · OSC · MediaPipe", "AI texture stylization"],
         output:    "Mesh + VAT animation · interactively driven in Unreal",
         note:      "Animated procedurally in Houdini and VAT-baked, then set-dressed in Unreal. Inside the Unreal session, Python · OSC · MediaPipe drives the rig live (hand gesture → OSC → blueprint). Diffuse texture passes through the custom AI stylization tool.",
+        // Vimeo embed shown right under the toolchain in the asset card.
+        // src already has autoplay / muted / loop query params baked in;
+        // swap to a different Vimeo ID by replacing the URL.
+        embed: {
+          src:   "https://player.vimeo.com/video/1191203670?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
+          label: "VAT + OSC interaction",
+          title: "VAT",
+        },
         compare: {
           before: null,
           after:  null,

@@ -42,6 +42,22 @@ function renderSimVideo(v) {
     </section>`;
 }
 
+function renderEmbed(e) {
+  if (!e || !e.src) return "";
+  return `
+    <section class="ah-section ah-embed">
+      <div class="ah-sec-title">${escapeHtml(e.label || "Video")}</div>
+      <div class="ah-embed-frame">
+        <iframe
+          src="${escapeHtml(e.src)}"
+          title="${escapeHtml(e.title || e.label || "embedded video")}"
+          allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen></iframe>
+      </div>
+    </section>`;
+}
+
 function renderToolchain(items) {
   if (!Array.isArray(items) || items.length === 0) return "";
   return items.map(t => `<span class="ah-chip">${escapeHtml(t)}</span>`)
@@ -66,6 +82,8 @@ function renderCard(it) {
     </section>` : ""}
 
     ${it.simVideo ? renderSimVideo(it.simVideo) : ""}
+
+    ${it.embed ? renderEmbed(it.embed) : ""}
 
     <section class="ah-section ah-media-row">
       <div class="ah-sec-title">Texture Stylization</div>

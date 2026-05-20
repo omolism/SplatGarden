@@ -2521,6 +2521,24 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   color: var(--text);
 }
 
+/* Embedded video (Vimeo / YouTube / generic iframe) — 16:9 wrapper */
+#asset-hover-card .ah-embed-frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--hair);
+  overflow: hidden;
+  background: #000;
+}
+#asset-hover-card .ah-embed-frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+
 /* Pipeline strip — n-wide image row */
 #asset-hover-card .ah-strip {
   display: grid;
