@@ -1063,14 +1063,17 @@ async function loadSplat() {
     if (window.__autoPlayedIntro && introOverlay) {
       introOverlay.update(dur > 0 ? t / dur : 0, camMoveState === "playing");
     }
-    // Lens-distortion pulse — fisheye blend ramps 0 → 1 → 0 across the
-    // clip via sin(πt) so the peak lands at the midpoint. The whole
-    // shape happens every play (not only the first-visit auto-play) so
-    // a manual Play button press still gets the cinematic bend. The
-    // user's pre-move value is restored by camMoveRevertLerps.
+    // Lens-distortion pulse — fisheye blend ramps 0 → LENS_PULSE_PEAK → 0
+    // across the clip via sin(πt) so the peak lands at the midpoint. The
+    // peak (0.26) is hand-tuned to give a subtle cinematic bend without
+    // the heavy distortion that hurts the splat readability at 1.0. The
+    // shape fires every play (not only the first-visit auto-play) so a
+    // manual Play button press also gets the bend. The user's pre-move
+    // value is restored by camMoveRevertLerps.
     if (camMoveState === "playing" && dur > 0) {
+      const LENS_PULSE_PEAK = 0.26;
       const tNorm = Math.max(0, Math.min(1, t / dur));
-      postfx.params.lensFisheye = Math.sin(tNorm * Math.PI);
+      postfx.params.lensFisheye = LENS_PULSE_PEAK * Math.sin(tNorm * Math.PI);
     }
   };
 
