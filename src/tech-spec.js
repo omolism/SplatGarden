@@ -335,41 +335,6 @@ export class TechSpec {
           <button class="ts-close" title="Close (T or Esc)">×</button>
         </header>
         <div class="ts-sub">How everything in this scene was made · click a section to fold</div>
-        <div class="ts-flow">
-          <div class="ts-flow-step">
-            <div class="ts-flow-eyebrow">Authoring</div>
-            <div class="ts-flow-tools">Houdini · Unreal · SpeedTree</div>
-          </div>
-          <div class="ts-flow-arrow">▼</div>
-          <div class="ts-flow-step">
-            <div class="ts-flow-eyebrow">Scene Assembly</div>
-            <div class="ts-flow-tools">Unreal Engine · Perforce</div>
-          </div>
-          <div class="ts-flow-arrow">▼</div>
-          <div class="ts-flow-step">
-            <div class="ts-flow-eyebrow">Capture</div>
-            <div class="ts-flow-tools">Multi-camera rig</div>
-          </div>
-          <div class="ts-flow-arrow">▼</div>
-          <div class="ts-flow-step">
-            <div class="ts-flow-eyebrow">Pose Reconstruction</div>
-            <div class="ts-flow-tools">COLMAP · 990 cameras</div>
-          </div>
-          <div class="ts-flow-arrow">▼</div>
-          <div class="ts-flow-step ts-flow-parallel">
-            <div class="ts-flow-eyebrow">Splat Training <span class="ts-flow-tag">parallel</span></div>
-            <div class="ts-flow-pair">
-              <div class="ts-flow-tools">Postshot</div>
-              <div class="ts-flow-pair-sep">‖</div>
-              <div class="ts-flow-tools">Lichtfeld Studio</div>
-            </div>
-          </div>
-          <div class="ts-flow-arrow">▼</div>
-          <div class="ts-flow-step">
-            <div class="ts-flow-eyebrow">Runtime</div>
-            <div class="ts-flow-tools">Spark · Three.js · WebGL 2</div>
-          </div>
-        </div>
         <div class="ts-body">
           ${TECH_SPECS.map((s, i) => {
             const groupCls = s.group ? ` ts-sec-${s.group}` : "";
