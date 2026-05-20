@@ -35,6 +35,9 @@ const ROWS = [
     // Useful range tightened from the old 0.0005-0.05 (100x): tiny dots
     // at 0.001, chunky dots at 0.01. Default 0.0025 sits ~20% in.
     sizeMin: 0.001, sizeMax: 0.01, sizeStep: 0.0001,
+    // The size slider only makes sense in Point mode — Gaussian mode
+    // reads each splat's own scale from the .splat data.
+    sizeOnlyForShape: "Point",
     shapes: [
       { val: "Gaussian", label: "Gaussian" },
       { val: "Point",    label: "Point"    },
@@ -182,6 +185,17 @@ export class UsdLayers {
       `).join("");
       const sizeVal = Number(this.params[row.sizeKey] ?? 0);
       const decimals = row.sizeStep < 0.001 ? 4 : 3;
+      // Hide the size slider when the active subform doesn't use it
+      // (Splat row hides Point Size while in Gaussian mode).
+      const showSize = !row.sizeOnlyForShape || row.sizeOnlyForShape === cur;
+      const sizeHTML = showSize ? `
+            <label class="usd-size">
+              <span class="usd-size-label">${row.sizeLabel}</span>
+              <input type="range" data-act="size"
+                     min="${row.sizeMin}" max="${row.sizeMax}" step="${row.sizeStep}"
+                     value="${sizeVal}">
+              <span class="usd-size-val">${sizeVal.toFixed(decimals)}</span>
+            </label>` : "";
       html += `
         <li class="usd-row ${on ? "" : "hidden-row"}" data-id="${row.id}">
           <div class="usd-row-main">
@@ -192,13 +206,7 @@ export class UsdLayers {
           </div>
           <div class="usd-row-sub">
             <div class="usd-pill-group">${pills}</div>
-            <label class="usd-size">
-              <span class="usd-size-label">${row.sizeLabel}</span>
-              <input type="range" data-act="size"
-                     min="${row.sizeMin}" max="${row.sizeMax}" step="${row.sizeStep}"
-                     value="${sizeVal}">
-              <span class="usd-size-val">${sizeVal.toFixed(decimals)}</span>
-            </label>
+            ${sizeHTML}
           </div>
         </li>
       `;
