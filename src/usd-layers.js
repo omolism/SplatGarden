@@ -90,7 +90,7 @@ export class UsdLayers {
    * @param {(size:number)=>void}  opts.onQuadSize   — quadizer.setQuadSize
    * @param {(size:number)=>void}  opts.onVoxelSize  — voxelizer.setVoxelSize
    */
-  constructor({ mountEl, params, controller, onQuadShape, onVoxelShape, onQuadSize, onVoxelSize, onUploadRequest }) {
+  constructor({ mountEl, params, controller, onQuadShape, onVoxelShape, onQuadSize, onVoxelSize, onUploadRequest, onLayerActivate }) {
     this.params       = params;
     this.controller   = controller;
     this.onQuadShape  = onQuadShape;
@@ -98,6 +98,11 @@ export class UsdLayers {
     this.onQuadSize   = onQuadSize;
     this.onVoxelSize  = onVoxelSize;
     this.onUploadRequest = onUploadRequest;
+    // Called with the layer key ("splat" | "quad" | "voxel") whenever the
+    // user manually toggles a layer ON via the eye icon. Used by main.js
+    // to fire a museum-style annotation overlay. Programmatic toggles
+    // (camera move) do NOT route through here.
+    this.onLayerActivate = onLayerActivate;
 
     this.el = document.createElement("aside");
     this.el.id = "usd-layers-panel";
@@ -125,6 +130,7 @@ export class UsdLayers {
   _setVisible(row, on) {
     this.params[row.visKey] = !!on;
     this.controller?.setLayerVis(row.layerKey, !!on);
+    if (on) this.onLayerActivate?.(row.layerKey);
     this._render();
   }
 

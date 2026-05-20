@@ -25,6 +25,7 @@ import { IntroOverlay } from "./intro-overlay.js";
 import { OnboardingPointers } from "./onboarding-pointers.js";
 import { MobileNav } from "./mobile-nav.js";
 import { UsdLayers } from "./usd-layers.js";
+import { UsdAnnotations } from "./usd-annotations.js";
 import { uniforms as effectUniforms } from "./effects.js";
 import { loadColmapImages, buildColmapFrustums, colmapCameraPosition, colmapCameraRotation } from "./colmap-loader.js";
 
@@ -386,6 +387,11 @@ async function loadSplat() {
   // hide below so the two surfaces don't double up on the same toggles.
   // Mounted on <body> (not #left-stack) and positioned via CSS at the
   // Render HUD's old slot in the top-left rail.
+  // Museum-style annotation overlay; fires from a manual eye toggle only
+  // (camera-move's programmatic setLayerVis calls bypass UsdLayers).
+  const usdAnnotations = new UsdAnnotations({ mountEl: document.body });
+  window.__usdAnnotations = usdAnnotations;
+
   const usdLayers = new UsdLayers({
     mountEl:      document.body,
     params:       effectParams,
@@ -398,6 +404,7 @@ async function loadSplat() {
     // the window stash that gets set when it's ready (search this file
     // for window.__showSplatDrop).
     onUploadRequest: () => window.__showSplatDrop?.(),
+    onLayerActivate: (key) => usdAnnotations.show(key),
   });
   window.__usdLayers = usdLayers;
   if (gui.fLayers?.hide) gui.fLayers.hide();
