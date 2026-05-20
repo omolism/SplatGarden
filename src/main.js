@@ -834,6 +834,7 @@ async function loadSplat() {
   let camMovePrevQuadVis = 0;
   let camMovePrevLensOn      = false;     // lens-pulse state restore
   let camMovePrevLensFisheye = 0;
+  let camMovePrevLensSqueeze = 1;
   let camMovePrevPostEnable  = true;
   const _camFwd = new THREE.Vector3();
 
@@ -870,9 +871,14 @@ async function loadSplat() {
     // stayed off because their individual *On flags weren't touched).
     camMovePrevLensOn      = postfx.params.lensOn;
     camMovePrevLensFisheye = postfx.params.lensFisheye;
+    camMovePrevLensSqueeze = postfx.params.lensSqueeze;
     camMovePrevPostEnable  = postfx.params.postEnable;
-    postfx.params.lensOn     = true;
-    postfx.params.postEnable = true;
+    postfx.params.lensOn      = true;
+    postfx.params.postEnable  = true;
+    // Snap squeeze to neutral on the very first frame so there's no
+    // visible jump between the user's pre-move value and the pulse's
+    // start (which is also neutral).
+    postfx.params.lensSqueeze = 1.0;
 
     if (!effects) return;
     camMovePrevSubform = effects.targetSubform ?? 0;
@@ -910,6 +916,7 @@ async function loadSplat() {
     // whatever the user had set before the camera move took it over.
     postfx.params.lensOn      = camMovePrevLensOn;
     postfx.params.lensFisheye = camMovePrevLensFisheye;
+    postfx.params.lensSqueeze = camMovePrevLensSqueeze;
     postfx.params.postEnable  = camMovePrevPostEnable;
 
     if (!effects) return;
@@ -1085,16 +1092,22 @@ async function loadSplat() {
     if (window.__autoPlayedIntro && introOverlay) {
       introOverlay.update(dur > 0 ? t / dur : 0, camMoveState === "playing");
     }
-    // Lens-distortion shape — starts and ends at LENS_PULSE_LEVEL (subtle
-    // bend), dips to 0 (no distortion) at the clip midpoint. Formula is
-    // LENS_PULSE_LEVEL * (1 - sin(πt)), so t=0 -> 0.26, t=0.5 -> 0,
-    // t=1 -> 0.26. The shape fires every play (not only the first-visit
-    // auto-play) so a manual Play button press also gets it. The user's
-    // pre-move lensFisheye value is restored by camMoveRevertLerps.
+    // Lens shape — two pulses driven by the same tNorm:
+    //   * Fisheye blend: starts / ends at 0.26 (subtle bend), dips to 0
+    //     at midpoint via 0.26 * (1 - sin(πt)).
+    //   * Anamorphic squeeze: starts / ends at 1.0 (neutral, "no squeeze"
+    //     since 0.5..2.0 is the slider range), peaks at 1.0 + 0.2 = 1.2
+    //     at midpoint via 1 + 0.2 * sin(πt). Inverted shape from fisheye
+    //     so the cinematic emphasis hands off cleanly mid-clip.
+    // Fires every play (manual + first-visit auto-play). camMoveRevertLerps
+    // snaps both params back to whatever the user had pre-play.
     if (camMoveState === "playing" && dur > 0) {
-      const LENS_PULSE_LEVEL = 0.26;
+      const LENS_PULSE_LEVEL    = 0.26;
+      const SQUEEZE_PEAK_OFFSET = 0.20;
       const tNorm = Math.max(0, Math.min(1, t / dur));
-      postfx.params.lensFisheye = LENS_PULSE_LEVEL * (1 - Math.sin(tNorm * Math.PI));
+      const sinT  = Math.sin(tNorm * Math.PI);
+      postfx.params.lensFisheye = LENS_PULSE_LEVEL * (1 - sinT);
+      postfx.params.lensSqueeze = 1.0 + SQUEEZE_PEAK_OFFSET * sinT;
     }
   };
 
