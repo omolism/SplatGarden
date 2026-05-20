@@ -2393,14 +2393,15 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   /* No default centering — _anchorCardToDot() in asset-hover.js sets
    * left/top so the card sits next to the dot the user is hovering
    * (right or left), eliminating the centre-jump flicker. z-index sits
-   * above lil-gui (1001) so an asset card pinned via click reads on
-   * top of the side panel; Credits modal (1100) still wins above it. */
+   * above all the regular page UI (lil-gui 1001, onboarding pointers
+   * 1050, USD annotation 1080, Credits 1100); only the Pipeline drawer
+   * (5000) and mobile-nav drawer (1500) still win above. */
   position: fixed;
   top: 36px;
   left: 36px;
   width: min(600px, 72vw);
   max-height: calc(100vh - 160px);
-  z-index: 1050;
+  z-index: 1200;
   background: var(--panel-strong);
   backdrop-filter: blur(28px) saturate(140%);
   -webkit-backdrop-filter: blur(28px) saturate(140%);
