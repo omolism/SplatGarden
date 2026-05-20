@@ -16,6 +16,14 @@ const TEAM = [
   { name: "Ben Jones",                role: "Team Member", url: "#" },
 ];
 
+// Special Thanks — advisors, mentors, external teams. Distinct from the
+// team list so credit weight reads correctly.
+const SPECIAL_THANKS = [
+  { name: "Dr. Deborah R. Fowler",                 url: "#" },
+  { name: "Munkhtsetseg Nandigjav",                url: "#" },
+  { name: "NVIDIA Omniverse and OpenUSD team",     url: "#" },
+];
+
 // Software — commercial / production DCC tools the team authored in.
 // Unreal Engine and Houdini are the hero entries (top of the section,
 // highlighted via .cr-chip-featured).
@@ -92,6 +100,23 @@ export class Credits {
             ${TECH_OTHER   .map(s => `<span class="cr-chip">${s}</span>`).join("")}
           </div>
         </section>
+        <section class="cr-sec">
+          <div class="cr-sec-title">Special Thanks</div>
+          <ul class="cr-list cr-list-thanks">
+            ${SPECIAL_THANKS.map(p => {
+              const linked = p.url && p.url !== "#";
+              const aOpen  = linked
+                ? `<a class="cr-link" href="${p.url}" target="_blank" rel="noopener noreferrer" title="Open ${p.name}'s page">`
+                : `<span class="cr-link cr-link-empty" title="No link yet">`;
+              const aClose = linked ? `</a>` : `</span>`;
+              return `
+                <li class="cr-row cr-row-thanks">
+                  <span class="cr-name">${p.name}</span>
+                  ${aOpen}${LINK_ICON_SVG}${aClose}
+                </li>`;
+            }).join("")}
+          </ul>
+        </section>
       </div>
     `;
     mountEl.appendChild(this.el);
@@ -103,10 +128,36 @@ export class Credits {
       if (tag === "INPUT" || tag === "TEXTAREA" || e.target?.isContentEditable) return;
       if (e.key === "Escape" && this.open) { e.preventDefault(); this.close(); }
     });
+
+    // Click outside the panel closes it. Captures pointerdown so the dismiss
+    // fires before any other click handler downstream. Skips clicks on
+    // lil-gui (the Credits checkbox lives there — let lil-gui's own
+    // onChange path handle that toggle) so the checkbox doesn't fight
+    // this listener and re-open immediately.
+    this._onOutsidePointerDown = (e) => {
+      if (!this.open) return;
+      if (this.el.contains(e.target)) return;
+      if (e.target?.closest?.('.lil-gui')) return;
+      this.close();
+    };
   }
 
-  show()    { this.open = true;  this.el.classList.add("show"); this.onOpenChange?.(true); }
-  close()   { this.open = false; this.el.classList.remove("show"); this.onOpenChange?.(false); }
+  show()  {
+    this.open = true;
+    this.el.classList.add("show");
+    this.onOpenChange?.(true);
+    // Defer attaching the outside-click listener one tick so the click
+    // that opened us doesn't immediately close us.
+    setTimeout(() => {
+      if (this.open) document.addEventListener("pointerdown", this._onOutsidePointerDown, true);
+    }, 0);
+  }
+  close() {
+    this.open = false;
+    this.el.classList.remove("show");
+    document.removeEventListener("pointerdown", this._onOutsidePointerDown, true);
+    this.onOpenChange?.(false);
+  }
   toggle()  { this.open ? this.close() : this.show(); }
   setOpen(v){ v ? this.show() : this.close(); }
 }

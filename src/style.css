@@ -2925,6 +2925,10 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   color: var(--text);
   font-weight: 500;
 }
+/* Special Thanks rows skip the middle "role" column — just name + link. */
+#credits .cr-row-thanks {
+  grid-template-columns: 1fr auto;
+}
 #credits .cr-role {
   font-family: var(--font-mono);
   font-size: 9.5px;
