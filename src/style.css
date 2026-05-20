@@ -3317,14 +3317,17 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
  * scene rather than floating in the chrome.
  * ============================================================ */
 #usd-annotations {
-  /* Sits above lil-gui (1001) so the annotation reads on top of the
-   * side panel when the user toggles a layer there. Below Credits
+  /* Sits LEFT of the lil-gui right rail (which is 280 px wide pinned
+   * 18 px from the right edge), with the connector rule on the card's
+   * right edge pointing back at the panel that triggered the toggle.
+   * z-index 1080 keeps it above lil-gui (1001) but below Credits
    * (1100) and the mobile nav drawer (1500). */
   position: fixed;
   top: 12vh;
-  right: 18px;
-  width: min(360px, calc(100vw - 36px));
+  right: 322px;             /* 18 + 280 + 24 = clears lil-gui + gap */
+  width: min(340px, calc(100vw - 360px));
   z-index: 1080;
+  flex-direction: row-reverse;   /* rule on the right, pointing right */
   display: flex;
   align-items: stretch;
   gap: 12px;
@@ -3429,11 +3432,14 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   letter-spacing: 0.01em;
 }
 @media (max-width: 767px) {
+  /* Phone: bottom sheet, full width, no row-reverse so the rule lines
+   * up flush with the right edge of the screen. */
   #usd-annotations {
     top: auto;
     bottom: 8vh;
     right: 8px;
     width: calc(100vw - 16px);
+    flex-direction: row;
   }
 }
 
