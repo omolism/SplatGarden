@@ -3317,11 +3317,14 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
  * scene rather than floating in the chrome.
  * ============================================================ */
 #usd-annotations {
+  /* Sits above lil-gui (1001) so the annotation reads on top of the
+   * side panel when the user toggles a layer there. Below Credits
+   * (1100) and the mobile nav drawer (1500). */
   position: fixed;
   top: 12vh;
   right: 18px;
   width: min(360px, calc(100vw - 36px));
-  z-index: 35;
+  z-index: 1080;
   display: flex;
   align-items: stretch;
   gap: 12px;
