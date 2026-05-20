@@ -51,7 +51,15 @@ html, body {
   user-select: none;
 }
 
-#app   { position: fixed; inset: 0; }
+/* #app — fills the viewport, but uses `position: absolute` (NOT
+   `fixed`) on purpose. `position: fixed` ALWAYS creates a stacking
+   context, and stacking contexts in Chromium prevent descendants'
+   `backdrop-filter` from compositing against the hardware-accelerated
+   WebGL canvas layer (the panel's glass blur collapses to a faint
+   tint). `position: absolute; inset: 0` on a body-direct child gives
+   identical viewport-fill behaviour AND does not create a stacking
+   context, so descendant backdrop-filter still reaches the canvas. */
+#app   { position: absolute; inset: 0; }
 #viewport {
   position: absolute;
   inset: 0;
