@@ -893,13 +893,29 @@ async function loadSplat() {
   let camMovePrevPostEnable  = true;
   let _introLensActive       = false;     // currently inside the stab window
   let _introTouchedLens      = false;     // ever fired during this play
-  // Lens outro fade: when the cinematic ends, hand off to a short smooth
-  // fade on lensFisheye → 0 instead of snapping back to the user's
-  // pre-intro state. Keeps the camera move from "blinking" out of fisheye
-  // on the last frame. 0 = no fade in progress.
+  // Lens outro fade: when the cinematic ends, lerp every distortion param
+  // toward fully neutral values (no warp, no squeeze, no chromatic shift)
+  // over INTRO_LENS_FADE_MS, then disable the pass. The pre-intro defaults
+  // are themselves distorting (lensAmt = -1, lensSqueeze = 0.97 …), so
+  // restoring them produces a visible "snap" at the seam — fading to
+  // genuinely neutral values is what removes the distortion smoothly.
+  // 0 = no fade in progress.
   let _introLensFadeStart    = 0;
-  let _introLensFadeFrom     = 0;
-  const INTRO_LENS_FADE_MS   = 700;
+  let _introLensFadeFrom     = {
+    lensFisheye: 0, lensAmt: 0, lensZoom: 1,
+    lensDispersion: 0, lensSqueeze: 1,
+  };
+  const INTRO_LENS_FADE_MS   = 1800;
+  // The fade target — geometric / chromatic identity. Independent of the
+  // user's pre-intro lens state on purpose: the user explicitly asked the
+  // post-intro state to read as "no lens distortion at all".
+  const NEUTRAL_LENS = {
+    lensFisheye:   0.0,
+    lensAmt:       0.0,
+    lensZoom:      1.0,
+    lensDispersion: 0.0,
+    lensSqueeze:   1.0,
+  };
   let camMovePrevCamFrustumsVisible = false;  // Training Cameras restore
   let camMovePrevCamFrustumsOpacity = 0.85;
   let _introFrustumsOn      = false;          // intra-tick edge detect
@@ -936,14 +952,16 @@ async function loadSplat() {
   function camMoveStartLerps() {
     camTimeline.style.display = "flex";
     // If a previous outro fade is still in flight (rapid re-Play), finalize
-    // it before re-stashing — otherwise camMovePrev* would snapshot the
-    // mid-fade lens state instead of the user's true pre-intro values.
+    // it before re-stashing — snap to the neutral lens state so the new
+    // intro starts from a clean baseline.
     if (_introLensFadeStart > 0) {
-      postfx.params.lensOn      = camMovePrevLensOn;
-      postfx.params.lensFisheye = camMovePrevLensFisheye;
-      postfx.params.lensSqueeze = camMovePrevLensSqueeze;
-      postfx.params.lensAmt     = camMovePrevLensAmt;
-      postfx.params.postEnable  = camMovePrevPostEnable;
+      postfx.params.lensFisheye    = NEUTRAL_LENS.lensFisheye;
+      postfx.params.lensAmt        = NEUTRAL_LENS.lensAmt;
+      postfx.params.lensZoom       = NEUTRAL_LENS.lensZoom;
+      postfx.params.lensDispersion = NEUTRAL_LENS.lensDispersion;
+      postfx.params.lensSqueeze    = NEUTRAL_LENS.lensSqueeze;
+      postfx.params.lensOn         = false;
+      postfx.params.postEnable     = camMovePrevPostEnable;
       _introLensFadeStart = 0;
       _introTouchedLens   = false;
     }
@@ -1034,13 +1052,18 @@ async function loadSplat() {
     camPhaseTimers.forEach(t => clearTimeout(t));
     camPhaseTimers = [];
     camTimeline.style.display = "none";
-    // Hand off lens restore to a short outro fade — the sin pulse's final
-    // value isn't exactly 0 by the time `finished` fires, and disabling
-    // the lens pass + reverting postEnable in one tick reads as a snap.
-    // The fade keeps lensOn live and lerps lensFisheye → 0 over
-    // INTRO_LENS_FADE_MS, then restores the user's pre-intro state.
+    // Hand off lens restore to a short outro fade. Pre-intro defaults
+    // (lensAmt = -1, lensSqueeze = 0.97 …) themselves produce distortion,
+    // so we don't restore to them — instead the fade lerps every
+    // distortion param toward neutral identity, then disables the pass.
     if (_introTouchedLens) {
-      _introLensFadeFrom  = postfx.params.lensFisheye;
+      _introLensFadeFrom = {
+        lensFisheye:    postfx.params.lensFisheye,
+        lensAmt:        postfx.params.lensAmt,
+        lensZoom:       postfx.params.lensZoom,
+        lensDispersion: postfx.params.lensDispersion,
+        lensSqueeze:    postfx.params.lensSqueeze,
+      };
       _introLensFadeStart = performance.now();
       _introLensActive    = false;
       // _introTouchedLens stays true; the fade tick clears it on completion.
@@ -1238,22 +1261,32 @@ async function loadSplat() {
   // but the scene continues to render normally.
   window.__camMoveTick = (dt) => {
     // Lens outro fade — runs after camMoveRevertLerps hands off and keeps
-    // ticking even once camMoveState is "idle", so the pass smoothly
-    // settles to 0 before the user's pre-intro lens state is restored.
+    // ticking even once camMoveState is "idle". Every distortion param
+    // lerps from its end-of-intro value toward neutral identity; at fade
+    // end the pass is disabled and params sit at fully neutral values, so
+    // re-enabling the lens later starts from a clean no-distortion state.
     if (_introLensFadeStart > 0) {
       const tFade = (performance.now() - _introLensFadeStart) / INTRO_LENS_FADE_MS;
       if (tFade >= 1) {
-        postfx.params.lensOn      = camMovePrevLensOn;
-        postfx.params.lensFisheye = camMovePrevLensFisheye;
-        postfx.params.lensSqueeze = camMovePrevLensSqueeze;
-        postfx.params.lensAmt     = camMovePrevLensAmt;
-        postfx.params.postEnable  = camMovePrevPostEnable;
+        postfx.params.lensFisheye    = NEUTRAL_LENS.lensFisheye;
+        postfx.params.lensAmt        = NEUTRAL_LENS.lensAmt;
+        postfx.params.lensZoom       = NEUTRAL_LENS.lensZoom;
+        postfx.params.lensDispersion = NEUTRAL_LENS.lensDispersion;
+        postfx.params.lensSqueeze    = NEUTRAL_LENS.lensSqueeze;
+        postfx.params.lensOn         = false;
+        postfx.params.postEnable     = camMovePrevPostEnable;
         _introLensFadeStart = 0;
         _introTouchedLens   = false;
       } else {
-        // Ease-out cubic: starts at fade-from, decays to 0.
-        const k = 1 - tFade;
-        postfx.params.lensFisheye = _introLensFadeFrom * k * k * k;
+        // Ease-out cubic on the inverse: tFade=0 → at "from" values,
+        // tFade=1 → at neutral. lerp(from, to, eased)
+        const eased = 1 - Math.pow(1 - tFade, 3);
+        const f = _introLensFadeFrom;
+        postfx.params.lensFisheye    = f.lensFisheye    + (NEUTRAL_LENS.lensFisheye    - f.lensFisheye)    * eased;
+        postfx.params.lensAmt        = f.lensAmt        + (NEUTRAL_LENS.lensAmt        - f.lensAmt)        * eased;
+        postfx.params.lensZoom       = f.lensZoom       + (NEUTRAL_LENS.lensZoom       - f.lensZoom)       * eased;
+        postfx.params.lensDispersion = f.lensDispersion + (NEUTRAL_LENS.lensDispersion - f.lensDispersion) * eased;
+        postfx.params.lensSqueeze    = f.lensSqueeze    + (NEUTRAL_LENS.lensSqueeze    - f.lensSqueeze)    * eased;
       }
     }
 
