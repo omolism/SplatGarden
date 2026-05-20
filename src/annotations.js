@@ -312,11 +312,16 @@ export class AnnotationManager {
     // splats from the bounding sphere in. boundsRadius can be 10 m+
     // once those outliers are counted, so we don't scale by it.
     const r = 6.0;
+    // Cardinal Y offset is set above the landscape / foliage band so the
+    // camera looks DOWN across the scene to the gazebo, not THROUGH the
+    // ground splats. r * 0.20 ~= 1.2 m above SUBJECT, ~0.6 m above origin
+    // — clear of the dense ground layer, still close enough to be a
+    // sane viewer's eye level rather than a top-down.
     const presets = [
-      { name: "Front",  subject: SUBJECT, pos: new THREE.Vector3( 0, r * 0.08,  r) },
-      { name: "Right",  subject: SUBJECT, pos: new THREE.Vector3( r, r * 0.08,  0) },
-      { name: "Back",   subject: SUBJECT, pos: new THREE.Vector3( 0, r * 0.08, -r) },
-      { name: "Left",   subject: SUBJECT, pos: new THREE.Vector3(-r, r * 0.08,  0) },
+      { name: "Front",  subject: SUBJECT, pos: new THREE.Vector3( 0, r * 0.20,  r) },
+      { name: "Right",  subject: SUBJECT, pos: new THREE.Vector3( r, r * 0.20,  0) },
+      { name: "Back",   subject: SUBJECT, pos: new THREE.Vector3( 0, r * 0.20, -r) },
+      { name: "Left",   subject: SUBJECT, pos: new THREE.Vector3(-r, r * 0.20,  0) },
       { name: "Top",    subject: SUBJECT, pos: new THREE.Vector3( 0, r * 1.10,  0.001) },
       // Center = camera placed at the geometric center of the splat bounds,
       // looking forward into the scene. OrbitControls treats the offset

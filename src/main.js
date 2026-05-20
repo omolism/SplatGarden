@@ -338,9 +338,9 @@ async function loadSplat() {
     statusEl,
     // localStorage key scoped to the splat URL so swapping splats doesn't
     // bring along the wrong viewpoints.
-    // v7 — bumped when the cardinal cameras 1-4 dropped from r*0.30 to
-    // r*0.08 above the subject (eye-level instead of high overhead).
-    storageKey: "splatgarden:viewpoints:v7:" + SPLAT_URL,
+    // v8 — bumped when the cardinal cameras' Y rose from r*0.08 back up
+    // to r*0.20 (above the ground splat layer, looking down at gazebo).
+    storageKey: "splatgarden:viewpoints:v8:" + SPLAT_URL,
   });
   // Seed defaults silently — without this guard, each seeded add() would
   // write to localStorage and wipe any saved user-added viewpoints (e.g.
