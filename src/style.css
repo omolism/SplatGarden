@@ -2211,6 +2211,15 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 .lil-gui input[type="color"] {
   border-radius: 4px !important;
 }
+/* lil-gui native checkbox accent — harmonised with the iOS-style
+   toggle switches in 3DGS / USD so the panel's "active" cue uses
+   the same off-white across every control type (checkbox / toggle /
+   active pill / slider fill). Cross-control coherence: when you
+   look at the panel, you instantly know what's "on" without
+   re-reading each control's specific affordance. */
+.lil-gui input[type="checkbox"] {
+  accent-color: rgba(255, 255, 255, 0.92) !important;
+}
 .lil-gui .slider {
   background: rgba(255, 255, 255, 0.05) !important;
   border-radius: 2px !important;

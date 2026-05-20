@@ -2704,6 +2704,35 @@ async function loadSplat() {
   // hidden secondary layers. The Scene panel exposes them with eye toggles
   // so the user can swap which splat is rendering.
   loadAdditionalSplatLayers();
+
+  // ---- Default fold state (PM ux: progressive disclosure / Zone 1) ----
+  // Now that EVERY folder is added (Customize, Cinematic FX, Tech Spec,
+  // Camera Movement, plus our 3DGS/USD), apply a "Zone 1 prominence"
+  // default: only 3DGS / USD opens at first load; everything else
+  // collapses. This shifts the panel from "dev tool — every knob on
+  // display" to "product — primary surface first, advanced tucked
+  // away". Users can still expand the folded folders with one click.
+  //   Zone 1 (open)   → 3DGS / USD            — the showcase toggles
+  //   Zone 2 (folded) → Customize, Cinematic FX, Camera Movement
+  //   Zone 3 (folded) → Tech Spec              — dev / authoring docs
+  // Mobile already auto-collapsed everything earlier; this is mainly
+  // for desktop / iPad to clean up the visual density at first paint.
+  if (!IS_MOBILE) {
+    try {
+      // Two folders default OPEN: 3DGS / USD (primary toggles) and
+      // Camera Movement (Play / Stop — the headline cinematic action).
+      // Everything else folds for cleaner initial visual density.
+      const KEEP_OPEN = new Set(["3DGS / USD", "Camera Movement"]);
+      gui.foldersRecursive().forEach(f => {
+        const title = f.$title?.textContent?.trim?.() || "";
+        if (KEEP_OPEN.has(title)) f.open();
+        else                       f.close();
+      });
+      // The root SPLATGARDEN STUDIO stays open so the children list
+      // is visible (vs. having to click the root caret first).
+      gui.open();
+    } catch { /* lil-gui internals change — silent on failure */ }
+  }
 }
 
 async function loadAdditionalSplatLayers() {
