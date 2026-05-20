@@ -924,11 +924,17 @@ async function loadSplat() {
     camPhaseTimers.forEach(t => clearTimeout(t));
     camPhaseTimers = [];
 
-    // Phased schedule across the clip duration:
-    //   0    Gaussian → Point + lens pulse arms (lens ends by t=0.50)
-    //   ¼    Quad (square) fades in
-    //   ½    Billboard subform swaps Quad → Circle (in place, no fade)
-    //   ¾    Billboard fades out + Point → Gaussian (back to splat)
+    // Phased schedule across the clip. The Point→Gaussian transition
+    // and the Billboard fade-out are now STAGGERED so the Circle
+    // billboard reads as a long closer that overlaps the re-emerging
+    // Gaussian splat for ~20 % of the clip:
+    //   0      Gaussian → Point + lens pulse arms (lens ends by t=0.50)
+    //   ¼      Billboard (square) fades in
+    //   ½      Billboard subform swaps Quad → Circle (in place)
+    //   0.625  Point → Gaussian — splat starts coming back while the
+    //          Circle billboard is still fully visible (overlap window)
+    //   0.825  Billboard fades out — exp-decay over ≈ 2.9 s leaves
+    //          residual ~5 % at the absolute last frame
     effects.targetSubform = 1.0;
 
     // Phase 2 — Billboard (square shape) fades in
@@ -947,14 +953,20 @@ async function loadSplat() {
       usdLayers?.refresh();
     }, beat * 2));
 
-    // Phase 4 — Billboard fades out + Point → Gaussian; the last beat
-    // of the clip plays out as splat-only, leaving 1 full beat (≈ ¼ of
-    // the clip) for the layer opacity to decay cleanly to zero.
+    // Phase 4 — Splat starts transitioning Point → Gaussian. Circle
+    // billboard stays visible, so the overlap window of "Gaussian splat
+    // + disc billboard" runs from here until the fade-out in Phase 5.
+    camPhaseTimers.push(setTimeout(() => {
+      if (camMoveState !== "playing") return;
+      effects.targetSubform = 0.0;
+    }, beat * 2.5));
+
+    // Phase 5 — Billboard fades out. 0.7-beat tail (≈ 2.9 s) at
+    // visTransitionRate 1.2/s lands the residual near 5 %.
     camPhaseTimers.push(setTimeout(() => {
       if (camMoveState !== "playing") return;
       effects.setLayerVis("quad", false);
-      effects.targetSubform = 0.0;
-    }, beat * 3));
+    }, beat * 3.3));
   }
   function camMoveRevertLerps() {
     camPhaseTimers.forEach(t => clearTimeout(t));
