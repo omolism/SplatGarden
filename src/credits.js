@@ -7,14 +7,13 @@
 // ---------------------------------------------------------------------------
 
 const TEAM = [
-  { name: "Ben Jones",                role: "Team Member", url: "#" },
   { name: "Danci Shen",               role: "Team Member", url: "#" },
   { name: "Itim Kongsakulvatanasook", role: "Team Member", url: "#" },
-  { name: "Professor Fowler",         role: "Team Member", url: "#" },
   { name: "Xinyi Liang",              role: "Team Member", url: "#" },
   { name: "Yichen Shi",               role: "Team Member", url: "#" },
   { name: "Yiqi Zheng",               role: "Team Member", url: "#" },
   { name: "Yiyi Long",                role: "Team Member", url: "#" },
+  { name: "Ben Jones",                role: "Team Member", url: "#" },
 ];
 
 const SOFTWARE = [

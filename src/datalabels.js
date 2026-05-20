@@ -4,7 +4,7 @@ import * as THREE from "three";
 // DataLabelLayer
 //
 // Surveillance / forensic-data aesthetic overlay:
-//   • Floating cards for each saved viewpoint (Id, Name, Time, Date, Coord),
+//   • Floating cards for each saved viewpoint (Id, Name, Time, Date),
 //     anchored to the 3D point with a thin SVG connector.
 //   • Faint dashed wireframe around the splat bounding box.
 //   • ~24 ambient pseudo-coordinate ticks scattered through the scene volume.
@@ -173,9 +173,6 @@ export class DataLabelLayer {
   }
 
   _addCard(vp, idx) {
-    // Fake but plausible-looking coordinates derived from the 3D anchor
-    const lat = (51.5440 + vp.anchor.z * 0.001).toFixed(4);
-    const lon = (-0.0648 + vp.anchor.x * 0.001).toFixed(4);
     const time = this._creationTime.toLocaleTimeString("en-GB", {
       hour: "2-digit", minute: "2-digit",
     });
@@ -188,7 +185,6 @@ export class DataLabelLayer {
       <div class="card-row"><span class="k">Name</span><span class="v">${vp.name}</span></div>
       <div class="card-row"><span class="k">Time</span><span class="v">${time}</span></div>
       <div class="card-row"><span class="k">Date</span><span class="v">${date}</span></div>
-      <div class="card-row"><span class="k">Coord</span><span class="v">${lat} N, ${lon} E</span></div>
     `;
     this.cards.appendChild(card);
 

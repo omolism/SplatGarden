@@ -877,8 +877,20 @@ async function loadSplat() {
         if (!camAnimNode) fbx.traverse(o => { if (!camAnimNode && o !== fbx) camAnimNode = o; });
         if (!fbx.animations?.length) throw new Error("FBX has no animation");
 
+        // The authored FBX is 600 frames at 24 fps (~25 s). We only want the
+        // middle 400 frames (≈ 16.67 s) for the intro cinematic — the head /
+        // tail of the clip have the camera ramping in/out of a static frame
+        // which doesn't read well as a title-sequence. subclip rebases the
+        // mixer time to 0 at the new start frame, so all downstream math
+        // (action.time, getClip().duration, intro overlay tNorm, phase
+        // timeline beat) automatically adapts.
+        const fullClip   = fbx.animations[0];
+        const middleClip = THREE.AnimationUtils.subclip(
+          fullClip, "Shot4B_middle", 100, 500, CAM_FPS,
+        );
+
         camMixer = new THREE.AnimationMixer(fbx);
-        camAction = camMixer.clipAction(fbx.animations[0]);
+        camAction = camMixer.clipAction(middleClip);
         camAction.setLoop(THREE.LoopOnce);
         camAction.clampWhenFinished = true;
         camMixer.addEventListener("finished", () => {
