@@ -1264,7 +1264,7 @@ kbd {
 #tech-spec .ts-sec-name {
   flex: 1;
   font-family: var(--font-ui);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.22em;
   text-transform: uppercase;
@@ -1287,11 +1287,11 @@ kbd {
 #tech-spec .ts-sec.collapsed .ts-list,
 #tech-spec .ts-sec.collapsed .ts-sec-desc { display: none; }
 #tech-spec .ts-sec-desc {
-  font-size: 11px;
+  font-size: 11.5px;
   color: var(--text-dim);
-  padding: 4px 0 10px;
-  letter-spacing: 0.02em;
-  line-height: 1.55;
+  padding: 6px 0 12px;
+  letter-spacing: 0.01em;
+  line-height: 1.5;
 }
 #tech-spec .ts-list {
   list-style: none;
@@ -1323,10 +1323,10 @@ kbd {
   margin: 0;
   flex: 1;
   font-family: var(--font-ui);
-  font-size: 17px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  line-height: 1.2;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
   color: var(--text);
 }
 #tech-spec .ts-item-loc {
@@ -1344,14 +1344,15 @@ kbd {
   white-space: nowrap;
 }
 
-/* 2. Subtitle — technical descriptor under the name */
+/* 2. Subtitle — technical descriptor under the name (dimmer than the
+ *    note paragraph so the body text doesn't compete with the title) */
 #tech-spec .ts-item-sub {
-  margin-top: 4px;
+  margin-top: 6px;
   font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.02em;
-  color: var(--text-mid);
-  line-height: 1.45;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  line-height: 1.4;
 }
 
 /* 3 + 4. Labelled zone (Toolchain / Output) */
@@ -1402,12 +1403,14 @@ kbd {
   user-select: none;
 }
 
-/* 5. Note — main reading paragraph */
+/* 5. Note — main reading paragraph; sized BELOW the title so it never
+ *    out-weighs the headline */
 #tech-spec .ts-item-note {
   margin: 14px 0 0;
   font-family: var(--font-ui);
-  font-size: 12.5px;
-  line-height: 1.65;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.55;
   letter-spacing: 0.005em;
   color: var(--text-mid);
 }
