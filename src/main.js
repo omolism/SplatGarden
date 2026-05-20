@@ -396,9 +396,10 @@ async function loadSplat() {
   // 3DGS / USD panel — eye-icon-driven layer list (matches the Scene panel
   // visual language). Replaces the lil-gui "3DGS/USD" folder, which we
   // hide below so the two surfaces don't double up on the same toggles.
-  const leftStack = document.getElementById("left-stack") || document.body;
+  // Mounted on <body> (not #left-stack) and positioned via CSS at the
+  // Render HUD's old slot in the top-left rail.
   const usdLayers = new UsdLayers({
-    mountEl:      leftStack,
+    mountEl:      document.body,
     params:       effectParams,
     controller:   effects,
     onQuadShape:  (v) => quadizer?.setShape(v),

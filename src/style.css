@@ -631,8 +631,11 @@ kbd {
  * -------------------------------------------------------------------- */
 #pipeline-hud {
   position: absolute;
-  top: 18px;
-  left: 274px;            /* sit clear of the Viewpoints sidebar */
+  /* Sits below the 3DGS/USD panel which now occupies the old slot. The
+   * exact offset depends on the USD panel's content height; this number
+   * is hand-tuned for the default 3-row layout. */
+  top: 430px;
+  left: 274px;
   width: 244px;
   z-index: 21;
   background: var(--panel);
@@ -3152,11 +3155,12 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
  * panel (same eye buttons, same row shape).
  * ============================================================ */
 #usd-layers-panel {
-  position: static;
-  width: 100%;
-  flex: 0 1 auto;
-  min-height: 0;
-  max-height: 50%;
+  position: absolute;
+  top: 18px;
+  left: 274px;             /* sit clear of #left-stack (left:18 + width:240 + 16 gap) */
+  width: 280px;
+  max-height: calc(100vh - 220px);
+  z-index: 21;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -3166,7 +3170,6 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   border: 1px solid var(--hair);
   border-radius: var(--radius);
   box-shadow: var(--shadow-soft);
-  margin-bottom: 8px;
 }
 #usd-layers-panel header {
   display: flex;
@@ -3476,6 +3479,26 @@ body.touch #mobile-nav-btn { display: flex; }
   /* Pipeline HUD — shrink hero numbers on tiny screens */
   #pipeline-hud { font-size: 10px; padding: 8px 10px; }
   #pipeline-hud .hud-hero { font-size: 18px; }
+  /* 3DGS/USD panel — collapses to a bottom sheet on phones since the
+   * 280 px absolute slot can't survive a narrow viewport. */
+  #usd-layers-panel {
+    position: fixed;
+    top: auto !important;
+    left: 8px !important;
+    right: 8px !important;
+    bottom: 8px;
+    width: auto !important;
+    max-height: 50vh !important;
+    z-index: 25;
+  }
+  /* Render HUD goes off the top-rail and pins to the top edge so it
+   * doesn't collide with the 3DGS/USD bottom sheet. */
+  #pipeline-hud {
+    top: 18px !important;
+    left: 8px !important;
+    right: 8px !important;
+    width: auto !important;
+  }
   /* Onboarding pointers — repositioned for narrow screens */
   #onboarding-pointers .op-tip[data-i="0"] { top: 12vh; right: 3vw; }
   #onboarding-pointers .op-tip[data-i="1"] { top: 28vh; right: 3vw; }
