@@ -1793,6 +1793,16 @@ body.mobile #sidebar button {
   font-size: 12px;
 }
 body.mobile #hand-panel { display: none !important; }
+/* Viewport Tuner + Scene panel + Viewpoints sidebar — all dense floating
+   panels that are awkward on phone/tablet (no K/keyboard shortcuts,
+   narrow viewport, keyboard-hint footer is pointless on touch).
+   The numbered hotspot dots in 3D remain tappable for viewpoint navigation. */
+body.mobile #viewpoint-tuner,
+body.mobile #scene-panel,
+body.mobile #sidebar,
+body.touch  #viewpoint-tuner,
+body.touch  #scene-panel,
+body.touch  #sidebar { display: none !important; }
 body.mobile .lil-gui.root {
   font-size: 12px;
   width: min(280px, 92vw);

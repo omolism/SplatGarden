@@ -60,15 +60,14 @@ const handModeEl   = document.getElementById("hand-mode");
 // it doesn't eat half the screen, and hides hand-tracking (front-cam +
 // MediaPipe is battery murder on phones).
 // ---------------------------------------------------------------------------
-// Touch / mobile detection. IS_TOUCH catches iPad-in-desktop-UA mode
-// (iPadOS 13+ lies about being macOS) via maxTouchPoints. IS_PHONE is for
-// the narrow-viewport case where panels need to go near-full-width;
-// IS_TABLET sits in between (iPad portrait/landscape, big Android tablets).
-const IS_TOUCH = (
-  ('ontouchstart' in window) ||
-  navigator.maxTouchPoints > 0 ||
-  window.matchMedia?.("(pointer: coarse)").matches
-);
+// Touch / mobile detection. Use ONLY `(pointer: coarse)` because that
+// reflects the *primary* pointing device, not just touch-capability.
+// `ontouchstart in window` and `maxTouchPoints > 0` are false positives
+// on Windows laptops with touchscreens (they report touch but the user
+// is driving with a mouse, so they shouldn't see the mobile hamburger).
+// iPad in desktop-UA mode still matches `(pointer: coarse)` because
+// iPadOS keeps the touch pointer as primary regardless of the lying UA.
+const IS_TOUCH = window.matchMedia?.("(pointer: coarse)").matches ?? false;
 const IS_PHONE  = IS_TOUCH && window.innerWidth <  768;
 const IS_TABLET = IS_TOUCH && window.innerWidth >= 768;
 // Back-compat name — legacy code paths read IS_MOBILE.
@@ -478,14 +477,19 @@ async function loadSplat() {
   }
 
   // Viewport Tuner — press K to open; shows live pose + lets you commit
-  // the current camera state into any seeded viewpoint slot.
-  viewpointTuner = new ViewpointTuner({
-    mountEl: document.getElementById("app") || document.body,
-    camera,
-    controls,
-    annotations,
-  });
-  window.__viewpointTuner = viewpointTuner;
+  // the current camera state into any seeded viewpoint slot. Skipped on
+  // touch devices: no physical K key, narrow viewport, and the panel is
+  // hidden via CSS anyway — construct nothing so the K listener + DOM
+  // + per-frame update() loop don't waste cycles.
+  if (!IS_TOUCH) {
+    viewpointTuner = new ViewpointTuner({
+      mountEl: document.getElementById("app") || document.body,
+      camera,
+      controls,
+      annotations,
+    });
+    window.__viewpointTuner = viewpointTuner;
+  }
 
   // ---- Data-label surveillance overlay (sits over the canvas) ----
   dataLabels = new DataLabelLayer({

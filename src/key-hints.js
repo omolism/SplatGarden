@@ -7,7 +7,7 @@
 // Player-facing essentials only — dev tools (P profiler, K tuner, V/C/R
 // viewpoint authoring, Esc) are intentionally omitted to keep the guide
 // short. Power users discover those via lil-gui or by reading the code.
-const SECTIONS = [
+const DESKTOP_SECTIONS = [
   {
     title: "Move the camera",
     rows: [
@@ -36,22 +36,51 @@ const SECTIONS = [
   },
 ];
 
+// Touch / mobile variant — drops keyboard-only rows (WASD, hotkeys) and
+// surfaces the gestures plus the hamburger as the only access path.
+const TOUCH_SECTIONS = [
+  {
+    title: "Move the camera",
+    rows: [
+      [`<span class="kh-mouse">1 finger</span>`,  "Rotate"],
+      [`<span class="kh-mouse">2 fingers</span>`, "Pinch&nbsp;zoom / pan"],
+    ],
+  },
+  {
+    title: "Jump to a view",
+    rows: [
+      [`<span class="kh-mouse">tap</span>`, "Numbered hotspot dots"],
+    ],
+  },
+  {
+    title: "Open panels",
+    rows: [
+      [`<span class="kh-mouse">tap</span>`, "Top-right menu (≡)"],
+    ],
+  },
+];
+
 export class KeyHints {
   constructor({ mountEl = document.body, autoHideMs = 6500 } = {}) {
     this.autoHideMs = autoHideMs;
     this._visible   = false;
     this._timer     = null;
 
+    // Touch devices get the gesture-only variant; no H key chip and no
+    // keyboard listener since there's no physical keyboard to fire it.
+    const isTouch  = document.body.classList.contains("touch");
+    const sections = isTouch ? TOUCH_SECTIONS : DESKTOP_SECTIONS;
+
     this.el = document.createElement("aside");
     this.el.id = "key-hints";
     this.el.innerHTML = `
       <header class="kh-head">
         <span class="kh-title">Quick Guide</span>
-        <span class="kh-key">H</span>
-        <button class="kh-close" data-act="close" title="Close (H or Esc)">&times;</button>
+        ${isTouch ? "" : `<span class="kh-key">H</span>`}
+        <button class="kh-close" data-act="close" title="${isTouch ? "Close" : "Close (H or Esc)"}">&times;</button>
       </header>
       <div class="kh-body">
-        ${SECTIONS.map(s => `
+        ${sections.map(s => `
           <section class="kh-sec">
             <div class="kh-sec-title">${s.title}</div>
             <ul class="kh-list">
@@ -70,13 +99,15 @@ export class KeyHints {
 
     this.el.querySelector('[data-act="close"]').addEventListener("click", () => this.hide());
 
-    // H toggles; Esc closes — guarded against input typing.
-    window.addEventListener("keydown", (e) => {
-      const tag = e.target?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || e.target?.isContentEditable) return;
-      if (e.key === "h" || e.key === "H") { e.preventDefault(); this.toggle(); }
-      else if (e.key === "Escape" && this._visible) { e.preventDefault(); this.hide(); }
-    });
+    // H toggles; Esc closes — desktop only; phones have no keyboard.
+    if (!isTouch) {
+      window.addEventListener("keydown", (e) => {
+        const tag = e.target?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || e.target?.isContentEditable) return;
+        if (e.key === "h" || e.key === "H") { e.preventDefault(); this.toggle(); }
+        else if (e.key === "Escape" && this._visible) { e.preventDefault(); this.hide(); }
+      });
+    }
 
     // Pause auto-hide while the user is hovering / interacting with the card.
     this.el.addEventListener("mouseenter", () => this._clearTimer());

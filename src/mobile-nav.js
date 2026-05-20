@@ -59,8 +59,6 @@ export class MobileNav {
       <ul class="mn-list">
         <li><button data-target="techSpec">
           <span class="mn-icon">▦</span><span class="mn-label">Pipeline</span><span class="mn-key">T</span></button></li>
-        <li><button data-target="viewpointTuner">
-          <span class="mn-icon">◎</span><span class="mn-label">Viewport Tuner</span><span class="mn-key">K</span></button></li>
         <li><button data-target="keyHints">
           <span class="mn-icon">?</span><span class="mn-label">Quick Guide</span><span class="mn-key">H</span></button></li>
         <li><button data-target="profiler">
