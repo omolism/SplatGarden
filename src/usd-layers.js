@@ -116,6 +116,13 @@ export class UsdLayers {
 
     this.el = document.createElement("aside");
     this.el.id = "usd-layers-panel";
+    // Header is JUST the fold caret + title — keeps the row tight so
+    // "3DGS / USD" never wraps when the panel is in a narrow column
+    // (mobile-sheet Advanced view, embedded lil-gui inside a phone-
+    // wide bottom sheet, etc.). The secondary "Use My Own" action
+    // lives below the rows instead, where it makes more hierarchical
+    // sense — primary content (layer toggles) on top, advanced asset-
+    // swap action at the bottom of the section.
     this.el.innerHTML = `
       <header>
         <button class="usd-fold-caret" type="button" aria-label="Fold section" title="Fold / unfold">
@@ -124,14 +131,18 @@ export class UsdLayers {
           </svg>
         </button>
         <div class="title">3DGS / USD</div>
-        <button class="usd-upload" title="Replace the primary splat — drop a .splat / .ply / .spz / .ksplat">⤓ Use My Own</button>
       </header>
       <ul class="usd-row-list"></ul>
+      <button class="usd-upload" title="Replace the primary splat — drop a .splat / .ply / .spz / .ksplat">⤓ Use My Own</button>
     `;
     mountEl.appendChild(this.el);
 
     this.listEl = this.el.querySelector(".usd-row-list");
-    this.el.querySelector(".usd-upload")?.addEventListener("click", () => this.onUploadRequest?.());
+    this.el.querySelector(".usd-upload")?.addEventListener("click", (e) => {
+      // Don't let the click bubble up to the header / panel fold handler.
+      e.stopPropagation();
+      this.onUploadRequest?.();
+    });
 
     // Fold the section when the header (or its caret) is clicked, like
     // a lil-gui folder. Same idiom as Customize / Cinematic FX / Tech
@@ -143,9 +154,9 @@ export class UsdLayers {
       this.el.classList.toggle("folded", on);
       header.setAttribute("aria-expanded", String(!on));
     };
-    header?.addEventListener("click", (e) => {
-      // Let the "Use My Own" button fire its own click without folding.
-      if (e.target?.closest(".usd-upload")) return;
+    header?.addEventListener("click", () => {
+      // "Use My Own" lives outside the header now, so no special-case
+      // bail-out needed — every click on the header strip folds.
       setFolded(!this.el.classList.contains("folded"));
     });
 

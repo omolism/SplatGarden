@@ -118,7 +118,16 @@ class BottomSheet {
     this.handleEl.addEventListener("pointermove", (e) => {
       if (this._dragStart == null) return;
       this._dragY = Math.max(0, e.clientY - this._dragStart);
-      this.el.style.transform = `translateY(${this._dragY}px)`;
+      // In landscape on phone, the sheet is horizontally centred via
+      // transform: translateX(-50%) ... — compose with our translateY
+      // so the drag doesn't snap the sheet off-centre. Portrait + tablet
+      // + desktop keep the pure translateY.
+      const isLandscapeMobile =
+        document.body.classList.contains("mobile") &&
+        window.matchMedia("(orientation: landscape)").matches;
+      this.el.style.transform = isLandscapeMobile
+        ? `translateX(-50%) translateY(${this._dragY}px)`
+        : `translateY(${this._dragY}px)`;
     });
     const endDrag = () => {
       if (this._dragStart == null) return;

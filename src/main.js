@@ -150,9 +150,21 @@ const IS_TABLET = IS_TOUCH && ( IS_IPAD || window.innerWidth >= 768);
 // Back-compat name — legacy code paths read IS_MOBILE.
 const IS_MOBILE = IS_PHONE;
 document.body.classList.toggle("touch",  IS_TOUCH);
-document.body.classList.toggle("phone",  IS_PHONE);
-document.body.classList.toggle("tablet", IS_TABLET);
-document.body.classList.toggle("mobile", IS_MOBILE);   // legacy alias
+// Phone / tablet / mobile classes are RE-EVALUATED on resize / rotation
+// so the same iPhone in portrait → phone UI / in landscape → tablet UI
+// (the user explicitly asked for phone landscape to "reference iPad's
+// visual"). The IS_TOUCH const stays sticky because touch capability
+// itself can't change at runtime.
+function _applyOrientationClasses() {
+  const phone  = IS_TOUCH && !IS_IPAD && window.innerWidth <  768;
+  const tablet = IS_TOUCH && ( IS_IPAD || window.innerWidth >= 768);
+  document.body.classList.toggle("phone",  phone);
+  document.body.classList.toggle("tablet", tablet);
+  document.body.classList.toggle("mobile", phone);   // legacy alias
+}
+_applyOrientationClasses();
+window.addEventListener("resize", _applyOrientationClasses);
+window.addEventListener("orientationchange", _applyOrientationClasses);
 
 // ---------------------------------------------------------------------------
 // Collapsible panels — Viewpoints (#sidebar), Scene (#scene-panel), and

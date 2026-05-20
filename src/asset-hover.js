@@ -369,6 +369,11 @@ export class AssetHoverManager {
     this.card.innerHTML = renderCard(it);
     this.card.removeAttribute("hidden");
     this.card.classList.toggle("pinned", !!this._pinned);
+    // Suppress the small floating hotspot labels while the card is
+    // showing — the card title already announces the asset, so the
+    // additional "Gazebo" / "Daffodil" pills near each dot become
+    // redundant and visually fight for the same space.
+    document.body.classList.toggle("asset-card-pinned", !!this._pinned);
     // Wire any inline before/after compare widget that's now in the DOM —
     // the .ts-compare CSS already covers visuals; this binds the drag.
     this.card.querySelectorAll(".ts-compare .cmp-frame").forEach(wireCompareFrame);
@@ -418,6 +423,9 @@ export class AssetHoverManager {
   _hide() {
     this.card.setAttribute("hidden", "");
     this.card.classList.remove("pinned");
+    // Re-show the small floating hotspot labels (suppressed while the
+    // card was open — see _show / .asset-card-pinned body class).
+    document.body.classList.remove("asset-card-pinned");
   }
 
   // Toggle the entire hotspot layer. Used both by the Tech Spec master

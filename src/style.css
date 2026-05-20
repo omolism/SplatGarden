@@ -3380,9 +3380,11 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   color: var(--text-mid);
 }
 #usd-layers-panel.usd-embedded .usd-upload {
-  font-size: 9.5px;
-  padding: 3px 8px;
-  border-radius: 4px;
+  /* Slightly tighter padding inside lil-gui to match the embed density. */
+  font-size: 10.5px;
+  padding: 7px 10px;
+  margin: 6px 10px 10px;
+  width: calc(100% - 20px);
 }
 #usd-layers-panel header {
   display: flex;
@@ -3429,23 +3431,32 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   text-transform: uppercase;
   color: var(--text-mid);
 }
+/* "Use My Own" — block-level secondary action below the layer rows.
+   Spans the full panel width as a soft outlined button so it reads
+   as one cohesive section: header + rows + secondary action. Hidden
+   when the section is folded (same as the rows). */
 #usd-layers-panel .usd-upload {
+  display: block;
+  width: calc(100% - 24px);
+  margin: 8px 12px 12px;
   background: transparent;
   color: var(--text);
   border: 1px solid var(--hair-strong);
-  border-radius: 6px;
-  padding: 4px 10px;
+  border-radius: 8px;
+  padding: 8px 12px;
   cursor: pointer;
   font-family: var(--font-ui);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.02em;
+  text-align: center;
   transition: background 0.12s, border-color 0.12s;
 }
 #usd-layers-panel .usd-upload:hover {
   background: var(--hover-strong);
   border-color: rgba(255, 255, 255, 0.22);
 }
+#usd-layers-panel.folded .usd-upload { display: none; }
 #usd-layers-panel .usd-row-list {
   list-style: none;
   margin: 0;
@@ -4463,6 +4474,38 @@ body.mobile #mobile-studio-btn { display: flex; }
 }
 
 /* ============================================================
+ * Phone LANDSCAPE adaptation — narrow phones (<768) in landscape
+ * still trigger body.mobile, but the viewport is wide + short. The
+ * default full-width bottom sheet looks oafish at 800 px wide and
+ * eats most of the short viewport. Pull it into a centered card
+ * floating above the capsule bottom-bar — same idiom as the bar
+ * itself, scaled for landscape. Wider phones (Plus / Pro Max in
+ * landscape, > 768 px) drop body.mobile entirely via JS re-detection
+ * and get the desktop / iPad layout (lil-gui + sidebar / scene /
+ * hand-panel visible). */
+@media (orientation: landscape) and (max-width: 1024px) {
+  body.mobile #mobile-sheet {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%) translateY(100%);
+    width: calc(100vw - 32px);
+    max-width: 560px;
+    bottom: calc(86px + env(safe-area-inset-bottom, 0px));
+    border-radius: 20px;
+    max-height: 60vh;
+    padding-bottom: 16px;
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+  body.mobile #mobile-sheet.open {
+    transform: translateX(-50%) translateY(0);
+  }
+  /* The JS drag handler sets `transform: translateY(Npx)` inline; in
+     landscape we need to keep the centering translate, so the drag
+     code (mobile-ui.js) reads the orientation and composes properly. */
+}
+
+/* ============================================================
  * Responsive — phone (<768px) and tablet (768-1024px) tuning
  * ============================================================ */
 @media (max-width: 767px) {
@@ -4552,6 +4595,12 @@ body.touch .cr-close,
 body.touch .ts-close { min-height: 32px; padding: 6px 12px; }
 body.touch #app .annotation { width: 32px; height: 32px; font-size: 13px; }
 body.touch .asset-hotspot .ahot-label { font-size: 12px; }
+/* Suppress the floating hotspot labels while an asset card is pinned —
+   the card title already names the asset so the extra "Gazebo" /
+   "Daffodil" pills near each dot become redundant chrome that fights
+   the card for screen space. Dots themselves remain visible so the
+   user can still see WHERE assets sit in 3D. */
+body.asset-card-pinned .asset-hotspot .ahot-label { opacity: 0; }
 /* Touch hit area: 22 px is below Apple 44 / Google 48 minimums, so a
    finger often lands just-off-dot — and because the dot is transformed
    every frame, a slow tap can have its pointerdown land on the dot and
