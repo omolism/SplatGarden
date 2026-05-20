@@ -145,8 +145,8 @@ export const TECH_SPECS = [
     section:   "3DGS",
     group:     "layer",
     layerNum:  3,
-    desc:      "Capturing the dressed Unreal scene at Lichtfeld Studio and training it as a 3D Gaussian Splat in Postshot.",
-    toolchain: ["Lichtfeld Studio", "COLMAP", "Postshot", "Spark"],
+    desc:      "Capturing the dressed Unreal scene and training it as a 3D Gaussian Splat. Postshot and Lichtfeld Studio run in parallel — two independent trainers we cross-compare to pick the cleaner result.",
+    toolchain: ["Multi-camera rig", "COLMAP", "Postshot", "Lichtfeld Studio", "Spark"],
     items: [
       {
         name: "3D Gaussian Splatting",
@@ -155,19 +155,19 @@ export const TECH_SPECS = [
       },
       {
         name:   "Capture",
-        ref:    "Lichtfeld Studio capture pipeline",
-        note:   "The whole Unreal scene is photographed at the Lichtfeld Studio rig — multi-camera array sweeping the subject for downstream reconstruction.",
+        ref:    "Multi-camera capture rig",
+        note:   "The whole Unreal scene is photographed at a multi-camera array — every frame feeds the downstream pose-solver + trainers.",
       },
       {
         name:   "Pose reconstruction",
         ref:    "COLMAP Structure-from-Motion · 990 cameras recovered",
-        note:   "COLMAP solves intrinsics + extrinsics for every capture frame; the resulting 990 camera poses feed the Postshot trainer (and double as the Training Cameras overlay in Tech Spec).",
+        note:   "COLMAP solves intrinsics + extrinsics for every capture frame; the resulting 990 camera poses feed both trainers (and double as the Training Cameras overlay in Tech Spec).",
         source: "src/colmap-loader.js:50",
       },
       {
-        name: "Splat training",
-        ref:  "Postshot — per-splat Gaussian fit + SH coefficients",
-        note: "Postshot optimises the 3D Gaussian parameters (centre, scales, rotation, SH coefficients, opacity) against the COLMAP-anchored capture images. Output: public/Whole_With_Statue.splat (≈ 3 M splats).",
+        name: "Splat training (parallel)",
+        ref:  "Postshot · Lichtfeld Studio",
+        note: "Two trainers fit the captured frames into a 3D Gaussian Splat at the same time. Postshot is the artist-driven path; Lichtfeld is the studio's in-house pipeline. We compare outputs and ship the cleaner one as public/Whole_With_Statue.splat (≈ 3M splats).",
       },
     ],
   },
@@ -335,6 +335,41 @@ export class TechSpec {
           <button class="ts-close" title="Close (T or Esc)">×</button>
         </header>
         <div class="ts-sub">How everything in this scene was made · click a section to fold</div>
+        <div class="ts-flow">
+          <div class="ts-flow-step">
+            <div class="ts-flow-eyebrow">Authoring</div>
+            <div class="ts-flow-tools">Houdini · Unreal · SpeedTree</div>
+          </div>
+          <div class="ts-flow-arrow">▼</div>
+          <div class="ts-flow-step">
+            <div class="ts-flow-eyebrow">Scene Assembly</div>
+            <div class="ts-flow-tools">Unreal Engine · Perforce</div>
+          </div>
+          <div class="ts-flow-arrow">▼</div>
+          <div class="ts-flow-step">
+            <div class="ts-flow-eyebrow">Capture</div>
+            <div class="ts-flow-tools">Multi-camera rig</div>
+          </div>
+          <div class="ts-flow-arrow">▼</div>
+          <div class="ts-flow-step">
+            <div class="ts-flow-eyebrow">Pose Reconstruction</div>
+            <div class="ts-flow-tools">COLMAP · 990 cameras</div>
+          </div>
+          <div class="ts-flow-arrow">▼</div>
+          <div class="ts-flow-step ts-flow-parallel">
+            <div class="ts-flow-eyebrow">Splat Training <span class="ts-flow-tag">parallel</span></div>
+            <div class="ts-flow-pair">
+              <div class="ts-flow-tools">Postshot</div>
+              <div class="ts-flow-pair-sep">‖</div>
+              <div class="ts-flow-tools">Lichtfeld Studio</div>
+            </div>
+          </div>
+          <div class="ts-flow-arrow">▼</div>
+          <div class="ts-flow-step">
+            <div class="ts-flow-eyebrow">Runtime</div>
+            <div class="ts-flow-tools">Spark · Three.js · WebGL 2</div>
+          </div>
+        </div>
         <div class="ts-body">
           ${TECH_SPECS.map((s, i) => {
             const groupCls = s.group ? ` ts-sec-${s.group}` : "";

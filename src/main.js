@@ -852,15 +852,13 @@ async function loadSplat() {
   let camMovePrevLensFisheye = 0;
   let camMovePrevLensSqueeze = 1;
   let camMovePrevPostEnable  = true;
-  // Soft-end pose — captured the first frame tNorm crosses 0.85 so the
-  // last 15% of the clip eases from the FBX path to this held pose
-  // instead of running the camera into a hard stop at the absolute
-  // last frame. Reset on every play in camMoveStartLerps.
-  let camSoftEndPos  = null;
-  let camSoftEndQuat = null;
-  let camSoftEndTgt  = null;
-  const _camSoftWork = new THREE.Vector3();
-  const _camSoftQuat = new THREE.Quaternion();
+  // Last 15% of the clip slows the mixer's effective dt so the FBX path's
+  // own velocity tapers to a near-stop before the 'finished' event fires.
+  // Replaces an earlier lerp-toward-pose-at-0.85 approach that was
+  // pulling the camera BACKWARD in the tail (visible as the weird
+  // last-few-frames motion the user reported).
+  const EASE_TAIL_FROM = 0.85;
+  const EASE_TAIL_MIN  = 0.10;
   const _camFwd = new THREE.Vector3();
 
   // Timeline / frame readout — visible only while the camera move is loaded.
@@ -905,11 +903,6 @@ async function loadSplat() {
     // window), so frame 0 and the final frame both naturally land on the
     // user's pre-move state.
 
-    // Soft-end pose is recaptured every play.
-    camSoftEndPos  = null;
-    camSoftEndQuat = null;
-    camSoftEndTgt  = null;
-
     if (!effects) return;
     camMovePrevSubform   = effects.targetSubform ?? 0;
     camMovePrevQuadVis   = effects.targetVis?.quad  ?? 0;
@@ -932,16 +925,21 @@ async function loadSplat() {
     camPhaseTimers.forEach(t => clearTimeout(t));
     camPhaseTimers = [];
 
-    // 4 equally-spaced phases across the clip duration:
-    //   0    Gaussian → Point + lens pulse arms (ends by t=0.50)
-    //   ¼    Quad (billboard) fades in
-    //   ½    Quad fades out, Voxel-as-Sphere fades in
-    //   ¾    Voxel fades out, Point → Gaussian (back to 3DGS by end)
+    // Phased schedule across the clip duration:
+    //   0       Gaussian → Point + lens pulse arms (lens ends by t=0.50)
+    //   ¼       Quad (quad shape) fades in
+    //   ½       Quad fades out, Voxel-as-Sphere fades in
+    //   ¾       Voxel fades out, Point → Gaussian, Billboard (CIRCLE) in
+    //   ~0.92   Billboard fades out — clip ends on splat-only
     effects.targetSubform = 1.0;
 
-    // Phase 2 — Quad fades in (showcase the Billboard subform)
+    // Phase 2 — Quad fades in (showcase the Billboard subform, square)
     camPhaseTimers.push(setTimeout(() => {
-      if (camMoveState === "playing") effects.setLayerVis("quad", true);
+      if (camMoveState !== "playing") return;
+      effectParams.quadShape = "quad";
+      if (quadizer) quadizer.setShape("quad");
+      usdLayers?.refresh();
+      effects.setLayerVis("quad", true);
     }, beat));
 
     // Phase 3 — Quad fades out, Voxel (sphere) fades in
@@ -951,12 +949,25 @@ async function loadSplat() {
       effects.setLayerVis("voxel", true);
     }, beat * 2));
 
-    // Phase 4 — Voxel fades out, Point → Gaussian (return to 3DGS)
+    // Phase 4 — Voxel fades out, Point → Gaussian (back to splat), and
+    // a final Billboard pulse — this time as a CIRCLE — so the closing
+    // beat reads as splat + circle disc before resolving to splat-only.
     camPhaseTimers.push(setTimeout(() => {
       if (camMoveState !== "playing") return;
       effects.setLayerVis("voxel", false);
       effects.targetSubform = 0.0;
+      effectParams.quadShape = "circle";
+      if (quadizer) quadizer.setShape("circle");
+      usdLayers?.refresh();
+      effects.setLayerVis("quad", true);
     }, beat * 3));
+
+    // Phase 5 — Billboard (circle) fades out so the very last seconds of
+    // the clip are pure splat, and revertLerps lands on a clean canvas.
+    camPhaseTimers.push(setTimeout(() => {
+      if (camMoveState !== "playing") return;
+      effects.setLayerVis("quad", false);
+    }, beat * 3.7));
   }
   function camMoveRevertLerps() {
     camPhaseTimers.forEach(t => clearTimeout(t));
@@ -1045,6 +1056,10 @@ async function loadSplat() {
           camMoveRevertLerps();
           camMoveState = "idle";
           controls.enabled = true;
+          // OrbitControls cached its spherical coords from the pre-play
+          // pose; re-sync them to the FBX endpoint so the orbit doesn't
+          // snap to its old position the moment the user pans.
+          controls.update();
           playCtrl.name("▶ Play Camera Move");
           statusEl.textContent = "Camera move complete";
           // Tear down the intro overlay and, if this was the first-visit
@@ -1119,6 +1134,7 @@ async function loadSplat() {
     camMoveRevertLerps();
     camMoveState = "idle";
     controls.enabled = true;
+    controls.update();             // resync OrbitControls (see finished handler)
     playCtrl.name("▶ Play Camera Move");
     statusEl.textContent = "Camera move stopped";
   }
@@ -1141,40 +1157,29 @@ async function loadSplat() {
   window.__camMoveTick = (dt) => {
     if (!camMixer || !camAnimNode) return;
     if (camMoveState === "idle") return;
-    camMixer.update(camMoveState === "paused" ? 0 : dt);
-    camAnimNode.updateWorldMatrix(true, false);
 
-    // Drive the on-screen timeline label
+    // Slow the mixer's effective dt across the tail so the FBX's own
+    // velocity ramps to (near) zero before 'finished' fires. tNorm read
+    // BEFORE mixer.update so a frame-late tNorm doesn't matter — the
+    // taper is gradual.
+    let effectiveDt = camMoveState === "paused" ? 0 : dt;
     const dur = camAction.getClip().duration;
-    const t   = Math.min(camAction.time, dur);
-    const tNormForEase = dur > 0 ? Math.max(0, Math.min(1, t / dur)) : 0;
-
-    // Pull the raw FBX values into scratch buffers, then optionally ease
-    // them toward a held "soft end" pose in the last 15% of the clip.
-    // The pose at tNorm = 0.85 becomes the resting position; smoothstep
-    // blend over the tail prevents the camera from slamming to a stop
-    // at the absolute last frame, which used to read as a visible jerk.
-    camAnimNode.getWorldPosition(_camSoftWork);
-    camAnimNode.getWorldQuaternion(_camSoftQuat);
-
-    const EASE_START = 0.85;
-    if (tNormForEase >= EASE_START) {
-      if (!camSoftEndPos) {
-        camSoftEndPos  = _camSoftWork.clone();
-        camSoftEndQuat = _camSoftQuat.clone();
-        _camFwd.set(0, 0, -1).applyQuaternion(camSoftEndQuat);
-        camSoftEndTgt  = camSoftEndPos.clone().add(_camFwd);
-      }
-      const tail = (tNormForEase - EASE_START) / (1 - EASE_START);
-      const eased = tail * tail * (3 - 2 * tail);    // smoothstep
-      _camSoftWork.lerp(camSoftEndPos, eased);
-      _camSoftQuat.slerp(camSoftEndQuat, eased);
+    const tNormBefore = dur > 0 ? camAction.time / dur : 0;
+    if (tNormBefore > EASE_TAIL_FROM) {
+      const tail = Math.min(1, (tNormBefore - EASE_TAIL_FROM) / (1 - EASE_TAIL_FROM));
+      const eased = tail * tail * (3 - 2 * tail);             // smoothstep
+      const scale = 1 - eased * (1 - EASE_TAIL_MIN);          // 1.0 → 0.10
+      effectiveDt *= scale;
     }
-
-    camera.position.copy(_camSoftWork);
-    camera.quaternion.copy(_camSoftQuat);
+    camMixer.update(effectiveDt);
+    camAnimNode.updateWorldMatrix(true, false);
+    camAnimNode.getWorldPosition(camera.position);
+    camAnimNode.getWorldQuaternion(camera.quaternion);
     _camFwd.set(0, 0, -1).applyQuaternion(camera.quaternion);
     controls.target.copy(camera.position).add(_camFwd);
+
+    // For downstream label / lens-pulse code: use the post-update time.
+    const t = Math.min(camAction.time, dur);
     const frT = Math.floor(t   * CAM_FPS);
     const frD = Math.floor(dur * CAM_FPS);
     ctTimeEl.textContent  = `${t.toFixed(2)}s / ${dur.toFixed(2)}s`;
