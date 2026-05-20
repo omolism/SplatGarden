@@ -897,12 +897,12 @@ async function loadSplat() {
     camMovePrevLensFisheye = postfx.params.lensFisheye;
     camMovePrevLensSqueeze = postfx.params.lensSqueeze;
     camMovePrevPostEnable  = postfx.params.postEnable;
-    postfx.params.lensOn      = true;
-    postfx.params.postEnable  = true;
-    // Snap squeeze to neutral on the very first frame so there's no
-    // visible jump between the user's pre-move value and the pulse's
-    // start (which is also neutral).
-    postfx.params.lensSqueeze = 1.0;
+    postfx.params.lensOn     = true;
+    postfx.params.postEnable = true;
+    // No snap on fisheye / squeeze — the per-frame pulse formula evaluates
+    // to the saved pre-play values at sinT=0 (start and end of the pulse
+    // window), so frame 0 and the final frame both naturally land on the
+    // user's pre-move state.
 
     if (!effects) return;
     camMovePrevSubform = effects.targetSubform ?? 0;
@@ -1121,27 +1121,27 @@ async function loadSplat() {
     if (window.__autoPlayedIntro && introOverlay) {
       introOverlay.update(dur > 0 ? t / dur : 0, camMoveState === "playing");
     }
-    // Lens shape — single peak-at-midpoint pulse, shifted so it starts
-    // a beat into the clip (PULSE_START_AT = 0.15) instead of at t=0.
-    //   * Fisheye blend: 0 → 0.26 → 0 across [PULSE_START_AT, 1.0]
-    //   * Anamorphic squeeze: 1.0 → 1.2 → 1.0 on the same window
-    //     (neutral 1.0 is "no squeeze" given the 0.5..2.0 slider range).
-    // The squeeze rests at 1.0 during the pre-pulse delay, so it stays
-    // visually neutral while the camera is still settling. Pulse fires
-    // on every play; camMoveRevertLerps snaps both params back to the
-    // user's pre-play state on stop / finish.
+    // Lens shape — peak-at-midpoint pulse over the user's saved values, so
+    // both ends settle exactly onto the pre-play state (no snap when the
+    // mixer 'finished' handler restores them):
+    //   fisheye(t) = prev + (PEAK    - prev) * sinT
+    //   squeeze(t) = prev + (PEAK_SQ - prev) * sinT
+    // sinT is shifted so the pulse only ramps up after PULSE_START_AT,
+    // letting the camera framing settle for a beat before the lens kicks
+    // in. At t < PULSE_START_AT and at t = 1.0, sinT = 0 → both params
+    // sit on the user's pre-play values.
     if (camMoveState === "playing" && dur > 0) {
-      const PULSE_START_AT      = 0.15;
-      const LENS_FISHEYE_PEAK   = 0.26;
-      const SQUEEZE_PEAK_OFFSET = 0.20;
+      const PULSE_START_AT    = 0.15;
+      const LENS_FISHEYE_PEAK = 0.26;
+      const LENS_SQUEEZE_PEAK = 1.20;
       const tNorm = Math.max(0, Math.min(1, t / dur));
       let sinT = 0;
       if (tNorm >= PULSE_START_AT) {
         const tLocal = (tNorm - PULSE_START_AT) / (1 - PULSE_START_AT);
         sinT = Math.sin(tLocal * Math.PI);
       }
-      postfx.params.lensFisheye = LENS_FISHEYE_PEAK   * sinT;
-      postfx.params.lensSqueeze = 1.0 + SQUEEZE_PEAK_OFFSET * sinT;
+      postfx.params.lensFisheye = camMovePrevLensFisheye + (LENS_FISHEYE_PEAK - camMovePrevLensFisheye) * sinT;
+      postfx.params.lensSqueeze = camMovePrevLensSqueeze + (LENS_SQUEEZE_PEAK - camMovePrevLensSqueeze) * sinT;
     }
   };
 
