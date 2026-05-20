@@ -36,8 +36,13 @@ const DESKTOP_SECTIONS = [
   },
 ];
 
-// Touch / mobile variant — drops keyboard-only rows (WASD, hotkeys) and
-// surfaces the gestures plus the hamburger as the only access path.
+// Touch / mobile variant — drops keyboard-only rows (WASD, hotkeys)
+// and maps each section to the surface the user actually has on phone:
+// gestures for camera motion, the bottom-bar tabs for daily-use panels,
+// the floating top-right Studio button for the 3DGS / USD layer modes,
+// and the hotspot dots in the scene for assets. Kept in sync with the
+// real layout — the previous "Top-right menu (≡)" copy was a stale
+// reference to the (since-removed) hamburger.
 const TOUCH_SECTIONS = [
   {
     title: "Move the camera",
@@ -47,15 +52,24 @@ const TOUCH_SECTIONS = [
     ],
   },
   {
-    title: "Jump to a view",
+    title: "Pick a viewpoint",
     rows: [
-      [`<span class="kh-mouse">tap</span>`, "Numbered hotspot dots"],
+      [`<span class="kh-mouse">tap</span>`,    "Numbered dots in scene"],
+      [`<span class="kh-mouse">Views</span>`,  "Bottom bar &middot; full list"],
     ],
   },
   {
-    title: "Open panels",
+    title: "Customize",
     rows: [
-      [`<span class="kh-mouse">tap</span>`, "Top-right menu (≡)"],
+      [`<span class="kh-mouse">Effects</span>`, "Click FX &middot; post-FX &middot; Advanced"],
+      [`<span class="kh-mouse">Camera</span>`,  "Play the camera move"],
+      [`<span class="kh-mouse">Studio</span>`,  "Top-right &middot; 3DGS / USD modes"],
+    ],
+  },
+  {
+    title: "Asset detail",
+    rows: [
+      [`<span class="kh-mouse">tap a dot</span>`, "Fly to + open the card"],
     ],
   },
 ];
