@@ -134,8 +134,8 @@ MediaPipe HandLandmarker (tasks-vision 0.10.35) drives an alternate control sche
 ### Profiler (press <kbd>P</kbd>)
 Per-phase frame-time breakdown — splat update, velocity step, particles, compose, overlay, HUD. Each phase has its own bar.
 
-### A/B Compare (press <kbd>`</kbd>)
-Paper-figure split-screen viewer for screenshots.
+### Before / After compare (in the Pipeline drawer, AI section)
+Each AI Stylization item can declare a `compare: { before, after, labelA, labelB }` pair. The Pipeline drawer renders an inline split-screen widget — drag the handle to wipe between the original texture and the stylized result.
 
 ---
 
@@ -232,7 +232,6 @@ src/
   datalabels.js                       # surveillance-card overlay
   handtracking.js                     # MediaPipe-driven hand-control state machine
   quadizer.js, voxelizer.js           # UsdGeomPointInstancer-style overlays
-  ab-compare.js                       # `-key paper-figure split-screen viewer
   profiler.js                         # per-phase frame-time bars (P)
   style.css                           # Luma-glass UI tokens + panel styles
 index.html

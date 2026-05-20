@@ -4,7 +4,6 @@ import { RGBELoader } from "three/addons/loaders/RGBELoader.js";
 import { FBXLoader } from "three/addons/loaders/FBXLoader.js";
 import { SparkRenderer, SplatMesh } from "@sparkjsdev/spark";
 import { createScanModifier, EffectController, buildGUI, params as effectParams } from "./effects.js";
-import { ABCompare } from "./ab-compare.js";
 import { Profiler } from "./profiler.js";
 import { TechSpec, TECH_SPECS } from "./tech-spec.js";
 import { AssetHoverManager } from "./asset-hover.js";
@@ -147,13 +146,6 @@ const pipelineHUD = new PipelineHUD({
   mountEl: document.getElementById("app") || document.body,
 });
 window.__pipelineHUD = pipelineHUD;
-
-// A/B Compare — backtick (`) opens / closes the side-by-side viewer.
-const abCompare = new ABCompare({
-  canvas,
-  mountEl: document.getElementById("app") || document.body,
-});
-window.__abCompare = abCompare;
 
 // Profiler — per-phase wall-clock frame timing. Toggle with P.
 const profiler = new Profiler({

@@ -94,6 +94,15 @@ export const TECH_SPECS = [
         toolchain: ["IP-Adapter (Ye 2023)", "ControlNet (Zhang 2023)", "AdaIN (Huang & Belongie 2017)", "Diffusion"],
         output:    "Painterly textures with preserved palette",
         note:      "Two artist-selectable modes — Full Style Transfer (color + texture + tone from a reference) and Texture-Only Transfer (auto-grayscale reference + AdaIN to apply painterly brushwork while keeping the original color palette intact). Per-channel histogram matching + patch-wise AdaIN run post-generation to deterministically correct residual color drift — output stays faithful to the pre-approved palette across runs.",
+        // Drag the handle on the compare widget below to wipe between the
+        // original photograph / render texture and the AI-stylized result.
+        // Patch `before` / `after` with real image URLs once they land.
+        compare: {
+          before: null,
+          after:  null,
+          labelA: "Original",
+          labelB: "Stylized",
+        },
         source:    "off-repo",
       },
       {
@@ -237,10 +246,69 @@ function renderItem(it) {
   // 5. Note — the readable prose paragraph
   const note = it.note ? `<p class="ts-item-note">${it.note}</p>` : "";
 
+  // 5b. Before/after compare widget — drag the handle to wipe between the
+  // pre-AI texture and the stylized output. Used by AI Stylization items;
+  // declared via `compare: { before, after, labelA, labelB }` on the item.
+  const compare = it.compare ? renderCompare(it.compare) : "";
+
   // 6. Source — small mono footer with hairline rule above
   const source = it.source ? `<div class="ts-item-src">${it.source}</div>` : "";
 
-  return `<li class="ts-item${isAsset ? " ts-item-asset" : ""}">${head}${sub}${chain}${output}${note}${source}</li>`;
+  return `<li class="ts-item${isAsset ? " ts-item-asset" : ""}">${head}${sub}${chain}${output}${note}${compare}${source}</li>`;
+}
+
+function renderCompare(c) {
+  const lblA = c.labelA || "Before";
+  const lblB = c.labelB || "After";
+  const layer = (url, fallback, cls) => url
+    ? `<img class="cmp-img ${cls}" src="${url}" draggable="false" alt="">`
+    : `<div class="cmp-img cmp-ph ${cls}"><span>${fallback}</span></div>`;
+  return `
+    <div class="ts-compare">
+      <div class="cmp-frame" data-cmp>
+        ${layer(c.after, "AFTER · placeholder", "cmp-img-b")}
+        ${layer(c.before, "BEFORE · placeholder", "cmp-img-a")}
+        <div class="cmp-handle"><div class="cmp-knob"></div></div>
+        <div class="cmp-tag cmp-tag-a">${lblA}</div>
+        <div class="cmp-tag cmp-tag-b">${lblB}</div>
+      </div>
+    </div>`;
+}
+
+// Wire the drag-to-wipe interaction on a single compare frame. The "A"
+// layer's clip-path follows the handle; clicking anywhere on the frame
+// snaps the split to that x.
+function wireCompareFrame(frame) {
+  const handle = frame.querySelector(".cmp-handle");
+  const imgA   = frame.querySelector(".cmp-img-a");
+  if (!handle || !imgA) return;
+
+  let split = 0.5;
+  const apply = () => {
+    handle.style.left = `${(split * 100).toFixed(3)}%`;
+    imgA.style.clipPath = `inset(0 ${((1 - split) * 100).toFixed(3)}% 0 0)`;
+  };
+  apply();
+
+  const setAt = (clientX) => {
+    const r = frame.getBoundingClientRect();
+    split = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
+    apply();
+  };
+
+  let dragging = false;
+  handle.addEventListener("pointerdown", (e) => {
+    dragging = true;
+    handle.setPointerCapture?.(e.pointerId);
+  });
+  handle.addEventListener("pointermove", (e) => {
+    if (dragging) setAt(e.clientX);
+  });
+  handle.addEventListener("pointerup", () => { dragging = false; });
+  frame.addEventListener("click", (e) => {
+    if (e.target === handle || handle.contains(e.target)) return;
+    setAt(e.clientX);
+  });
 }
 
 export class TechSpec {
@@ -301,6 +369,9 @@ export class TechSpec {
         sec.classList.toggle("collapsed");
       });
     });
+
+    // Wire drag handles on every inline before/after compare widget.
+    this.el.querySelectorAll(".ts-compare .cmp-frame").forEach(wireCompareFrame);
 
     // T key toggles, Esc closes — guarded against typing into inputs.
     window.addEventListener("keydown", (e) => {
