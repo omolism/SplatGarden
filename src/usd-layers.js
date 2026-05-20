@@ -131,10 +131,29 @@ export class UsdLayers {
     mountEl.appendChild(this.el);
 
     this.listEl = this.el.querySelector(".usd-row-list");
+    this.hintEl = this.el.querySelector(".usd-hint");
     this.el.querySelector(".usd-upload")?.addEventListener("click", (e) => {
       e.stopPropagation();
       this.onUploadRequest?.();
     });
+
+    // Behavioural hint: the small "stack freely" caption is only meta-
+    // information until the user has actually clicked a toggle. Once
+    // they do, the caption has done its job — fade it out and remember
+    // so it doesn't reappear next session. Pure UX move: the textual
+    // hint is a crutch that should self-retire as soon as the user's
+    // own action proves they understood the multi-select.
+    const HINT_KEY = "splatgarden:usd-hint-seen";
+    try {
+      if (localStorage.getItem(HINT_KEY) === "1" && this.hintEl) {
+        this.hintEl.classList.add("dismissed");
+      }
+    } catch {}
+    this._dismissHintOnFirstToggle = () => {
+      if (!this.hintEl || this.hintEl.classList.contains("dismissed")) return;
+      this.hintEl.classList.add("dismissed");
+      try { localStorage.setItem(HINT_KEY, "1"); } catch {}
+    };
 
     this._render();
   }
@@ -231,6 +250,7 @@ export class UsdLayers {
         const act   = e.currentTarget.dataset.act;
         if (act === "toggle") {
           this._setVisible(row, this.params[row.visKey] === false);
+          this._dismissHintOnFirstToggle?.();
         } else if (act === "shape") {
           this._setShape(row, e.currentTarget.dataset.val);
         } else if (act === "size") {

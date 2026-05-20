@@ -3372,14 +3372,23 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.38);
   padding: 4px 10px 6px;
+  max-height: 24px;
+  overflow: hidden;
+  transition: opacity 0.4s ease, max-height 0.35s ease, padding 0.35s ease;
 }
-#usd-layers-panel.usd-embedded .usd-upload {
-  /* Slightly tighter padding inside lil-gui to match the embed density. */
-  font-size: 10.5px;
-  padding: 7px 10px;
-  margin: 6px 10px 10px;
-  width: calc(100% - 20px);
+/* Hint auto-retires once the user has clicked any toggle — its job is
+   teaching multi-select; after the first toggle the user has proven
+   they understood. Fades out + collapses, persists across sessions. */
+#usd-layers-panel .usd-hint.dismissed {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  pointer-events: none;
 }
+/* The embedded variant inherits the same subtle text-link styling
+   defined for the base .usd-upload — no overrides needed now that
+   the upload action is a discrete link rather than a block button. */
 /* (Header / fold-caret / folded-state rules removed — UsdLayers no
    longer manages its own folding. The wrapping lil-gui folder owns
    that now. See the .usd-hint rule above for the only piece of
@@ -3393,30 +3402,33 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   text-transform: uppercase;
   color: var(--text-mid);
 }
-/* "Use My Own" — block-level secondary action below the layer rows.
-   Spans the full panel width as a soft outlined button so it reads
-   as one cohesive section: header + rows + secondary action. Hidden
-   when the section is folded (same as the rows). */
+/* "Use My Own" — *rare* secondary action. Styled as a subtle text
+   link rather than a button so the visual weight is clearly less
+   than the primary controls (toggle switches + subform pills). This
+   was an outlined block-button before, which read at the same weight
+   as the actual primary controls — false hierarchy, distracting. Now
+   it's tucked at the bottom as discreet small-caps text the user can
+   discover but won't fight for attention. */
 #usd-layers-panel .usd-upload {
   display: block;
-  width: calc(100% - 24px);
-  margin: 8px 12px 12px;
+  margin: 6px auto 10px;
+  padding: 5px 12px;
   background: transparent;
-  color: var(--text);
-  border: 1px solid var(--hair-strong);
-  border-radius: 8px;
-  padding: 8px 12px;
+  color: rgba(255, 255, 255, 0.45);
+  border: 0;
+  border-radius: 6px;
   cursor: pointer;
-  font-family: var(--font-ui);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 400;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   text-align: center;
-  transition: background 0.12s, border-color 0.12s;
+  transition: color 0.15s ease, background 0.15s ease;
 }
 #usd-layers-panel .usd-upload:hover {
-  background: var(--hover-strong);
-  border-color: rgba(255, 255, 255, 0.22);
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.04);
 }
 #usd-layers-panel.folded .usd-upload { display: none; }
 #usd-layers-panel .usd-row-list {
@@ -3489,6 +3501,19 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   cursor: pointer;
   padding: 0;
   transition: background 0.18s ease, border-color 0.18s ease;
+}
+/* Invisible 44 × 44 hit zone via ::before — the visible pill is 34 × 20
+   (a polished iOS-style switch reads small) but fingers need more
+   slop. The pseudo-element extends the tap target outward by 5 px
+   horizontally and 12 px vertically so any reasonable finger landing
+   on the switch row registers as a hit. Stays transparent — purely
+   for touch reliability. Doesn't extend rightward enough to overlap
+   the layer name to the toggle's right. */
+#usd-layers-panel .usd-row .usd-toggle::before {
+  content: "";
+  position: absolute;
+  inset: -12px -5px;
+  border-radius: 999px;
 }
 #usd-layers-panel .usd-row .usd-toggle .usd-toggle-knob {
   position: absolute;
