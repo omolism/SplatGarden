@@ -1121,23 +1121,26 @@ async function loadSplat() {
     if (window.__autoPlayedIntro && introOverlay) {
       introOverlay.update(dur > 0 ? t / dur : 0, camMoveState === "playing");
     }
-    // Lens shape — two pulses driven by the same tNorm:
-    //   * Fisheye blend: 0.26 at boundaries, dips to 0.15 (not 0) at
-    //     midpoint so the bend doesn't disappear entirely. Formula:
-    //     0.26 - 0.11 * sin(πt).
-    //   * Anamorphic squeeze: starts / ends at 1.0 (neutral, "no squeeze"
-    //     since 0.5..2.0 is the slider range), peaks at 1.0 + 0.2 = 1.2
-    //     at midpoint via 1 + 0.2 * sin(πt). Inverted shape from fisheye
-    //     so the cinematic emphasis hands off cleanly mid-clip.
-    // Fires every play (manual + first-visit auto-play). camMoveRevertLerps
-    // snaps both params back to whatever the user had pre-play.
+    // Lens shape — single peak-at-midpoint pulse, shifted so it starts
+    // a beat into the clip (PULSE_START_AT = 0.15) instead of at t=0.
+    //   * Fisheye blend: 0 → 0.26 → 0 across [PULSE_START_AT, 1.0]
+    //   * Anamorphic squeeze: 1.0 → 1.2 → 1.0 on the same window
+    //     (neutral 1.0 is "no squeeze" given the 0.5..2.0 slider range).
+    // The squeeze rests at 1.0 during the pre-pulse delay, so it stays
+    // visually neutral while the camera is still settling. Pulse fires
+    // on every play; camMoveRevertLerps snaps both params back to the
+    // user's pre-play state on stop / finish.
     if (camMoveState === "playing" && dur > 0) {
-      const LENS_FISHEYE_BOUND  = 0.26;
-      const LENS_FISHEYE_MID    = 0.15;
+      const PULSE_START_AT      = 0.15;
+      const LENS_FISHEYE_PEAK   = 0.26;
       const SQUEEZE_PEAK_OFFSET = 0.20;
       const tNorm = Math.max(0, Math.min(1, t / dur));
-      const sinT  = Math.sin(tNorm * Math.PI);
-      postfx.params.lensFisheye = LENS_FISHEYE_BOUND - (LENS_FISHEYE_BOUND - LENS_FISHEYE_MID) * sinT;
+      let sinT = 0;
+      if (tNorm >= PULSE_START_AT) {
+        const tLocal = (tNorm - PULSE_START_AT) / (1 - PULSE_START_AT);
+        sinT = Math.sin(tLocal * Math.PI);
+      }
+      postfx.params.lensFisheye = LENS_FISHEYE_PEAK   * sinT;
       postfx.params.lensSqueeze = 1.0 + SQUEEZE_PEAK_OFFSET * sinT;
     }
   };
