@@ -894,6 +894,7 @@ async function loadSplat() {
   let _introLensActive       = false;     // currently inside the stab window
   let _introTouchedLens      = false;     // ever fired during this play
   let camMovePrevCamFrustumsVisible = false;  // Training Cameras restore
+  let camMovePrevCamFrustumsOpacity = 0.85;
   let _introFrustumsOn      = false;          // intra-tick edge detect
   let _introTouchedFrustums = false;          // ever toggled during intro?
   // No more tail-ease — the previous 0.10x dt slowdown was perceived as a
@@ -938,6 +939,7 @@ async function loadSplat() {
     _introLensActive       = false;
     _introTouchedLens      = false;
     camMovePrevCamFrustumsVisible = cameraFrustums?.visible ?? false;
+    camMovePrevCamFrustumsOpacity = cameraFrustums?.material?.opacity ?? 0.85;
     _introFrustumsOn      = false;
     _introTouchedFrustums = false;
 
@@ -1025,7 +1027,12 @@ async function loadSplat() {
     // Check the touched flag (not the on flag) so we still restore when
     // the intro ended while the frustums had just been turned off.
     if (_introTouchedFrustums) {
-      if (cameraFrustums) cameraFrustums.visible = camMovePrevCamFrustumsVisible;
+      if (cameraFrustums) {
+        cameraFrustums.visible = camMovePrevCamFrustumsVisible;
+        if (cameraFrustums.material) {
+          cameraFrustums.material.opacity = camMovePrevCamFrustumsOpacity;
+        }
+      }
       dataParams.enabled = camMovePrevCamFrustumsVisible;
       if (camCtrl) camCtrl.updateDisplay();
       _introFrustumsOn      = false;
@@ -1230,17 +1237,38 @@ async function loadSplat() {
     if (window.__autoPlayedIntro && introOverlay) {
       const tNorm = dur > 0 ? t / dur : 0;
       introOverlay.update(tNorm, camMoveState === "playing");
-      // POSE phase only — light the Training Cameras frustum overlay
-      // up exactly while the caption reads "990 camera poses solved
-      // with COLMAP" (clip-norm 0.27 → 0.50). CAPTURE phase keeps
-      // the scene clean so the multi-camera-capture line plays
-      // against the splat without competing iconography. Edge-detect
-      // keeps us from thrashing visibility every frame.
-      const inCameraWindow = tNorm >= 0.27 && tNorm <= 0.50 && camMoveState === "playing";
+      // Training Cameras fade — coincide with the POSE phase but with
+      // soft edges so the iconography appears as the CAPTURE line is
+      // already fading out, sits full-strength through the "990 camera
+      // poses solved with COLMAP" caption, then drifts back to zero
+      // well past the end of POSE. Edge detect drives the lil-gui
+      // checkbox + Tech Spec restore flag.
+      //   0.22 → 0.27   fade IN  (≈ 5 % / 800 ms)
+      //   0.27 → 0.50   FULL opacity
+      //   0.50 → 0.65   fade OUT (≈ 15 % / 2.5 s)
+      const FADE_IN_AT   = 0.22;
+      const FADE_IN_END  = 0.27;
+      const FADE_OUT_AT  = 0.50;
+      const FADE_OUT_END = 0.65;
+      const FULL_OPACITY = camMovePrevCamFrustumsOpacity || 0.85;
+      let targetOpacity = 0;
+      if (tNorm >= FADE_IN_AT && tNorm < FADE_IN_END) {
+        const u = (tNorm - FADE_IN_AT) / (FADE_IN_END - FADE_IN_AT);
+        targetOpacity = (u * u * (3 - 2 * u)) * FULL_OPACITY;
+      } else if (tNorm >= FADE_IN_END && tNorm < FADE_OUT_AT) {
+        targetOpacity = FULL_OPACITY;
+      } else if (tNorm >= FADE_OUT_AT && tNorm < FADE_OUT_END) {
+        const u = (tNorm - FADE_OUT_AT) / (FADE_OUT_END - FADE_OUT_AT);
+        targetOpacity = (1 - u * u * (3 - 2 * u)) * FULL_OPACITY;
+      }
+      const inCameraWindow = targetOpacity > 0.001 && camMoveState === "playing";
+      if (cameraFrustums && cameraFrustums.material) {
+        cameraFrustums.material.opacity = targetOpacity;
+        cameraFrustums.visible = inCameraWindow;
+      }
       if (inCameraWindow !== _introFrustumsOn) {
         _introFrustumsOn      = inCameraWindow;
         _introTouchedFrustums = true;
-        if (cameraFrustums) cameraFrustums.visible = inCameraWindow;
         dataParams.enabled = inCameraWindow;
         if (camCtrl) camCtrl.updateDisplay();
       }
