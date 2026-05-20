@@ -92,16 +92,15 @@ Per-phase frame-time breakdown: splat update, velocity step, particles, compose,
 
 ## 3DGS / USD
 
-The lil-gui `3DGS/USD` folder selects which render representation is active. Multiple representations can be visible at once.
+Dedicated left-stack panel (above the Scene panel) listing the three render representations with eye-icon visibility toggles, subform pills, and inline size sliders. Multiple representations can be visible at once.
 
 ```
-Splat          [Gaussian | Point]
-Point Size
-Quad           [Quad | Circle]
-Quad Size
-Voxel          [Cube | Sphere]
-Voxel Size
+[eye] Splat       Gaussian | Point     Point Size      [───o───]
+[eye] Billboard   Quad     | Circle    Billboard Size  [─o─────]
+[eye] Voxel       Cube     | Sphere    Voxel Size      [─o─────]
 ```
+
+A `⤓ Use My Own` button in the panel header opens a drop overlay that replaces the primary splat with a dropped `.splat / .ply / .spz / .ksplat`.
 
 | Layer | Subform | USD analogue |
 |---|---|---|

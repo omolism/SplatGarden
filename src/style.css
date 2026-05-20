@@ -3147,6 +3147,210 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 }
 
 /* ============================================================
+ * UsdLayers panel — 3DGS / USD layer rows with eye toggles, subform
+ * pills, and inline size sliders. Visual language matches the Scene
+ * panel (same eye buttons, same row shape).
+ * ============================================================ */
+#usd-layers-panel {
+  position: static;
+  width: 100%;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 50%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--panel);
+  backdrop-filter: blur(28px) saturate(140%);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  margin-bottom: 8px;
+}
+#usd-layers-panel header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--hair);
+}
+#usd-layers-panel header .title {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-mid);
+}
+#usd-layers-panel .usd-upload {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--hair-strong);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  transition: background 0.12s, border-color 0.12s;
+}
+#usd-layers-panel .usd-upload:hover {
+  background: var(--hover-strong);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+#usd-layers-panel .usd-row-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  flex: 1;
+}
+#usd-layers-panel .usd-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  color: var(--text);
+  transition: background 0.12s;
+}
+#usd-layers-panel .usd-row:hover { background: var(--hover); }
+#usd-layers-panel .usd-row.hidden-row .usd-name,
+#usd-layers-panel .usd-row.hidden-row .usd-badge,
+#usd-layers-panel .usd-row.hidden-row .usd-pill-group,
+#usd-layers-panel .usd-row.hidden-row .usd-size { opacity: 0.40; }
+
+#usd-layers-panel .usd-row-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#usd-layers-panel .usd-row .eye {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px; height: 20px;
+  border-radius: 4px;
+  background: transparent;
+  border: 1px solid var(--hair);
+  color: var(--text);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+#usd-layers-panel .usd-row .eye:hover {
+  background: var(--hover-strong);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+#usd-layers-panel .usd-row.hidden-row .eye {
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.02);
+}
+#usd-layers-panel .usd-name {
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+#usd-layers-panel .usd-badge {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  text-transform: none;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--hair);
+  border-radius: 3px;
+  padding: 2px 6px;
+  white-space: nowrap;
+}
+
+#usd-layers-panel .usd-row-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 28px;          /* align under the name, past the eye */
+}
+#usd-layers-panel .usd-pill-group {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--hair);
+  border-radius: 5px;
+  padding: 2px;
+  align-self: flex-start;
+}
+#usd-layers-panel .usd-pill {
+  background: transparent;
+  border: 0;
+  color: var(--text-mid);
+  font-family: var(--font-ui);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  padding: 4px 11px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+#usd-layers-panel .usd-pill:hover { color: var(--text); }
+#usd-layers-panel .usd-pill.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
+  font-weight: 500;
+}
+
+#usd-layers-panel .usd-size {
+  display: grid;
+  grid-template-columns: 84px 1fr 48px;
+  align-items: center;
+  gap: 8px;
+}
+#usd-layers-panel .usd-size-label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+#usd-layers-panel .usd-size input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.10);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+#usd-layers-panel .usd-size input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text);
+  border: 0;
+  cursor: pointer;
+}
+#usd-layers-panel .usd-size input[type="range"]::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--text);
+  border: 0;
+  cursor: pointer;
+}
+#usd-layers-panel .usd-size-val {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-mid);
+  text-align: right;
+}
+
+/* ============================================================
  * MobileNav — hamburger trigger + slide-down drawer (touch only)
  * ============================================================ */
 #mobile-nav-btn {

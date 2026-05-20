@@ -24,6 +24,7 @@ import { Credits } from "./credits.js";
 import { IntroOverlay } from "./intro-overlay.js";
 import { OnboardingPointers } from "./onboarding-pointers.js";
 import { MobileNav } from "./mobile-nav.js";
+import { UsdLayers } from "./usd-layers.js";
 import { uniforms as effectUniforms } from "./effects.js";
 import { loadColmapImages, buildColmapFrustums, colmapCameraPosition, colmapCameraRotation } from "./colmap-loader.js";
 
@@ -391,6 +392,26 @@ async function loadSplat() {
     quad:  (v) => quadizer?.setShape(v),
     voxel: (v) => voxelizer?.setShape(v),
   };
+
+  // 3DGS / USD panel — eye-icon-driven layer list (matches the Scene panel
+  // visual language). Replaces the lil-gui "3DGS/USD" folder, which we
+  // hide below so the two surfaces don't double up on the same toggles.
+  const leftStack = document.getElementById("left-stack") || document.body;
+  const usdLayers = new UsdLayers({
+    mountEl:      leftStack,
+    params:       effectParams,
+    controller:   effects,
+    onQuadShape:  (v) => quadizer?.setShape(v),
+    onVoxelShape: (v) => voxelizer?.setShape(v),
+    onQuadSize:   (v) => quadizer?.setQuadSize(v),
+    onVoxelSize:  (v) => voxelizer?.setVoxelSize(v),
+    // showSplatDrop is defined later in loadSplat — resolve lazily via
+    // the window stash that gets set when it's ready (search this file
+    // for window.__showSplatDrop).
+    onUploadRequest: () => window.__showSplatDrop?.(),
+  });
+  window.__usdLayers = usdLayers;
+  if (gui.fLayers?.hide) gui.fLayers.hide();
 
   // ---- Annotations ----
   annotations = new AnnotationManager({
@@ -796,6 +817,9 @@ async function loadSplat() {
   const splatStatusEl = splatDrop.querySelector(".hdri-status");
 
   const showSplatDrop = () => { splatDrop.style.display = "flex"; splatStatusEl.textContent = ""; };
+  // Expose so the UsdLayers panel's "⤓ Use My Own" button (mounted
+  // earlier) can call back into this drop-overlay flow.
+  window.__showSplatDrop = showSplatDrop;
   const hideSplatDrop = () => { splatDrop.style.display = "none"; };
   splatDrop.addEventListener("click", (e) => { if (e.target === splatDrop) hideSplatDrop(); });
   splatDrop.addEventListener("dragover",  (e) => { e.preventDefault(); splatDrop.classList.add("over"); });
@@ -993,8 +1017,13 @@ async function loadSplat() {
             setTimeout(() => keyHints?.showFor(6500), 250);
             setTimeout(() => onboardingPointers?.show(), 600);
             setTimeout(() => {
+              // The lil-gui USD badge moved into the new UsdLayers panel,
+              // so the popover-wrap is hidden via .hide(). Skip the auto-
+              // pop when offsetParent is null (no rendered ancestor) — the
+              // billboard badge is now visible permanently inside the
+              // 3DGS/USD panel and doesn't need a one-shot reveal.
               const quadWrap = document.querySelector('.usd-spec-wrap[data-proto="billboard"]');
-              if (quadWrap?._show) {
+              if (quadWrap?._show && quadWrap.offsetParent !== null) {
                 quadWrap._show();
                 setTimeout(() => quadWrap._hide?.(), 5500);
               }
