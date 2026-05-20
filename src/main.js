@@ -131,16 +131,22 @@ const handModeEl   = document.getElementById("hand-mode");
 // it doesn't eat half the screen, and hides hand-tracking (front-cam +
 // MediaPipe is battery murder on phones).
 // ---------------------------------------------------------------------------
-// Touch / mobile detection. Use ONLY `(pointer: coarse)` because that
-// reflects the *primary* pointing device, not just touch-capability.
-// `ontouchstart in window` and `maxTouchPoints > 0` are false positives
-// on Windows laptops with touchscreens (they report touch but the user
-// is driving with a mouse, so they shouldn't see the mobile hamburger).
-// iPad in desktop-UA mode still matches `(pointer: coarse)` because
-// iPadOS keeps the touch pointer as primary regardless of the lying UA.
-const IS_TOUCH = window.matchMedia?.("(pointer: coarse)").matches ?? false;
-const IS_PHONE  = IS_TOUCH && window.innerWidth <  768;
-const IS_TABLET = IS_TOUCH && window.innerWidth >= 768;
+// Touch / mobile detection. Primary signal is `(pointer: coarse)` —
+// that reflects the *primary* pointing device, not just touch-capability,
+// so a Windows laptop with a touchscreen but a mouse plugged in does NOT
+// trip it.
+//
+// iPad detection is hardened on top: iPads (including the ones that lie
+// about being macOS via desktop-UA mode) are always classified as TABLET
+// regardless of viewport width. Without this, an iPad held in portrait
+// + dragged into Split-View at 50 % drops below 768 px and falls into
+// IS_PHONE, which would surface the phone-only mobile UI on a device
+// the user has explicitly said should match the desktop layout.
+const _ua      = navigator.userAgent || "";
+const IS_IPAD  = /iPad/.test(_ua) || (/Macintosh/.test(_ua) && navigator.maxTouchPoints > 1);
+const IS_TOUCH = (window.matchMedia?.("(pointer: coarse)").matches ?? false) || IS_IPAD;
+const IS_PHONE  = IS_TOUCH && !IS_IPAD && window.innerWidth <  768;
+const IS_TABLET = IS_TOUCH && ( IS_IPAD || window.innerWidth >= 768);
 // Back-compat name — legacy code paths read IS_MOBILE.
 const IS_MOBILE = IS_PHONE;
 document.body.classList.toggle("touch",  IS_TOUCH);

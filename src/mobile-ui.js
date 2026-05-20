@@ -75,15 +75,18 @@ function escapeHtml(s) {
 // ----------------------------------------------------------------------
 class BottomSheet {
   constructor() {
-    this.open      = false;
-    this.activeKey = null;
+    this.open       = false;
+    this.activeKey  = null;
     this._dragStart = null;
     this._dragY     = 0;
     this._onDismiss = null;
 
-    this.backdrop = document.createElement("div");
-    this.backdrop.id = "mobile-sheet-backdrop";
-    document.body.appendChild(this.backdrop);
+    // No backdrop — the sheet intentionally leaves the splat
+    // interactive behind/above it. The user can keep orbiting /
+    // panning the scene while the sheet is open. Close via the ×
+    // button, swipe-down on the handle, or re-tap of the active
+    // bottom-bar tab. This is the standard iOS / Material 3
+    // "non-modal sheet" pattern.
 
     this.el = document.createElement("aside");
     this.el.id = "mobile-sheet";
@@ -102,7 +105,6 @@ class BottomSheet {
     this.bodyEl   = this.el.querySelector(".ms-body");
     this.handleEl = this.el.querySelector(".ms-handle");
 
-    this.backdrop.addEventListener("pointerdown", () => this.close());
     this.el.querySelector(".ms-close").addEventListener("click", () => this.close());
 
     // Drag-down dismissal. Capture pointer so we keep tracking even if
