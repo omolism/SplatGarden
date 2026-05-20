@@ -3403,7 +3403,25 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   cursor: pointer;
   user-select: none;
 }
-#usd-layers-panel header .title { flex: 1; }
+#usd-layers-panel header .usd-title-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+#usd-layers-panel header .title { /* sits at top of title-wrap */ }
+#usd-layers-panel header .usd-hint {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.38);
+  margin-top: 2px;
+}
+/* Folded view: the hint is meta-info that's only useful when the
+   section is open and the user can see the toggles below. Hide it
+   when folded for a tighter collapsed header. */
+#usd-layers-panel.folded .usd-hint { display: none; }
 /* Fold caret — sits on the LEFT of the title, rotates -90° when the
    section is folded (lil-gui idiom: down = open, right = closed).
    Click anywhere on the header (except the Use My Own button) folds
@@ -3519,26 +3537,44 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   align-items: center;
   gap: 8px;
 }
-#usd-layers-panel .usd-row .eye {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px; height: 20px;
-  border-radius: 4px;
-  background: transparent;
-  border: 1px solid var(--hair);
-  color: var(--text);
+/* iOS-style ON/OFF switch per row. Replaces the older eye-icon button
+   because (a) the switch's pill+knob shape inherently signals "this is
+   one of multiple independent toggles you can mix freely", and (b) the
+   eye icon was easy to mistake for a "preview / hover" affordance.
+   Each row's switch operates independently — layers stack. */
+#usd-layers-panel .usd-row .usd-toggle {
+  position: relative;
+  width: 34px;
+  height: 20px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.10);
   cursor: pointer;
   padding: 0;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  transition: background 0.18s ease, border-color 0.18s ease;
 }
-#usd-layers-panel .usd-row .eye:hover {
-  background: var(--hover-strong);
-  border-color: rgba(255, 255, 255, 0.22);
+#usd-layers-panel .usd-row .usd-toggle .usd-toggle-knob {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+  transition: transform 0.18s ease, background 0.18s ease;
 }
-#usd-layers-panel .usd-row.hidden-row .eye {
-  color: var(--text-dim);
-  background: rgba(255, 255, 255, 0.02);
+#usd-layers-panel .usd-row .usd-toggle.on {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(255, 255, 255, 0.92);
+}
+#usd-layers-panel .usd-row .usd-toggle.on .usd-toggle-knob {
+  transform: translateX(14px);
+  background: #0b0f14;
+}
+#usd-layers-panel .usd-row .usd-toggle:active .usd-toggle-knob {
+  width: 18px;   /* tiny "press" stretch */
 }
 #usd-layers-panel .usd-name {
   font-weight: 500;

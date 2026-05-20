@@ -130,7 +130,10 @@ export class UsdLayers {
             <polyline points="6 9 12 15 18 9"/>
           </svg>
         </button>
-        <div class="title">3DGS / USD</div>
+        <div class="usd-title-wrap">
+          <div class="title">3DGS / USD</div>
+          <div class="usd-hint">Toggle layers · stack freely</div>
+        </div>
       </header>
       <ul class="usd-row-list"></ul>
       <button class="usd-upload" title="Replace the primary splat — drop a .splat / .ply / .spz / .ksplat">⤓ Use My Own</button>
@@ -227,8 +230,11 @@ export class UsdLayers {
       html += `
         <li class="usd-row ${on ? "" : "hidden-row"}" data-id="${row.id}">
           <div class="usd-row-main">
-            <button class="eye" data-act="toggle"
-                    title="${on ? "Hide" : "Show"} ${row.name}">${on ? EYE_OPEN : EYE_OFF}</button>
+            <button class="usd-toggle ${on ? "on" : ""}" data-act="toggle"
+                    role="switch" aria-checked="${on}"
+                    title="${on ? "Hide" : "Show"} ${row.name} (layers stack — toggle any combination)">
+              <span class="usd-toggle-knob"></span>
+            </button>
             <span class="usd-name">${row.name}</span>
             <span class="usd-badge" title="${row.badge}">${row.badge}</span>
           </div>
