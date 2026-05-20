@@ -3946,35 +3946,44 @@ body.mobile #mobile-nav-btn { display: none !important; }
  * a splash. Each surface uses `animation-fill-mode: backwards`
  * so it's invisible BEFORE its delay (prevents a flash).
  * ============================================================ */
-@keyframes ui-enter {
+/* Keyframes intentionally OPACITY-ONLY (no transform) for any element
+   that has backdrop-filter, or whose descendants do. Chromium drops
+   backdrop-filter pass-through whenever an ancestor sits in a non-
+   identity transform context — even after the animation completes,
+   `transform: translateX(0)` from `animation-fill-mode: both` keeps
+   the stacking context alive and the children's glass blur breaks
+   (visible as the dim/weak background on Viewpoints / Scene / Hand
+   Tracking panels). Plain opacity has no such side-effect. The
+   bottom toolbar + Studio button DON'T contain backdrop-filter
+   children, so they can keep the translate motion. */
+@keyframes ui-enter-opacity {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes ui-enter-translate {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-@keyframes ui-enter-from-right {
-  from { opacity: 0; transform: translateX(12px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
-@keyframes ui-enter-from-left {
-  from { opacity: 0; transform: translateX(-12px); }
-  to   { opacity: 1; transform: translateX(0); }
-}
 body.ui-ready .lil-gui.root {
-  animation: ui-enter-from-right 0.55s cubic-bezier(.16,1,.3,1) 0.08s both;
+  animation: ui-enter-opacity 0.55s cubic-bezier(.16,1,.3,1) 0.08s both;
 }
 body.ui-ready #left-stack {
-  animation: ui-enter-from-left 0.55s cubic-bezier(.16,1,.3,1) 0.20s both;
+  animation: ui-enter-opacity 0.55s cubic-bezier(.16,1,.3,1) 0.20s both;
 }
 body.ui-ready #hand-panel {
-  animation: ui-enter-from-left 0.50s cubic-bezier(.16,1,.3,1) 0.32s both;
+  animation: ui-enter-opacity 0.50s cubic-bezier(.16,1,.3,1) 0.32s both;
 }
 body.ui-ready #toolbar {
-  animation: ui-enter 0.50s cubic-bezier(.16,1,.3,1) 0.40s both;
+  animation: ui-enter-translate 0.50s cubic-bezier(.16,1,.3,1) 0.40s both;
 }
 body.ui-ready #mobile-bottombar {
-  animation: ui-enter 0.55s cubic-bezier(.16,1,.3,1) 0.12s both;
+  /* Opacity-only — the bar's `transform: translateX(-50%)` is what
+     centers it horizontally, so a translate-based animation would
+     fight the centering and momentarily slide it off-centre. */
+  animation: ui-enter-opacity 0.55s cubic-bezier(.16,1,.3,1) 0.12s both;
 }
 body.ui-ready #mobile-studio-btn {
-  animation: ui-enter-from-right 0.50s cubic-bezier(.16,1,.3,1) 0.22s both;
+  animation: ui-enter-opacity 0.50s cubic-bezier(.16,1,.3,1) 0.22s both;
 }
 /* Asset hotspots pulse in after the chrome UI — final layer in the
    cinematic reveal sequence. They use opacity-only because the
