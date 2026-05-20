@@ -14,15 +14,15 @@
 
 export const TECH_SPECS = [
   // ============== Three layered groups ==============
-  // Tools WITHIN each layer collaborate; layers stack R&D -> Production
-  // -> Runtime. The layer header shows its tool stack as chips, so even
-  // collapsed sections read as a tech-stack summary.
+  // L1 R&D       — research / spec work: AI tooling + USD interop
+  // L2 Production — assets + Unreal scene assembly
+  // L3 3DGS       — capture + training (the Unreal -> splat conversion)
   {
     section:   "R&D",
     group:     "layer",
     layerNum:  1,
-    desc:      "Modeling, animation, and AI-driven texture work — everything that happened before the camera turned on.",
-    toolchain: ["Houdini", "SpeedTree", "Unreal Engine", "VAT bake", "Python · OSC", "AI Stylization"],
+    desc:      "Research + interop layer — the custom AI texture tool plus the OpenUSD spec for our alternative render subforms.",
+    toolchain: ["IP-Adapter", "ControlNet", "AdaIN", "Diffusion", "OpenUSD", "UsdGeomPointInstancer"],
     items: [
       {
         name:      "AI Texture Stylization",
@@ -37,6 +37,13 @@ export const TECH_SPECS = [
           labelB: "Stylized",
         },
       },
+      {
+        name:      "OpenUSD subforms",
+        ref:       "Quad + Voxel as UsdGeomPointInstancer prims",
+        toolchain: ["UsdGeomPointInstancer", "UsdGeomPlane", "UsdGeomCube", "primvars:displayColor"],
+        output:    "USD-compatible alternative renderings of the same splat data",
+        note:      "Two alternative render representations of the splat, each expressed as a USD PointInstancer prim. Quad uses proto = UsdGeomPlane (per-instance camera-facing billboards). Voxel uses proto = UsdGeomCube (uniform-grid binning with averaged colour per cell). Both carry per-instance positions, orientations, scales, and a primvars:displayColor array. Toggle live via Customize ▸ Splat in the GUI.",
+      },
     ],
   },
 
@@ -44,64 +51,14 @@ export const TECH_SPECS = [
     section:   "Production",
     group:     "layer",
     layerNum:  2,
-    desc:      "From the dressed Unreal scene to a trained 3D Gaussian Splat.",
-    toolchain: ["Unreal Engine", "Perforce", "Litchfield Studio", "COLMAP", "Postshot"],
+    desc:      "Per-object authoring + Unreal scene assembly — everything that goes into the dressed scene before the camera turns on.",
+    toolchain: ["Houdini", "SpeedTree", "VAT bake", "Python · OSC", "Unreal Engine", "Perforce"],
     items: [
       {
         name: "Scene assembly",
         ref:  "Unreal Engine — every asset set-dressed into one scene",
-        note: "Perforce-backed version control across artists.",
+        note: "Perforce-backed version control across artists. All set-dressed assets land here before the capture stage.",
       },
-      {
-        name: "Capture",
-        ref:  "Litchfield Studio capture pipeline",
-      },
-      {
-        name:   "Pose reconstruction",
-        ref:    "COLMAP Structure-from-Motion · 990 cameras recovered",
-        source: "src/colmap-loader.js:50",
-      },
-      {
-        name: "Splat training",
-        ref:  "Postshot — per-splat Gaussian fit + SH coefficients",
-      },
-    ],
-  },
-
-  {
-    section:   "Runtime",
-    group:     "layer",
-    layerNum:  3,
-    desc:      "Real-time browser playback with USD-compatible subforms and gesture input.",
-    toolchain: ["Spark", "Three.js", "WebGL 2", "OpenUSD", "MediaPipe"],
-    items: [
-      {
-        name:   "3D Gaussian Splatting",
-        ref:    "Kerbl et al., SIGGRAPH 2023 · via @sparkjsdev/spark",
-        note:   "Per-splat ellipsoidal Gaussians + SH view-dependent colour. The Customize ▸ Splat toggle switches subforms in place: Gaussian (default), Point (collapsed centres — sky shows through), Quad (OpenUSD UsdGeomPointInstancer ▸ Plane, camera-facing billboards), Voxel (UsdGeomPointInstancer ▸ Cube, uniform-grid binned with averaged colour per cell).",
-      },
-      {
-        name:   "Cinematic flythrough",
-        ref:    "Houdini-authored FBX · 24 fps · 25 s · 600 frames",
-        source: "public/Shot4B_GS-FX_Camera_V01.fbx",
-      },
-      {
-        name:   "Hand tracking",
-        ref:    "MediaPipe HandLandmarker (tasks-vision 0.10.35)",
-        note:   "Pinch = click, drag = orbit. Two-hand mode: pinch-to-zoom + parallel-drag pan.",
-        source: "src/handtracking.js:1",
-      },
-    ],
-  },
-
-  // ============== Per-asset inventory ==============
-  // Ordered by narrative weight: centerpiece -> animated assets with
-  // deeper toolchains -> simpler assets -> the whole composite.
-  {
-    section: "Assets",
-    group:   "assets",
-    desc:    "Per-object inventory — set-dressed in Unreal, then captured together as one 3DGS.",
-    items: [
       {
         name:      "Gazebo",
         location:  "Centerpiece",
@@ -118,7 +75,7 @@ export const TECH_SPECS = [
       {
         name:      "Vine",
         location:  "Near gazebo",
-        worldPos:  [0.5, -0.926, 3.258],
+        worldPos:  [-0.89, -0.926, 3.258],
         toolchain: ["Unreal Engine — Motion Graphics", "Unreal Engine — WPO shader"],
         output:    "Animated vine growth · flowers driven by Motion Graphics, stems by WPO",
         note:      "Vine growth render. The bloom heads use Unreal's Motion Graphics system for keyframed flowering; the stems run a custom material whose World Position Offset (WPO) drives the procedural growth path along the gazebo's framework.",
@@ -134,7 +91,7 @@ export const TECH_SPECS = [
         worldPos:  [0.28, -0.773, 2.226],
         toolchain: ["Houdini", "VAT bake", "Unreal Engine (set dress)", "Python · OSC · MediaPipe", "AI texture stylization"],
         output:    "Mesh + VAT animation · interactively driven in Unreal",
-        note:      "Animated procedurally in Houdini and VAT-baked, then set-dressed in Unreal. Inside the Unreal session, Python · OSC · MediaPipe drives the rig live (hand gesture → OSC → blueprint). Diffuse texture passes through the AI stylization tool above.",
+        note:      "Animated procedurally in Houdini and VAT-baked, then set-dressed in Unreal. Inside the Unreal session, Python · OSC · MediaPipe drives the rig live (hand gesture → OSC → blueprint). Diffuse texture passes through the AI Texture Stylization tool from L1.",
         embed: {
           src:   "https://player.vimeo.com/video/1191203670?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
           label: "VAT + OSC interaction",
@@ -171,19 +128,41 @@ export const TECH_SPECS = [
         location:  "Whole scene base",
         toolchain: ["Unreal Engine (terrain authoring)", "AI texture stylization"],
         output:    "Landscape mesh + AI-stylized ground textures",
-        note:      "Terrain authored directly in Unreal; ground textures passed through the AI stylization tool to land the painterly look in the final 3DGS.",
-      },
-      {
-        name:      "Garden Environment",
-        location:  "Whole scene",
-        toolchain: ["Unreal Engine (assembly)", "Litchfield Studio (capture)", "Postshot (training)"],
-        output:    "3DGS · 990 COLMAP poses",
-        note:      "All set-dressed assets composited in Unreal, then captured at Litchfield Studio and trained as a single 3D Gaussian Splat in Postshot — the only stage where Postshot enters the pipeline.",
-        source:    "public/Whole_With_Statue.splat",
+        note:      "Terrain authored directly in Unreal; ground textures passed through the AI Texture Stylization tool from L1 to land the painterly look in the final 3DGS.",
       },
     ],
   },
 
+  {
+    section:   "3DGS",
+    group:     "layer",
+    layerNum:  3,
+    desc:      "Capturing the dressed Unreal scene at Litchfield Studio and training it as a 3D Gaussian Splat in Postshot.",
+    toolchain: ["Litchfield Studio", "COLMAP", "Postshot", "Spark"],
+    items: [
+      {
+        name: "3D Gaussian Splatting",
+        ref:  "Kerbl et al., SIGGRAPH 2023 · rendered in-browser via @sparkjsdev/spark",
+        note: "The render primitive: per-splat ellipsoidal Gaussians + spherical-harmonic view-dependent colour. The composed garden ends up as a single .splat asset, rasterised in real time by Spark on Three.js + WebGL 2.",
+      },
+      {
+        name:   "Capture",
+        ref:    "Litchfield Studio capture pipeline",
+        note:   "The whole Unreal scene is photographed at the Litchfield Studio rig — multi-camera array sweeping the subject for downstream reconstruction.",
+      },
+      {
+        name:   "Pose reconstruction",
+        ref:    "COLMAP Structure-from-Motion · 990 cameras recovered",
+        note:   "COLMAP solves intrinsics + extrinsics for every capture frame; the resulting 990 camera poses feed the Postshot trainer (and double as the Training Cameras overlay in Tech Spec).",
+        source: "src/colmap-loader.js:50",
+      },
+      {
+        name: "Splat training",
+        ref:  "Postshot — per-splat Gaussian fit + SH coefficients",
+        note: "Postshot optimises the 3D Gaussian parameters (centre, scales, rotation, SH coefficients, opacity) against the COLMAP-anchored capture images. Output: public/Whole_With_Statue.splat (≈ 3 M splats).",
+      },
+    ],
+  },
 ];
 
 function renderItem(it) {
