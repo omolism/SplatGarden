@@ -77,14 +77,6 @@ Toggled by the `Credits` checkbox under the lil-gui Tech Spec folder. Sections: 
 ### Mobile nav (touch only)
 On touch devices a hamburger button sits in the top-right corner. Tapping it opens a slide-down drawer with shortcuts to Pipeline / Viewport Tuner / Quick Guide / Profiler / Credits — equivalent to the T / K / H / P keyboard shortcuts on desktop. The Hand Tracking panel is hidden on touch; on phones the heavier post-process passes (Bloom, Underwater) default off.
 
-### Pipeline HUD — RENDER (top-left)
-Live render readout:
-
-- Current splat count (24 px tabular-nums)
-- Subform composition bars — 3DGS / Quad / Voxel
-- Draw / Tris footer
-- GPU identity strap
-
 ### Profiler (P)
 Per-phase frame-time breakdown: splat update, velocity step, particles, compose, overlay, HUD.
 
@@ -222,7 +214,7 @@ public/
 src/
   main.js                             # scene, renderer, animation loop, hooks
   scene-layers.js                     # multi-splat layer panel
-  pipeline-hud.js                     # RENDER HUD
+  usd-layers.js                       # 3DGS/USD eye-toggle panel
   tech-spec.js                        # Pipeline drawer data + renderer
   asset-hover.js                      # hotspots + poster-style info card
   annotations.js                      # viewpoints + camera tween

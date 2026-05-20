@@ -16,7 +16,7 @@ import { GPGPUParticles } from "./gpgpu-particles.js";
 // SortedParticles removed — replaced by the WarpFx post-process pass.
 import { Voxelizer } from "./voxelizer.js";
 import { Quadizer }  from "./quadizer.js";
-import { PipelineHUD } from "./pipeline-hud.js";
+// PipelineHUD removed — the 3DGS/USD panel now occupies that slot.
 import { SceneLayers } from "./scene-layers.js";
 import { KeyHints } from "./key-hints.js";
 import { ViewpointTuner } from "./viewpoint-tuner.js";
@@ -149,22 +149,10 @@ const particleScene = new THREE.Scene();
 particleScene.add(gpgpuParticles.points);
 window.__gpgpuParticles = gpgpuParticles;
 
-// Pipeline HUD — slim RENDER readout: splat count + subform bars + GPU.
-// Refs may be null at construction; pipelineHUD reads them lazily via the
-// refs object so later assignments to splat / voxelizer / quadizer are
-// picked up automatically.
-const _hudRefs = {
-  splat:       null,
-  voxelizer:   null,
-  quadizer:    null,
-  sceneLayers: null,   // wired below once SceneLayers is instantiated
-};
-const pipelineHUD = new PipelineHUD({
-  renderer,
-  refs:    _hudRefs,
-  mountEl: document.getElementById("app") || document.body,
-});
-window.__pipelineHUD = pipelineHUD;
+// Pipeline HUD removed — its slot is now the 3DGS/USD panel. _hudRefs is
+// retained as a no-op bag because several code paths still write to it
+// (splat / voxelizer / quadizer / sceneLayers); nothing reads it now.
+const _hudRefs = {};
 
 // Profiler — per-phase wall-clock frame timing. Toggle with P.
 const profiler = new Profiler({
@@ -861,6 +849,15 @@ async function loadSplat() {
   let camMovePrevLensFisheye = 0;
   let camMovePrevLensSqueeze = 1;
   let camMovePrevPostEnable  = true;
+  // Soft-end pose — captured the first frame tNorm crosses 0.85 so the
+  // last 15% of the clip eases from the FBX path to this held pose
+  // instead of running the camera into a hard stop at the absolute
+  // last frame. Reset on every play in camMoveStartLerps.
+  let camSoftEndPos  = null;
+  let camSoftEndQuat = null;
+  let camSoftEndTgt  = null;
+  const _camSoftWork = new THREE.Vector3();
+  const _camSoftQuat = new THREE.Quaternion();
   const _camFwd = new THREE.Vector3();
 
   // Timeline / frame readout — visible only while the camera move is loaded.
@@ -904,6 +901,11 @@ async function loadSplat() {
     // to the saved pre-play values at sinT=0 (start and end of the pulse
     // window), so frame 0 and the final frame both naturally land on the
     // user's pre-move state.
+
+    // Soft-end pose is recaptured every play.
+    camSoftEndPos  = null;
+    camSoftEndQuat = null;
+    camSoftEndTgt  = null;
 
     if (!effects) return;
     camMovePrevSubform = effects.targetSubform ?? 0;
@@ -1103,14 +1105,38 @@ async function loadSplat() {
     if (camMoveState === "idle") return;
     camMixer.update(camMoveState === "paused" ? 0 : dt);
     camAnimNode.updateWorldMatrix(true, false);
-    camAnimNode.getWorldPosition(camera.position);
-    camAnimNode.getWorldQuaternion(camera.quaternion);
-    _camFwd.set(0, 0, -1).applyQuaternion(camera.quaternion);
-    controls.target.copy(camera.position).add(_camFwd);
 
     // Drive the on-screen timeline label
     const dur = camAction.getClip().duration;
     const t   = Math.min(camAction.time, dur);
+    const tNormForEase = dur > 0 ? Math.max(0, Math.min(1, t / dur)) : 0;
+
+    // Pull the raw FBX values into scratch buffers, then optionally ease
+    // them toward a held "soft end" pose in the last 15% of the clip.
+    // The pose at tNorm = 0.85 becomes the resting position; smoothstep
+    // blend over the tail prevents the camera from slamming to a stop
+    // at the absolute last frame, which used to read as a visible jerk.
+    camAnimNode.getWorldPosition(_camSoftWork);
+    camAnimNode.getWorldQuaternion(_camSoftQuat);
+
+    const EASE_START = 0.85;
+    if (tNormForEase >= EASE_START) {
+      if (!camSoftEndPos) {
+        camSoftEndPos  = _camSoftWork.clone();
+        camSoftEndQuat = _camSoftQuat.clone();
+        _camFwd.set(0, 0, -1).applyQuaternion(camSoftEndQuat);
+        camSoftEndTgt  = camSoftEndPos.clone().add(_camFwd);
+      }
+      const tail = (tNormForEase - EASE_START) / (1 - EASE_START);
+      const eased = tail * tail * (3 - 2 * tail);    // smoothstep
+      _camSoftWork.lerp(camSoftEndPos, eased);
+      _camSoftQuat.slerp(camSoftEndQuat, eased);
+    }
+
+    camera.position.copy(_camSoftWork);
+    camera.quaternion.copy(_camSoftQuat);
+    _camFwd.set(0, 0, -1).applyQuaternion(camera.quaternion);
+    controls.target.copy(camera.position).add(_camFwd);
     const frT = Math.floor(t   * CAM_FPS);
     const frD = Math.floor(dur * CAM_FPS);
     ctTimeEl.textContent  = `${t.toFixed(2)}s / ${dur.toFixed(2)}s`;
@@ -2058,9 +2084,7 @@ renderer.setAnimationLoop(() => {
   renderer.autoClear = prevAutoClear;
 
   profiler.mark("hud");
-  // Pipeline HUD — read live render-info / pass counts / particle stats
-  // and refresh DOM at ~2 Hz inside the module.
-  pipelineHUD.tick(performance.now(), dt * 1000);
+  // Pipeline HUD removed — no per-frame tick needed.
   // Asset hover hotspots — project worldPos to screen each frame.
   assetHover?.update();
   // Viewport Tuner — refresh live pose readout (cheap, bails when closed).

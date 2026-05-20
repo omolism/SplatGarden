@@ -26,6 +26,12 @@ const TIPS = [
     selector: "#scene-panel, #left-stack",
     anchor:   "top-left",
   },
+  {
+    label: "3DGS / USD",
+    sub:   "Toggle layers + swap subforms",
+    selector: "#usd-layers-panel",
+    anchor:   "mid-left",
+  },
 ];
 
 export class OnboardingPointers {

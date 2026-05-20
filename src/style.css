@@ -629,15 +629,15 @@ kbd {
  * composition bars (3DGS / Quad / Voxel) + draw/tris + GPU identity.
  * Luma-glass surface.
  * -------------------------------------------------------------------- */
+/* #pipeline-hud is no longer instantiated by main.js; rules retained so
+ * a future re-enable doesn't require re-writing the CSS. */
 #pipeline-hud {
   position: absolute;
-  /* Sits below the 3DGS/USD panel which now occupies the old slot. The
-   * exact offset depends on the USD panel's content height; this number
-   * is hand-tuned for the default 3-row layout. */
-  top: 430px;
+  top: 18px;
   left: 274px;
   width: 244px;
   z-index: 21;
+  display: none;
   background: var(--panel);
   backdrop-filter: blur(28px) saturate(140%);
   -webkit-backdrop-filter: blur(28px) saturate(140%);
@@ -3132,14 +3132,17 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 }
 
 /* Pointer placement — pinned to viewport edges. data-i drives the
- * stacking so the two right-anchored callouts don't sit on top of each
- * other. Pipeline (T) sits high-right, Tuner (K) mid-right, Scene panel
- * card mirrors to the left. */
+ * stacking so callouts don't overlap. Pipeline (T) high-right,
+ * Tuner (K) mid-right, Scene panel high-left, 3DGS/USD mid-left
+ * (points at the new top-rail panel that moved into the Render HUD
+ * slot). */
 #onboarding-pointers .op-tip[data-i="0"] { top: 22%; right: 5vw; }
 #onboarding-pointers .op-tip[data-i="1"] { top: 42%; right: 5vw; }
 #onboarding-pointers .op-tip[data-i="2"] { top: 22%; left: 5vw; flex-direction: row-reverse; }
-#onboarding-pointers .op-tip[data-i="2"] .op-arrow {
-  /* Mirror the arrow so it points back at the left-side Scene panel.
+#onboarding-pointers .op-tip[data-i="3"] { top: 50%; left: 20vw; flex-direction: row-reverse; }
+#onboarding-pointers .op-tip[data-i="2"] .op-arrow,
+#onboarding-pointers .op-tip[data-i="3"] .op-arrow {
+  /* Mirror the arrow so it points back at the left-side panels.
    * Compose with the bob animation by using a separate keyframe set. */
   transform: scaleX(-1);
   animation: op-arrow-bob-left 1.6s ease-in-out infinite;
@@ -3210,6 +3213,36 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   overflow-y: auto;
   flex: 1;
 }
+/* Section header — separates "3DGS" from "USD". Tight typography so it
+ * reads as a label, not a row in its own right. */
+#usd-layers-panel .usd-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 12px 8px 4px;
+  border-top: 1px solid var(--hair);
+  margin-top: 4px;
+}
+#usd-layers-panel .usd-section-head:first-child {
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 4px;
+}
+#usd-layers-panel .usd-section-name {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+#usd-layers-panel .usd-section-blurb {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
 #usd-layers-panel .usd-row {
   display: flex;
   flex-direction: column;

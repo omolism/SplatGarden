@@ -15,12 +15,17 @@
 const EYE_OPEN = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>`;
 const EYE_OFF  = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>`;
 
-// Row definitions — each describes one layer family. visKey is the
-// boolean field on the params object; layerKey is the string the
-// EffectController.setLayerVis() expects.
+// Row definitions — each describes one layer family. `section` groups
+// rows under a small all-caps section header in the panel:
+//   3DGS  → the native gaussian-splat render
+//   USD   → alternative renderings exposed as UsdGeomPointInstancer
+//           prims (billboard plane, voxel cube/sphere)
+// visKey is the boolean field on the params object; layerKey is the
+// string the EffectController.setLayerVis() expects.
 const ROWS = [
   {
     id: "splat",
+    section: "3DGS",
     name: "Splat",
     visKey: "splatLayer",
     layerKey: "splat",
@@ -32,10 +37,11 @@ const ROWS = [
       { val: "Gaussian", label: "Gaussian" },
       { val: "Point",    label: "Point"    },
     ],
-    badge: "PointInstancer · Splat",
+    badge: "Anisotropic 3D Gaussian",
   },
   {
     id: "billboard",
+    section: "USD",
     name: "Billboard",
     visKey: "quadLayer",
     layerKey: "quad",
@@ -47,10 +53,11 @@ const ROWS = [
       { val: "quad",   label: "Quad"   },
       { val: "circle", label: "Circle" },
     ],
-    badge: "PointInstancer · Plane",
+    badge: "PointInstancer › Plane",
   },
   {
     id: "voxel",
+    section: "USD",
     name: "Voxel",
     visKey: "voxelLayer",
     layerKey: "voxel",
@@ -62,9 +69,14 @@ const ROWS = [
       { val: "cube",   label: "Cube"   },
       { val: "sphere", label: "Sphere" },
     ],
-    badge: "PointInstancer · Cube, Sphere",
+    badge: "PointInstancer › Cube · Sphere",
   },
 ];
+
+const SECTION_BLURBS = {
+  "3DGS": "Native render",
+  "USD":  "OpenUSD alternative renderings",
+};
 
 export class UsdLayers {
   /**
@@ -138,7 +150,17 @@ export class UsdLayers {
 
   _render() {
     if (!this.listEl) return;
-    this.listEl.innerHTML = ROWS.map(row => {
+    let html = "";
+    let prevSection = null;
+    for (const row of ROWS) {
+      if (row.section !== prevSection) {
+        html += `
+          <li class="usd-section-head">
+            <span class="usd-section-name">${row.section}</span>
+            <span class="usd-section-blurb">${SECTION_BLURBS[row.section] || ""}</span>
+          </li>`;
+        prevSection = row.section;
+      }
       const on  = this.params[row.visKey] !== false;
       const cur = this.params[row.shapeKey];
       const pills = row.shapes.map(s => `
@@ -147,7 +169,7 @@ export class UsdLayers {
       `).join("");
       const sizeVal = Number(this.params[row.sizeKey] ?? 0);
       const decimals = row.sizeStep < 0.001 ? 4 : 3;
-      return `
+      html += `
         <li class="usd-row ${on ? "" : "hidden-row"}" data-id="${row.id}">
           <div class="usd-row-main">
             <button class="eye" data-act="toggle"
@@ -167,7 +189,8 @@ export class UsdLayers {
           </div>
         </li>
       `;
-    }).join("");
+    }
+    this.listEl.innerHTML = html;
 
     // Wire row buttons. currentTarget so clicks land on the button even
     // when the eye SVG is the literal event target.
