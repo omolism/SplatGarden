@@ -2986,10 +2986,9 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
  * panel (same eye buttons, same row shape).
  * ============================================================ */
 #usd-layers-panel {
-  /* Pinned to the right rail, above the lil-gui Customize folder.
-   * lil-gui's own top offset is bumped down (see main.js) to clear
-   * this panel. z-index 1002 sits above lil-gui (1001) so even if
-   * vertical positions accidentally overlap, the layer panel wins. */
+  /* Default standalone style — kept as a fallback if the embedded path
+   * fails (e.g. lil-gui internals change). The .usd-embedded class
+   * below overrides everything once the panel mounts inside lil-gui. */
   position: fixed;
   top: 18px;
   right: 18px;
@@ -3005,6 +3004,34 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   border: 1px solid var(--hair);
   border-radius: var(--radius);
   box-shadow: var(--shadow-soft);
+}
+/* Embedded inside lil-gui — strip the floating-panel chrome so the
+ * panel reads as the topmost section of the existing lil-gui surface.
+ * Width inherits, max-height drops (lil-gui scrolls), background and
+ * border collapse away. */
+#usd-layers-panel.usd-embedded {
+  position: static;
+  width: auto;
+  max-width: 100%;
+  max-height: none;
+  z-index: auto;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border: 0;
+  border-bottom: 1px solid var(--hair);
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
+  overflow: visible;
+}
+#usd-layers-panel.usd-embedded .usd-row-list {
+  overflow: visible;
+  padding: 4px 6px 8px;
+}
+#usd-layers-panel.usd-embedded header {
+  padding: 10px 12px 8px;
+  background: rgba(255, 255, 255, 0.02);
 }
 #usd-layers-panel header {
   display: flex;
@@ -3468,9 +3495,11 @@ body.touch #mobile-nav-btn { display: flex; }
   }
   /* Scene panel + viewpoint sidebar — compact */
   #left-stack { max-width: 200px; }
-  /* 3DGS/USD panel — collapses to a bottom sheet on phones since the
-   * 280 px absolute slot can't survive a narrow viewport. */
-  #usd-layers-panel {
+  /* Fallback bottom-sheet for the standalone case — only applies when
+   * UsdLayers is NOT embedded inside lil-gui. Once embedded the panel
+   * rides with lil-gui (which goes bottom-sheet on phones via its
+   * own .lil-gui.root rule above). */
+  #usd-layers-panel:not(.usd-embedded) {
     position: fixed;
     top: auto !important;
     left: 8px !important;
@@ -3504,16 +3533,10 @@ body.touch #mobile-nav-btn { display: flex; }
   #credits {
     width: min(480px, calc(100vw - 32px));
   }
-  /* Right-rail squeeze: shrink the UsdLayers panel and push lil-gui up
-   * closer so both fit on iPad-class viewports without overflowing. */
-  #usd-layers-panel {
+  /* Standalone fallback only — embedded UsdLayers rides with lil-gui. */
+  #usd-layers-panel:not(.usd-embedded) {
     width: 260px !important;
     max-height: 360px !important;
-  }
-  .lil-gui.root {
-    top: 400px !important;
-    width: 260px !important;
-    max-height: calc(100vh - 420px) !important;
   }
   /* Annotation card narrower so it doesn't sit on top of the right rail. */
   #usd-annotations { width: min(320px, calc(100vw - 320px)); right: 296px; }

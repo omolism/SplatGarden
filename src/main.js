@@ -332,12 +332,9 @@ async function loadSplat() {
   splat.updateGenerator();
   const gui = buildGUI(effects);
   postfx.attachGUI(gui);
-  // Push lil-gui down to clear the UsdLayers panel that sits on the
-  // right rail above it (UsdLayers max-height = 420 px + 18 top +
-  // 18 gap = 456). Width matches the panel so the two surfaces line
-  // up vertically.
-  gui.domElement.style.top   = "456px";
-  gui.domElement.style.width = "280px";
+  // No inline top / width overrides — UsdLayers now nests INSIDE lil-gui
+  // (see below) so the two read as one panel. lil-gui's own default
+  // top: 0 / right: 0 anchor is fine.
   // Top-level "Cinematic FX" — promotes the character-defining post-FX
   // (Lens Distortion / Underwater / Kaleidoscope) out of the colour-grading
   // Post-Process folder so they're immediately discoverable. The Particles
@@ -396,8 +393,13 @@ async function loadSplat() {
   const usdAnnotations = new UsdAnnotations({ mountEl: document.body });
   window.__usdAnnotations = usdAnnotations;
 
+  // Mount UsdLayers as the FIRST slot inside lil-gui's children container
+  // so the eye-icon layer panel reads as the top section of the same
+  // panel that contains Customize / Cinematic FX / Tech Spec / etc.
+  // Falls back to <body> if the lil-gui internal layout changes shape.
+  const guiChildren = gui.domElement.querySelector(".children");
   const usdLayers = new UsdLayers({
-    mountEl:      document.body,
+    mountEl:      guiChildren || document.body,
     params:       effectParams,
     controller:   effects,
     onQuadShape:  (v) => quadizer?.setShape(v),
@@ -410,6 +412,13 @@ async function loadSplat() {
     onUploadRequest: () => window.__showSplatDrop?.(),
     onLayerActivate: (key) => usdAnnotations.show(key),
   });
+  if (guiChildren && guiChildren.firstChild !== usdLayers.el) {
+    guiChildren.insertBefore(usdLayers.el, guiChildren.firstChild);
+  }
+  // .usd-embedded class triggers a styling pass in style.css that
+  // strips the panel's own background / border / shadow so it reads
+  // as a section of lil-gui rather than a floating popover.
+  if (guiChildren) usdLayers.el.classList.add("usd-embedded");
   window.__usdLayers = usdLayers;
   if (gui.fLayers?.hide) gui.fLayers.hide();
 
