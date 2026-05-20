@@ -1169,41 +1169,33 @@ async function loadSplat() {
     if (window.__autoPlayedIntro && introOverlay) {
       introOverlay.update(dur > 0 ? t / dur : 0, camMoveState === "playing");
     }
-    // Lens shape — peak-at-midpoint pulse confined to the FIRST HALF of
-    // the clip ([PULSE_START, PULSE_END]), then a separate FADE window
-    // at the tail that lerps the baseline from the user's saved value
-    // toward neutral (fisheye 0, squeeze 1.0). The lens reads as "fully
-    // off" by the last frame, so when revertLerps fires the user's
-    // saved lensOn flag takes over cleanly with no snap.
-    //   pulse:    fisheye/squeeze = baseline + (PEAK - baseline) * sinT
-    //   baseline: lerp(prev, neutral, fadeT)
+    // Lens shape — active across t = [0.15, 0.625] with a quick attack
+    // then a slow decay (cosine ease-out) so the lens reads as a single
+    // sustained effect that fades away naturally, not a bell-curve
+    // pulse. Outside the window the lens lands on user's pre-play
+    // baseline; revertLerps takes it from there with no snap.
+    //   strength(t) = ramp-in (0.15 → 0.20) ; cos ease-out (0.20 → 0.625)
+    //   fisheye = prev + (PEAK_FISHEYE - prev) * strength
+    //   squeeze = prev + (PEAK_SQUEEZE - prev) * strength
     if (camMoveState === "playing" && dur > 0) {
-      const PULSE_START_AT    = 0.15;
-      const PULSE_END_AT      = 0.50;
-      const FADE_START_AT     = 0.80;
+      const LENS_START_AT     = 0.15;
+      const LENS_ATTACK_END   = 0.20;
+      const LENS_DECAY_END    = 0.625;
       const LENS_FISHEYE_PEAK = 0.26;
       const LENS_SQUEEZE_PEAK = 1.20;
       const tNorm = Math.max(0, Math.min(1, t / dur));
-
-      // Pulse contribution
-      let sinT = 0;
-      if (tNorm >= PULSE_START_AT && tNorm <= PULSE_END_AT) {
-        const tLocal = (tNorm - PULSE_START_AT) / (PULSE_END_AT - PULSE_START_AT);
-        sinT = Math.sin(tLocal * Math.PI);
+      let strength = 0;
+      if (tNorm >= LENS_START_AT && tNorm <= LENS_DECAY_END) {
+        if (tNorm < LENS_ATTACK_END) {
+          const attack = (tNorm - LENS_START_AT) / (LENS_ATTACK_END - LENS_START_AT);
+          strength = attack * attack * (3 - 2 * attack);          // smoothstep
+        } else {
+          const decay = (tNorm - LENS_ATTACK_END) / (LENS_DECAY_END - LENS_ATTACK_END);
+          strength = Math.cos(decay * Math.PI / 2);               // quarter cos
+        }
       }
-
-      // Tail fade-out: baseline drifts from user's pre-play value toward
-      // neutral so by t = 1.0 the lens has no visible effect at all.
-      let fadeT = 0;
-      if (tNorm > FADE_START_AT) {
-        const raw = Math.min(1, (tNorm - FADE_START_AT) / (1 - FADE_START_AT));
-        fadeT = raw * raw * (3 - 2 * raw);                  // smoothstep
-      }
-      const baselineFisheye = camMovePrevLensFisheye * (1 - fadeT) + 0.0 * fadeT;
-      const baselineSqueeze = camMovePrevLensSqueeze * (1 - fadeT) + 1.0 * fadeT;
-
-      postfx.params.lensFisheye = baselineFisheye + (LENS_FISHEYE_PEAK - baselineFisheye) * sinT;
-      postfx.params.lensSqueeze = baselineSqueeze + (LENS_SQUEEZE_PEAK - baselineSqueeze) * sinT;
+      postfx.params.lensFisheye = camMovePrevLensFisheye + (LENS_FISHEYE_PEAK - camMovePrevLensFisheye) * strength;
+      postfx.params.lensSqueeze = camMovePrevLensSqueeze + (LENS_SQUEEZE_PEAK - camMovePrevLensSqueeze) * strength;
     }
   };
 
