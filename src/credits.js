@@ -16,19 +16,29 @@ const TEAM = [
   { name: "Ben Jones",                role: "Team Member", url: "#" },
 ];
 
-const SOFTWARE = [
-  // Authoring / DCC
-  "Houdini", "SpeedTree", "Unreal Engine", "Perforce",
-  // Capture & training
-  "Lichtfeld Studio", "COLMAP", "Postshot",
+// Software — commercial / production DCC tools the team authored in.
+// Unreal Engine and Houdini are the hero entries (top of the section,
+// highlighted via .cr-chip-featured).
+const SOFTWARE_FEATURED = ["Unreal Engine", "Houdini"];
+const SOFTWARE_OTHER    = [
+  "SpeedTree", "Postshot", "Perforce", "Lichtfeld Studio",
+];
+
+// Tech Stack — the research / runtime / interop methods that ride
+// underneath the visible scene. HP AI Studio and OpenUSD are the
+// featured story beats.
+const TECH_FEATURED = ["HP AI Studio", "OpenUSD"];
+const TECH_OTHER    = [
+  // Reconstruction
+  "COLMAP",
+  // AI stylization
+  "PyTorch", "CUDA", "IP-Adapter", "ControlNet", "AdaIN",
   // Render runtime
   "@sparkjsdev/spark", "Three.js", "WebGL 2", "Vite",
   // Interaction
   "MediaPipe HandLandmarker",
-  // AI stylization
-  "PyTorch", "CUDA", "IP-Adapter", "ControlNet", "AdaIN",
-  // Interop
-  "OpenUSD", "UsdGeomPointInstancer",
+  // USD primitives
+  "UsdGeomPointInstancer",
 ];
 
 const LINK_ICON_SVG = `
@@ -69,9 +79,17 @@ export class Credits {
           </ul>
         </section>
         <section class="cr-sec">
-          <div class="cr-sec-title">Software &amp; Tools</div>
+          <div class="cr-sec-title">Software</div>
           <div class="cr-chips">
-            ${SOFTWARE.map(s => `<span class="cr-chip">${s}</span>`).join("")}
+            ${SOFTWARE_FEATURED.map(s => `<span class="cr-chip cr-chip-featured">${s}</span>`).join("")}
+            ${SOFTWARE_OTHER   .map(s => `<span class="cr-chip">${s}</span>`).join("")}
+          </div>
+        </section>
+        <section class="cr-sec">
+          <div class="cr-sec-title">Tech Stack</div>
+          <div class="cr-chips">
+            ${TECH_FEATURED.map(s => `<span class="cr-chip cr-chip-featured">${s}</span>`).join("")}
+            ${TECH_OTHER   .map(s => `<span class="cr-chip">${s}</span>`).join("")}
           </div>
         </section>
       </div>

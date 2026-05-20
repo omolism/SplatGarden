@@ -17,11 +17,16 @@ const QUAD_VERT = /* glsl */`
   attribute vec3 aInstanceCenter;
   attribute vec3 aInstanceColor;
   varying vec3 vColor;
+  varying vec2 vLocalUv;
   void main() {
     // Billboards are intentionally static — they don't react to the splat's
     // click FX. (To re-enable, restore fxOffset/fxColorTint here and the
     // shader-uniform sync in syncFxUniforms below — see src/fx-glsl.js.)
     vColor           = aInstanceColor;
+    // PlaneGeometry's position is centered at origin with extents -0.5..0.5,
+    // so position.xy doubles as a centered local UV in the [-0.5, 0.5] range
+    // — exactly what the circle discard test needs.
+    vLocalUv         = position.xy;
     vec4 worldCenter = modelMatrix * vec4(aInstanceCenter, 1.0);
     vec4 viewCenter  = viewMatrix  * worldCenter;
     vec3 corner      = vec3(position.x, position.y, 0.0) * uQuadSize;
@@ -32,17 +37,30 @@ const QUAD_VERT = /* glsl */`
 
 const QUAD_FRAG = /* glsl */`
   varying vec3 vColor;
+  varying vec2 vLocalUv;
   uniform float uOpacity;
+  uniform float uIsCircle;     // 0 = square quad, 1 = camera-facing disc
   void main() {
+    // Circle subform: discard pixels outside the unit disc (centered at 0,
+    // radius 0.5). Anti-alias via smoothstep on the radial distance for a
+    // soft edge that holds up at small sizes.
+    if (uIsCircle > 0.5) {
+      float r = length(vLocalUv);
+      if (r > 0.5) discard;
+      float aa = smoothstep(0.5, 0.45, r);
+      gl_FragColor = vec4(vColor, uOpacity * aa);
+      return;
+    }
     gl_FragColor = vec4(vColor, uOpacity);
   }
 `;
 
 export class Quadizer {
-  constructor({ scene, splatMesh, quadSize = 0.0015, fxUniforms = null }) {
+  constructor({ scene, splatMesh, quadSize = 0.0015, shape = "quad", fxUniforms = null }) {
     this.scene      = scene;
     this.splatMesh  = splatMesh;
     this.quadSize   = quadSize;
+    this.shape      = shape;          // "quad" | "circle"
     this.fxUniforms = fxUniforms;
     this.opacity    = 0;
     this.mesh       = null;
@@ -52,6 +70,15 @@ export class Quadizer {
   setQuadSize(s) {
     this.quadSize = s;
     if (this.mesh) this.mesh.material.uniforms.uQuadSize.value = s;
+  }
+
+  // Switch between square billboard and camera-facing disc. Cheap: a single
+  // shader uniform — no geometry rebuild required.
+  setShape(s) {
+    this.shape = (s === "circle") ? "circle" : "quad";
+    if (this.mesh) {
+      this.mesh.material.uniforms.uIsCircle.value = (this.shape === "circle") ? 1.0 : 0.0;
+    }
   }
 
   setOpacity(o) {
@@ -114,6 +141,7 @@ export class Quadizer {
         uniforms: {
           uQuadSize: { value: this.quadSize },
           uOpacity:  { value: this.opacity },
+          uIsCircle: { value: this.shape === "circle" ? 1.0 : 0.0 },
         },
         transparent: true,
         depthWrite:  true,

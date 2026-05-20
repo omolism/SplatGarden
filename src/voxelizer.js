@@ -44,10 +44,11 @@ const VOXEL_FRAG = /* glsl */`
 `;
 
 export class Voxelizer {
-  constructor({ scene, splatMesh, voxelSize = 0.013, fxUniforms = null }) {
+  constructor({ scene, splatMesh, voxelSize = 0.013, shape = "cube", fxUniforms = null }) {
     this.scene      = scene;
     this.splatMesh  = splatMesh;
     this.voxelSize  = voxelSize;
+    this.shape      = shape;          // "cube" | "sphere"
     this.fxUniforms = fxUniforms;     // optional; see syncFxUniforms()
     this.mesh       = null;
     this.opacity    = 0;
@@ -60,6 +61,21 @@ export class Voxelizer {
     if (Math.abs(s - this.voxelSize) < 1e-6) return;
     this.voxelSize = s;
     this._dirty = true;
+    if (this._rebuildTimer) clearTimeout(this._rebuildTimer);
+    this._rebuildTimer = setTimeout(() => this.rebuild(), REBUILD_DEBOUNCE_MS);
+  }
+
+  // Switch between cube and icosphere prototypes. Requires a geometry rebuild
+  // (different vertex / index buffers), so this is a real rebuild — debounced
+  // the same way setVoxelSize is, in case the user toggles back and forth.
+  // No-op rebuild if the mesh doesn't exist yet (i.e. the layer is hidden) —
+  // the next layer-show in main.js will build with the latest shape.
+  setShape(s) {
+    const next = (s === "sphere") ? "sphere" : "cube";
+    if (next === this.shape) return;
+    this.shape = next;
+    this._dirty = true;
+    if (!this.mesh) return;
     if (this._rebuildTimer) clearTimeout(this._rebuildTimer);
     this._rebuildTimer = setTimeout(() => this.rebuild(), REBUILD_DEBOUNCE_MS);
   }
@@ -143,12 +159,17 @@ export class Voxelizer {
       this.cellBoundsMin = new THREE.Vector3(xMin, yMin, zMin);
       this.cellBoundsMax = new THREE.Vector3(xMax, yMax, zMax);
 
-      const cube = new THREE.BoxGeometry(1, 1, 1);
+      // Proto geometry — Cube (BoxGeometry) or Sphere (IcosahedronGeometry
+      // at detail=1 → 80 tris per instance, smooth enough at typical voxel
+      // sizes without blowing the tri budget at ~10-50k cells).
+      const proto = this.shape === "sphere"
+        ? new THREE.IcosahedronGeometry(0.5, 1)
+        : new THREE.BoxGeometry(1, 1, 1);
       const geom = new THREE.InstancedBufferGeometry();
-      geom.index               = cube.index;
-      geom.attributes.position = cube.attributes.position;
-      geom.attributes.uv       = cube.attributes.uv;
-      geom.attributes.normal   = cube.attributes.normal;
+      geom.index               = proto.index;
+      geom.attributes.position = proto.attributes.position;
+      if (proto.attributes.uv)     geom.attributes.uv     = proto.attributes.uv;
+      if (proto.attributes.normal) geom.attributes.normal = proto.attributes.normal;
       geom.instanceCount       = n;
       geom.setAttribute("aInstanceCenter",
         new THREE.InstancedBufferAttribute(positions, 3));
@@ -180,7 +201,7 @@ export class Voxelizer {
       // Sync once immediately so the first frame after build looks right.
       if (this.fxUniforms) this.syncFxUniforms(this.fxUniforms);
       const ms = (performance.now() - t0).toFixed(0);
-      console.info(`[Voxelizer] built ${n} cubes from splats in ${ms}ms (voxelSize=${vs})`);
+      console.info(`[Voxelizer] built ${n} ${this.shape}s from splats in ${ms}ms (voxelSize=${vs})`);
       return n;
     } catch (e) {
       console.error("[Voxelizer] build error:", e);

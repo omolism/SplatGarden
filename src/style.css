@@ -2961,6 +2961,18 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   border: 1px solid var(--hair);
   color: var(--text-mid);
 }
+/* Featured chip — Unreal/Houdini in Software, HP AI Studio/OpenUSD in
+ * Tech Stack. Wears a brighter background + slightly larger type so
+ * the eye lands on the hero entries first. */
+#credits .cr-chip-featured {
+  background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  padding: 5px 11px;
+}
 
 /* ============================================================
  * IntroOverlay — hero title + phase callouts over the auto-play

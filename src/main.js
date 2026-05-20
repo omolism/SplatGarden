@@ -333,11 +333,13 @@ async function loadSplat() {
   voxelizer = new Voxelizer({
     scene, splatMesh: splat,
     voxelSize: effectUniforms.voxelSize.value,
+    shape:     effectParams.voxelShape,
     fxUniforms: effectUniforms,
   });
   quadizer = new Quadizer({
     scene, splatMesh: splat,
     quadSize: effectUniforms.quadSize.value,
+    shape:    effectParams.quadShape,
     fxUniforms: effectUniforms,
   });
   _hudRefs.voxelizer = voxelizer;
@@ -351,6 +353,12 @@ async function loadSplat() {
       ctrl.onChange((v) => { if (prev) prev(v); quadizer.setQuadSize(v); });
     }
   });
+  // Quad/Circle and Cube/Sphere segmented buttons are raw DOM (not lil-gui
+  // controllers), so effects.js dispatches their clicks through this hook.
+  gui.__shapeCallbacks = {
+    quad:  (v) => quadizer?.setShape(v),
+    voxel: (v) => voxelizer?.setShape(v),
+  };
 
   // ---- Annotations ----
   annotations = new AnnotationManager({

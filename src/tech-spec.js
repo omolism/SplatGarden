@@ -39,10 +39,10 @@ export const TECH_SPECS = [
       },
       {
         name:      "OpenUSD subforms",
-        ref:       "Quad + Voxel as UsdGeomPointInstancer prims",
-        toolchain: ["UsdGeomPointInstancer", "UsdGeomPlane", "UsdGeomCube", "primvars:displayColor"],
+        ref:       "Billboard + Voxel as UsdGeomPointInstancer prims",
+        toolchain: ["UsdGeomPointInstancer", "UsdGeomPlane", "UsdGeomCube", "UsdGeomSphere", "primvars:displayColor"],
         output:    "USD-compatible alternative renderings of the same splat data",
-        note:      "Two alternative render representations of the splat, each expressed as a USD PointInstancer prim. Quad uses proto = UsdGeomPlane (per-instance camera-facing billboards). Voxel uses proto = UsdGeomCube (uniform-grid binning with averaged colour per cell). Both carry per-instance positions, orientations, scales, and a primvars:displayColor array. Toggle live via Customize ▸ Splat in the GUI.",
+        note:      "Two alternative render representations of the splat, each expressed as a USD PointInstancer prim. The Billboard layer uses proto = UsdGeomPlane (per-instance camera-facing billboards), with a Quad subform (full square) and a Circle subform (unit-disc discard for soft round impostors). The Voxel layer buckets splats into a uniform grid with averaged colour per cell, rendered as proto = UsdGeomCube or proto = UsdGeomSphere depending on the subform. All variants carry per-instance positions, orientations, scales, and a primvars:displayColor array. Toggle live via the GUI's 3DGS/USD folder.",
       },
     ],
   },

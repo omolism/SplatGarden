@@ -92,6 +92,8 @@ export const params = {
   quadLayer:   false,
   voxelLayer:  false,
   splatSubform: "Gaussian",   // "Gaussian" | "Point"
+  quadShape:    "quad",       // "quad" | "circle" — Quadizer subform
+  voxelShape:   "cube",       // "cube" | "sphere" — Voxelizer subform
   pointSize: 0.0025,
   quadSize:  0.0064,
   voxelSize: 0.013,
@@ -1297,11 +1299,88 @@ export function buildGUI(controller) {
 
   const quadCtrl = fLayers.add(params, "quadLayer").name("Quad")
     .onChange((v) => controller.setLayerVis("quad", v));
+
+  // Quad subform — Quad (square plane) vs Circle (camera-facing disc).
+  // Same segmented-pill pattern as Splat's Gaussian/Point above.
+  const quadShapeRow = document.createElement("div");
+  quadShapeRow.className = "subform-toggle";
+  quadShapeRow.innerHTML = `
+    <span class="subform-cell"><button data-val="quad">Quad</button></span>
+    <span class="subform-cell"><button data-val="circle">Circle</button></span>
+  `;
+  const QUAD_SHAPE_TIPS = {
+    quad:   `<div class="k">TYPE</div><div class="v">Square billboard</div>
+             <div class="k">SHADE</div><div class="v">flat colour</div>`,
+    circle: `<div class="k">TYPE</div><div class="v">Camera-facing disc</div>
+             <div class="k">SHADE</div><div class="v">unit-circle discard + AA edge</div>`,
+  };
+  quadShapeRow.querySelectorAll(".subform-cell").forEach(cell => {
+    const val = cell.querySelector("button")?.dataset.val;
+    const tip = document.createElement("div");
+    tip.className = "subform-tip";
+    tip.innerHTML = QUAD_SHAPE_TIPS[val] || "";
+    document.body.appendChild(tip);
+    cell._tip = tip;
+  });
+  const quadShapeSync = () => {
+    quadShapeRow.querySelectorAll("button").forEach(b =>
+      b.classList.toggle("active", b.dataset.val === params.quadShape));
+  };
+  quadShapeRow.querySelectorAll("button").forEach(b => {
+    b.addEventListener("click", () => {
+      params.quadShape = b.dataset.val;
+      // main.js hooks the actual Quadizer.setShape() call through this.
+      gui.__shapeCallbacks?.quad?.(params.quadShape);
+      quadShapeSync();
+    });
+  });
+  quadShapeSync();
+  const quadRow = quadCtrl.domElement;
+  quadRow.insertAdjacentElement("afterend", quadShapeRow);
+
   fLayers.add(params, "quadSize",   0.0001, 0.05,  0.0001).name("Quad Size")
     .onChange(() => controller.applyParams());
 
   const voxelCtrl = fLayers.add(params, "voxelLayer").name("Voxel")
     .onChange((v) => controller.setLayerVis("voxel", v));
+
+  // Voxel subform — Cube (BoxGeometry) vs Sphere (IcosahedronGeometry).
+  // Changing this triggers a Voxelizer rebuild (different geometry buffers).
+  const voxelShapeRow = document.createElement("div");
+  voxelShapeRow.className = "subform-toggle";
+  voxelShapeRow.innerHTML = `
+    <span class="subform-cell"><button data-val="cube">Cube</button></span>
+    <span class="subform-cell"><button data-val="sphere">Sphere</button></span>
+  `;
+  const VOXEL_SHAPE_TIPS = {
+    cube:   `<div class="k">TYPE</div><div class="v">Spatial-bin cube</div>
+             <div class="k">PROTO</div><div class="v">BoxGeometry · 12 tris</div>`,
+    sphere: `<div class="k">TYPE</div><div class="v">Spatial-bin sphere</div>
+             <div class="k">PROTO</div><div class="v">IcosahedronGeometry · 80 tris</div>`,
+  };
+  voxelShapeRow.querySelectorAll(".subform-cell").forEach(cell => {
+    const val = cell.querySelector("button")?.dataset.val;
+    const tip = document.createElement("div");
+    tip.className = "subform-tip";
+    tip.innerHTML = VOXEL_SHAPE_TIPS[val] || "";
+    document.body.appendChild(tip);
+    cell._tip = tip;
+  });
+  const voxelShapeSync = () => {
+    voxelShapeRow.querySelectorAll("button").forEach(b =>
+      b.classList.toggle("active", b.dataset.val === params.voxelShape));
+  };
+  voxelShapeRow.querySelectorAll("button").forEach(b => {
+    b.addEventListener("click", () => {
+      params.voxelShape = b.dataset.val;
+      gui.__shapeCallbacks?.voxel?.(params.voxelShape);
+      voxelShapeSync();
+    });
+  });
+  voxelShapeSync();
+  const voxelRow = voxelCtrl.domElement;
+  voxelRow.insertAdjacentElement("afterend", voxelShapeRow);
+
   fLayers.add(params, "voxelSize",  0.0005, 0.40,  0.0005).name("Voxel Size")
     .onChange(() => controller.applyParams());
 
@@ -1315,8 +1394,8 @@ export function buildGUI(controller) {
   // "Cube" don't communicate to a non-USD audience that we mean a camera-
   // facing billboard / spatial-bin cube, so we surface it explicitly.
   const PROTO_TYPE = {
-    Plane: "Camera-facing billboard",
-    Cube:  "Spatial-bin cube",
+    Plane: "Camera-facing billboard (Quad · Circle)",
+    Cube:  "Spatial-bin instancer (Cube · Sphere)",
   };
   const attachUsdBadge = (ctrl, proto) => {
     const nameEl = ctrl.domElement.querySelector(".name");
