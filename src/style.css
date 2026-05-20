@@ -2648,8 +2648,10 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   font-family: var(--font-ui);
   font-size: 22px;
   font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  /* Honour the asset's authored casing (e.g. "Gazebo", "Daffodil") —
+     the ALL CAPS treatment was visually loud and the asset names
+     already carry their own intentional capitalisation. */
   color: var(--text);
 }
 .ah-card .ah-loc {

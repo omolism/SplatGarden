@@ -173,6 +173,12 @@ class MobileStudioPanel {
   constructor(usdLayersEl) {
     this.usdLayersEl    = usdLayersEl ?? null;
     this.originalParent = usdLayersEl?.parentNode ?? null;
+    // Capture the sibling AFTER usd-layers-panel inside its parent so
+    // we can put it back in the same slot on close — not at the end.
+    // Without this, an appendChild() on close would push the panel to
+    // the bottom of lil-gui (after Customize / Cinematic FX / Tech Spec /
+    // Camera Movement), even though it was authored to live at the top.
+    this.originalNextSibling = usdLayersEl?.nextSibling ?? null;
     this.open           = false;
 
     // Trigger button — top-right, same coordinate the hamburger used.
@@ -242,9 +248,11 @@ class MobileStudioPanel {
     // Restore the panel to its original parent IMMEDIATELY so any
     // subsequent UI that expects it there (Effects → Open Advanced
     // moves the entire lil-gui, including this panel) sees it in the
-    // right place. The empty Studio frame fades out separately.
+    // right place. insertBefore with the captured originalNextSibling
+    // keeps the panel's authored slot (top of the lil-gui children
+    // list) instead of pushing it to the bottom.
     if (this.originalParent && this.usdLayersEl) {
-      this.originalParent.appendChild(this.usdLayersEl);
+      this.originalParent.insertBefore(this.usdLayersEl, this.originalNextSibling);
     }
     setTimeout(() => {
       if (this.open) return;

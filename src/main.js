@@ -205,10 +205,16 @@ function setupCollapsiblePanel({
       if (localStorage.getItem(storageKey) === "1") setCollapsed(true, false);
     } catch {}
   }
-  return { setCollapsed };
+  return {
+    setCollapsed,
+    isCollapsed: () => panel.classList.contains(minimizedClass),
+  };
 }
 
-setupCollapsiblePanel({
+// Module-level handles so the intro playback (camMoveStartLerps /
+// camMoveRevertLerps, defined inside loadSplat below) can collapse +
+// restore all panels in a single coordinated motion.
+const _sidebarCollapseCtrl = setupCollapsiblePanel({
   panelSelector:  "#sidebar",
   toggleSelector: "#sidebar-toggle",
   storageKey:     "splatgarden:sidebar-collapsed",
@@ -218,10 +224,7 @@ setupCollapsiblePanel({
   minimizedClass: "sidebar-minimized",
   bodyClass:      "has-collapsed-sidebar",
 });
-// Hand Tracking lives at the bottom-left so its expand handle sits
-// near the bottom of the rail; its minimize chevron is the absolute-
-// positioned corner button added in index.html.
-setupCollapsiblePanel({
+const _handCollapseCtrl = setupCollapsiblePanel({
   panelSelector:  "#hand-panel",
   toggleSelector: "#hand-min-toggle",
   storageKey:     "splatgarden:hand-collapsed",
@@ -231,6 +234,7 @@ setupCollapsiblePanel({
   minimizedClass: "hand-minimized",
   bodyClass:      "has-collapsed-hand",
 });
+let _sceneCollapseCtrl = null;   // wired below after SceneLayers is built
 // (Scene panel collapse is set up below, after SceneLayers is built —
 // scene-layers.js attaches the chevron button as part of its DOM.)
 
@@ -338,7 +342,7 @@ window.__sceneLayers = sceneLayers;
 _hudRefs.sceneLayers = sceneLayers;   // RENDER HUD sums splats across visible layers
 // Scene panel collapse — wired here (not earlier) because SceneLayers
 // constructs its own DOM and the chevron button only exists after.
-setupCollapsiblePanel({
+_sceneCollapseCtrl = setupCollapsiblePanel({
   panelSelector:  "#scene-panel",
   toggleSelector: "#scene-toggle",
   storageKey:     "splatgarden:scene-collapsed",
@@ -1365,8 +1369,33 @@ async function loadSplat() {
   //   ½ — Quad layer fades in      (overlay)
   //   ¾ — Quad layer fades out
   //   1 — Point → Gaussian         (back to 3DGS as the clip ends)
+  // Snapshot of every collapsible panel's state taken when the intro
+  // starts. Restored at intro end so the user's pre-intro UI layout
+  // comes back exactly as they left it (user might have left the
+  // sidebar collapsed deliberately — we don't want to "helpfully"
+  // expand it for them). Also tracks gui._closed so the lil-gui
+  // returns to its previous open/closed state.
+  let _introPanelSnapshot = null;
+
   function camMoveStartLerps() {
     camTimeline.style.display = "flex";
+    // Auto-collapse all floating UI so the intro reads as a clean
+    // cinematic. Snapshot first so the restore at intro end matches
+    // the user's pre-intro state. Skipped on phone (panels are CSS-
+    // hidden there anyway; the mobile UI has its own bottom-bar +
+    // sheets that don't fight the cinematic).
+    if (!IS_PHONE) {
+      _introPanelSnapshot = {
+        sidebar:  _sidebarCollapseCtrl?.isCollapsed() ?? null,
+        scene:    _sceneCollapseCtrl ?.isCollapsed() ?? null,
+        hand:     _handCollapseCtrl  ?.isCollapsed() ?? null,
+        guiClosed: gui._closed,
+      };
+      _sidebarCollapseCtrl?.setCollapsed(true, false);
+      _sceneCollapseCtrl ?.setCollapsed(true, false);
+      _handCollapseCtrl  ?.setCollapsed(true, false);
+      gui.close();
+    }
     // If a previous outro fade is still in flight (rapid re-Play), finalize
     // it before re-stashing — snap to the neutral lens state so the new
     // intro starts from a clean baseline.
@@ -1470,6 +1499,17 @@ async function loadSplat() {
     camPhaseTimers.forEach(t => clearTimeout(t));
     camPhaseTimers = [];
     camTimeline.style.display = "none";
+    // Restore the floating UI to its pre-intro state. Persist:false
+    // here so the user's actual saved preference (the localStorage
+    // value set the last time they explicitly toggled a panel)
+    // isn't overwritten by this transient intro-driven collapse.
+    if (_introPanelSnapshot) {
+      _sidebarCollapseCtrl?.setCollapsed(!!_introPanelSnapshot.sidebar, false);
+      _sceneCollapseCtrl ?.setCollapsed(!!_introPanelSnapshot.scene,   false);
+      _handCollapseCtrl  ?.setCollapsed(!!_introPanelSnapshot.hand,    false);
+      if (!_introPanelSnapshot.guiClosed) gui.open();
+      _introPanelSnapshot = null;
+    }
     // Hand off lens restore to a short outro fade. Pre-intro defaults
     // (lensAmt = -1, lensSqueeze = 0.97 …) themselves produce distortion,
     // so we don't restore to them — instead the fade lerps every
