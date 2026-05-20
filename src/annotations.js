@@ -318,7 +318,13 @@ export class AnnotationManager {
     // — clear of the dense ground layer, still close enough to be a
     // sane viewer's eye level rather than a top-down.
     const presets = [
-      { name: "Front",  subject: SUBJECT, pos: new THREE.Vector3( 0, r * 0.20,  r) },
+      // Front — hand-tuned absolute pose (captured live via the K viewport
+      // tuner, then baked here so fresh installs get the same framing). The
+      // generic SUBJECT-orbit math used by Right/Back/Left/Top doesn't apply
+      // because Front needs a tighter, off-axis composition.
+      { name: "Front",
+        absolutePos:    new THREE.Vector3(-1.687,  0.284,  2.195),
+        absoluteTarget: new THREE.Vector3(-1.133, -0.278, -0.997) },
       { name: "Right",  subject: SUBJECT, pos: new THREE.Vector3( r, r * 0.20,  0) },
       { name: "Back",   subject: SUBJECT, pos: new THREE.Vector3( 0, r * 0.20, -r) },
       { name: "Left",   subject: SUBJECT, pos: new THREE.Vector3(-r, r * 0.20,  0) },
@@ -344,9 +350,15 @@ export class AnnotationManager {
       let position, target, anchor;
       if (p.absoluteTarget) {
         target   = p.absoluteTarget.clone();
-        position = p.positionOffset
-          ? target.clone().add(p.positionOffset)
-          : target.clone().add(new THREE.Vector3(0, boundsRadius * 0.3, r));
+        // Fully-baked pose: caller supplied both endpoints. Otherwise derive
+        // a position from positionOffset or a sane default behind/above.
+        if (p.absolutePos) {
+          position = p.absolutePos.clone();
+        } else {
+          position = p.positionOffset
+            ? target.clone().add(p.positionOffset)
+            : target.clone().add(new THREE.Vector3(0, boundsRadius * 0.3, r));
+        }
         anchor   = target.clone();
       } else {
         // Pivot around the per-preset subject if declared, otherwise fall
