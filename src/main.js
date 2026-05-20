@@ -1101,13 +1101,14 @@ async function loadSplat() {
   // move auto-plays again, with the title-sequence overlay, onboarding
   // pointers, and Quad-popup auto-pop running fresh as if it were the
   // user's first time on the site. Exposed on window so the mobile-nav
-  // drawer can also trigger it.
+  // drawer can also trigger it. The lil-gui button itself is mounted
+  // further down inside the "Camera Movement" folder — it lives with
+  // Play / Stop because that's the user's mental model for "do the
+  // camera-move thing again", not in Tech Spec.
   window.__replayIntro = () => {
     try { localStorage.removeItem("splatgarden:visited:v1"); } catch {}
     window.location.reload();
   };
-  const replayCtrl = fTechSpec.add({ replay: window.__replayIntro }, "replay").name("↻ Replay Intro");
-  replayCtrl.domElement.title = "Reset the first-visit flag and reload so the opening cinematic plays again.";
 
   // Pipeline drawer is intentionally decoupled from Tech Spec Enable now.
   // The asset hotspots are on by default and the drawer is pure asset
@@ -1743,6 +1744,11 @@ async function loadSplat() {
   playCtrl.domElement.title = "Play / pause the pre-authored camera move (Shot4B_GS-FX_Camera_V01.fbx).";
   const stopCtrl = fOverlay.add(camMoveParams, "stop").name("■ Stop Camera Move");
   stopCtrl.domElement.title = "Reset the camera move to the beginning and return control to the user.";
+  // Replay Intro — lives here (not in Tech Spec) because it's a
+  // camera-move action conceptually: re-fire the intro cinematic,
+  // including the title-sequence overlay + onboarding pointers.
+  const replayCtrl = fOverlay.add({ replay: window.__replayIntro }, "replay").name("↻ Replay Intro");
+  replayCtrl.domElement.title = "Reset the first-visit flag and reload so the opening cinematic plays again.";
   // Live tuning so you can frame the gazebo while the move plays.
   const fCamTune = fOverlay.addFolder("Camera Move Tuning").close();
   fCamTune.add(camMoveXf, "ox",    -30, 30, 0.1).name("Offset X").onChange(applyCamFbxXf);
@@ -2705,34 +2711,12 @@ async function loadSplat() {
   // so the user can swap which splat is rendering.
   loadAdditionalSplatLayers();
 
-  // ---- Default fold state (PM ux: progressive disclosure / Zone 1) ----
-  // Now that EVERY folder is added (Customize, Cinematic FX, Tech Spec,
-  // Camera Movement, plus our 3DGS/USD), apply a "Zone 1 prominence"
-  // default: only 3DGS / USD opens at first load; everything else
-  // collapses. This shifts the panel from "dev tool — every knob on
-  // display" to "product — primary surface first, advanced tucked
-  // away". Users can still expand the folded folders with one click.
-  //   Zone 1 (open)   → 3DGS / USD            — the showcase toggles
-  //   Zone 2 (folded) → Customize, Cinematic FX, Camera Movement
-  //   Zone 3 (folded) → Tech Spec              — dev / authoring docs
-  // Mobile already auto-collapsed everything earlier; this is mainly
-  // for desktop / iPad to clean up the visual density at first paint.
-  if (!IS_MOBILE) {
-    try {
-      // Two folders default OPEN: 3DGS / USD (primary toggles) and
-      // Camera Movement (Play / Stop — the headline cinematic action).
-      // Everything else folds for cleaner initial visual density.
-      const KEEP_OPEN = new Set(["3DGS / USD", "Camera Movement"]);
-      gui.foldersRecursive().forEach(f => {
-        const title = f.$title?.textContent?.trim?.() || "";
-        if (KEEP_OPEN.has(title)) f.open();
-        else                       f.close();
-      });
-      // The root SPLATGARDEN STUDIO stays open so the children list
-      // is visible (vs. having to click the root caret first).
-      gui.open();
-    } catch { /* lil-gui internals change — silent on failure */ }
-  }
+  // (Folder default fold state intentionally left as lil-gui's natural
+  // open state — the showcase reads better with ALL controls visible at
+  // first paint so users can SEE what's tweakable, vs. the previous
+  // "Zone 1 only" approach which hid the depth of the studio behind
+  // collapsed folders. Mobile still auto-collapses everything earlier
+  // for the narrow-viewport sheet view.)
 }
 
 async function loadAdditionalSplatLayers() {
