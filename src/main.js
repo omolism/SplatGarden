@@ -810,6 +810,9 @@ async function loadSplat() {
   let camPhaseTimers = [];           // staged transition timers
   let camMovePrevSubform = 0;        // restore on stop / finish
   let camMovePrevQuadVis = 0;
+  let camMovePrevLensOn      = false;     // lens-pulse state restore
+  let camMovePrevLensFisheye = 0;
+  let camMovePrevPostEnable  = true;
   const _camFwd = new THREE.Vector3();
 
   // Timeline / frame readout — visible only while the camera move is loaded.
@@ -837,6 +840,18 @@ async function loadSplat() {
   //   1 — Point → Gaussian         (back to 3DGS as the clip ends)
   function camMoveStartLerps() {
     camTimeline.style.display = "flex";
+    // Stash + arm the lens-distortion pulse — animated 0 → 1 → 0 across
+    // the clip in __camMoveTick. Done before the effects-null bail so the
+    // pulse fires regardless of whether the FX dyno controller exists.
+    // postEnable also gets force-on so the pulse renders on phones (where
+    // post-fx defaults off) without enabling Bloom / Underwater (those
+    // stayed off because their individual *On flags weren't touched).
+    camMovePrevLensOn      = postfx.params.lensOn;
+    camMovePrevLensFisheye = postfx.params.lensFisheye;
+    camMovePrevPostEnable  = postfx.params.postEnable;
+    postfx.params.lensOn     = true;
+    postfx.params.postEnable = true;
+
     if (!effects) return;
     camMovePrevSubform = effects.targetSubform ?? 0;
     camMovePrevQuadVis = effects.targetVis?.quad ?? 0;
@@ -869,6 +884,12 @@ async function loadSplat() {
     camPhaseTimers.forEach(t => clearTimeout(t));
     camPhaseTimers = [];
     camTimeline.style.display = "none";
+    // Restore the lens distortion (and the post-process master toggle) to
+    // whatever the user had set before the camera move took it over.
+    postfx.params.lensOn      = camMovePrevLensOn;
+    postfx.params.lensFisheye = camMovePrevLensFisheye;
+    postfx.params.postEnable  = camMovePrevPostEnable;
+
     if (!effects) return;
     effects.targetSubform = camMovePrevSubform;
     if (effects.targetVis) effects.targetVis.quad = camMovePrevQuadVis;
@@ -1042,6 +1063,15 @@ async function loadSplat() {
     if (window.__autoPlayedIntro && introOverlay) {
       introOverlay.update(dur > 0 ? t / dur : 0, camMoveState === "playing");
     }
+    // Lens-distortion pulse — fisheye blend ramps 0 → 1 → 0 across the
+    // clip via sin(πt) so the peak lands at the midpoint. The whole
+    // shape happens every play (not only the first-visit auto-play) so
+    // a manual Play button press still gets the cinematic bend. The
+    // user's pre-move value is restored by camMoveRevertLerps.
+    if (camMoveState === "playing" && dur > 0) {
+      const tNorm = Math.max(0, Math.min(1, t / dur));
+      postfx.params.lensFisheye = Math.sin(tNorm * Math.PI);
+    }
   };
 
 
@@ -1106,21 +1136,9 @@ async function loadSplat() {
     colorHot:      "#ff8c33",
   };
   const fGpParticles = (gui.fCustomize || gui).addFolder("Particles").close();
-  const particlesEnableMain = fGpParticles.add(gpParticleParams, "enable").name("Enable")
-    .onChange(v => {
-      gpgpuParticles.setEnabled(v);
-      particlesEnableCine?.updateDisplay();
-    });
+  fGpParticles.add(gpParticleParams, "enable").name("Enable")
+    .onChange(v => gpgpuParticles.setEnabled(v));
   gpgpuParticles.setEnabled(gpParticleParams.enable);
-  // Mirror the Particles toggle inside Cinematic FX so the four "fun"
-  // effects all sit in one folder. Both controllers bind to the same
-  // gpParticleParams.enable; cross-updateDisplay keeps the checkboxes in
-  // sync without lil-gui knowing about each other.
-  const particlesEnableCine = gui.fCine?.add(gpParticleParams, "enable").name("Particles")
-    .onChange(v => {
-      gpgpuParticles.setEnabled(v);
-      particlesEnableMain.updateDisplay();
-    });
   fGpParticles.add(gpParticleParams, "pointSize", 1, 60, 0.5).name("Point Size")
     .onChange(v => gpgpuParticles.setPointSize(v));
   fGpParticles.add(gpParticleParams, "fieldStrength", 0, 12, 0.1).name("Field Strength")
