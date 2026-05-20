@@ -109,7 +109,12 @@ export const TECH_SPECS = [
         location:  "Near gazebo",
         worldPos:  [-0.195, -0.730, 2.379],
         toolchain: ["Houdini (procedural)", "Unreal Engine (set dress)"],
-        note:      "Houdini-generated cluster scattered across the gazebo planters.",
+        note:      "Houdini-generated cluster scattered across the gazebo planters. The previs reel below steps through the closeup and the Houdini custom-tool breakdown that drives the bloom layout.",
+        embed: {
+          src:   "https://player.vimeo.com/video/1193813472?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
+          label: "Closeup + Houdini tool breakdown",
+          title: "Grape Hyacinth Tool Previs",
+        },
         compare: {
           before: null,
           after:  null,
