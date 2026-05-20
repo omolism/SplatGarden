@@ -117,6 +117,7 @@ export class SceneLayers {
     this.el.innerHTML = `
       <header>
         <div class="title">Scene</div>
+        <button class="scene-min" title="Minimize">&minus;</button>
         <button class="add-splat" title="Add a splat layer (or drag a file onto the scene)">+ Add</button>
       </header>
       <ul class="layer-list"></ul>
@@ -133,6 +134,24 @@ export class SceneLayers {
     this.addBtn = this.el.querySelector(".add-splat");
     if (this.addBtn) {
       this.addBtn.addEventListener("click", () => this.onAddRequest?.());
+    }
+    // Minimize toggle — same Blender-style behaviour as the Viewport
+    // Tuner: − / + button + clicking the header itself.
+    this.minimized = false;
+    const minBtn = this.el.querySelector(".scene-min");
+    const header = this.el.querySelector("header");
+    if (minBtn && header) {
+      const toggle = () => {
+        this.minimized = !this.minimized;
+        this.el.classList.toggle("minimized", this.minimized);
+        minBtn.innerHTML = this.minimized ? "&plus;" : "&minus;";
+        minBtn.title     = this.minimized ? "Expand"  : "Minimize";
+      };
+      minBtn.addEventListener("click", (e) => { e.stopPropagation(); toggle(); });
+      header.addEventListener("click", (e) => {
+        if (e.target.closest("button")) return;
+        toggle();
+      });
     }
   }
 

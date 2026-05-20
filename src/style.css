@@ -346,7 +346,8 @@ html, body {
   text-transform: uppercase;
   color: var(--text-mid);
 }
-#scene-panel .add-splat {
+#scene-panel .add-splat,
+#scene-panel .scene-min {
   background: transparent;
   color: var(--text);
   border: 1px solid var(--hair-strong);
@@ -359,10 +360,23 @@ html, body {
   letter-spacing: 0.02em;
   transition: background 0.12s, border-color 0.12s;
 }
-#scene-panel .add-splat:hover {
+#scene-panel .scene-min {
+  padding: 0;
+  width: 22px;
+  height: 22px;
+  font-size: 14px;
+  line-height: 1;
+  margin-left: auto;
+}
+#scene-panel .add-splat:hover,
+#scene-panel .scene-min:hover {
   background: var(--hover-strong);
   border-color: rgba(255, 255, 255, 0.22);
 }
+/* Minimized state — header stays, layer list + hint collapse. */
+#scene-panel.minimized .layer-list,
+#scene-panel.minimized .hint { display: none; }
+#scene-panel.minimized header { cursor: pointer; }
 #scene-panel .layer-list {
   list-style: none;
   margin: 0;
@@ -1991,7 +2005,8 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   color: var(--text-mid);
   letter-spacing: 0.10em;
 }
-#viewpoint-tuner .vt-close {
+#viewpoint-tuner .vt-close,
+#viewpoint-tuner .vt-min {
   appearance: none;
   background: transparent;
   border: 1px solid var(--hair-strong);
@@ -2005,11 +2020,16 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   padding: 0;
   transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
-#viewpoint-tuner .vt-close:hover {
+#viewpoint-tuner .vt-close:hover,
+#viewpoint-tuner .vt-min:hover {
   background: var(--hover-strong);
   border-color: rgba(255, 255, 255, 0.22);
   color: var(--text);
 }
+/* Minimized state — header stays visible, body collapses. Clicking
+ * the header itself toggles back to expanded. */
+#viewpoint-tuner.minimized .vt-body { display: none; }
+#viewpoint-tuner.minimized .vt-head { cursor: pointer; }
 
 #viewpoint-tuner .vt-body { padding: 12px 14px 14px; }
 
@@ -2341,10 +2361,12 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 
 /* ---------- Card ---------- */
 #asset-hover-card {
-  position: absolute;
+  /* No default centering — _anchorCardToDot() in asset-hover.js sets
+   * left/top so the card sits next to the dot the user is hovering
+   * (right or left), eliminating the centre-jump flicker. */
+  position: fixed;
   top: 36px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 36px;
   width: min(600px, 72vw);
   max-height: calc(100vh - 160px);
   z-index: 25;
@@ -2836,13 +2858,16 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   transition: opacity 0.18s linear;
   text-shadow: 0 2px 30px rgba(0, 0, 0, 0.75);
 }
+/* Mirrors #loading .ld-title so the splash and the intro overlay show
+ * the same "SplatGarden" wordmark in the same face / weight / spacing. */
 #intro-overlay .io-hero-title {
-  font-size: clamp(40px, 6.5vw, 88px);
-  font-weight: 200;
-  letter-spacing: 0.12em;
+  font-family: var(--font-ui);
+  font-size: clamp(56px, 9vw, 104px);
+  font-weight: 300;
+  letter-spacing: -0.025em;
+  line-height: 0.95;
   color: #fff;
   margin: 0;
-  line-height: 1;
 }
 #intro-overlay .io-hero-sub {
   margin-top: 14px;

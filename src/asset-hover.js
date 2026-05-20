@@ -269,10 +269,47 @@ export class AssetHoverManager {
     // Wire any inline before/after compare widget that's now in the DOM —
     // the .ts-compare CSS already covers visuals; this binds the drag.
     this.card.querySelectorAll(".ts-compare .cmp-frame").forEach(wireCompareFrame);
-    // Re-apply any user-dragged position so the card stays where the user
-    // parked it across asset swaps. First-time show uses the default
-    // top-centre CSS layout.
-    if (this._cardPos) this._setCardPos(this._cardPos.x, this._cardPos.y);
+
+    // Position the card NEAR the hovered dot (right of it if there's
+    // room, otherwise left), instead of pinned to the centre. The old
+    // centre layout was right under the asset cluster, so quick mouse
+    // moves between adjacent dots flashed the card in/out at the same
+    // spot. Anchoring beside the dot makes the card stable visually.
+    if (this._cardPos) {
+      // User has dragged — honour the parked spot across asset swaps.
+      this._setCardPos(this._cardPos.x, this._cardPos.y);
+    } else {
+      this._anchorCardToDot(it);
+    }
+  }
+
+  // Place the card next to the dot's current screen position. Tries
+  // right, then left; clamps to viewport so it never falls off-screen.
+  _anchorCardToDot(it) {
+    const dotEntry = this.dots.find(d => d.item === it);
+    if (!dotEntry) return;
+    const dotRect = dotEntry.el.getBoundingClientRect();
+    // Measure the card by rendering off-screen first.
+    this.card.style.left      = "-9999px";
+    this.card.style.top       = "-9999px";
+    this.card.style.transform = "none";
+    const w = this.card.offsetWidth  || 600;
+    const h = this.card.offsetHeight || 400;
+    const gap    = 28;
+    const margin = 12;
+    // Prefer right of the dot; fall back to left, then a fixed
+    // top-right slot if the dot is centered horizontally.
+    let x = dotRect.right + gap;
+    let y = dotRect.top - 20;
+    if (x + w > window.innerWidth - margin) {
+      x = dotRect.left - w - gap;
+    }
+    if (x < margin) {
+      x = Math.max(margin, window.innerWidth - w - margin);
+    }
+    y = Math.max(margin, Math.min(window.innerHeight - h - margin, y));
+    this.card.style.left = x + "px";
+    this.card.style.top  = y + "px";
   }
 
   _hide() {

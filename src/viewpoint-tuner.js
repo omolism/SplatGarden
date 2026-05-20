@@ -28,6 +28,7 @@ export class ViewpointTuner {
       <header class="vt-head">
         <span class="vt-title">Viewport Tuner</span>
         <span class="vt-key">K</span>
+        <button class="vt-min"   data-act="min"   title="Minimize">&minus;</button>
         <button class="vt-close" data-act="close" title="Close (K or Esc)">&times;</button>
       </header>
       <div class="vt-body">
@@ -53,6 +54,23 @@ export class ViewpointTuner {
 
     this.el.querySelector('[data-act="close"]').addEventListener("click", () => this.hide());
     this.el.querySelector('[data-act="copy"]') .addEventListener("click", () => this._copySnippet());
+    // Minimize collapses .vt-body, leaving just the header. Same button
+    // (− / +) toggles between states; header stays clickable so the user
+    // can grab it / re-expand. Default state is expanded.
+    this.minimized = false;
+    const minBtn = this.el.querySelector('[data-act="min"]');
+    minBtn.addEventListener("click", () => {
+      this.minimized = !this.minimized;
+      this.el.classList.toggle("minimized", this.minimized);
+      minBtn.innerHTML = this.minimized ? "&plus;" : "&minus;";
+      minBtn.title     = this.minimized ? "Expand"  : "Minimize";
+    });
+    // Clicking the header (anywhere except the buttons) also toggles
+    // minimize, like Blender's collapsible side panel headers.
+    this.el.querySelector(".vt-head").addEventListener("click", (e) => {
+      if (e.target.closest("[data-act]")) return;
+      minBtn.click();
+    });
 
     window.addEventListener("keydown", (e) => {
       const tag = e.target?.tagName;

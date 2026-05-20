@@ -1085,6 +1085,14 @@ async function loadSplat() {
           // USD-spec tooltip so the "billboard" concept gets introduced
           // before the user is left to explore on their own.
           introOverlay?.hide();
+          // Restore the Hand Tracking panel if the intro had hidden it
+          // (don't unhide on phones, where it's permanently off via the
+          // IS_PHONE startup block).
+          const _handPanelAfterIntro = document.getElementById("hand-panel");
+          if (_handPanelAfterIntro?.dataset?.introHidden === "1") {
+            delete _handPanelAfterIntro.dataset.introHidden;
+            if (!IS_PHONE) _handPanelAfterIntro.style.display = "";
+          }
           if (window.__autoPlayedIntro) {
             window.__autoPlayedIntro = false;
             setTimeout(() => keyHints?.showFor(6500), 250);
@@ -1997,6 +2005,12 @@ async function loadSplat() {
     try { localStorage.setItem(FIRST_VISIT_KEY, String(Date.now())); } catch {}
     window.__autoPlayedIntro = true;
     introOverlay?.show();
+    // Hide Hand Tracking during the cinematic — it competes for screen
+    // real-estate with the title sequence and the layer-showcase. The
+    // panel is restored by the mixer 'finished' handler (see above).
+    const _handPanelDuringIntro = document.getElementById("hand-panel");
+    if (_handPanelDuringIntro) _handPanelDuringIntro.dataset.introHidden = "1";
+    if (_handPanelDuringIntro) _handPanelDuringIntro.style.display = "none";
     // Small beat after the splash hide so the camera move doesn't yank
     // the viewport at exactly the same instant the splash is leaving.
     setTimeout(() => { playPauseCameraMove(); }, 350);

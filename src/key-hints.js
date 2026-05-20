@@ -4,40 +4,34 @@
 // splash), auto-dismisses after a few seconds, summon back with H.
 // ---------------------------------------------------------------------------
 
+// Player-facing essentials only — dev tools (P profiler, K tuner, V/C/R
+// viewpoint authoring, Esc) are intentionally omitted to keep the guide
+// short. Power users discover those via lil-gui or by reading the code.
 const SECTIONS = [
   {
-    title: "Mouse",
+    title: "Move the camera",
     rows: [
-      [`<span class="kh-mouse">drag</span>`,       "Rotate"],
-      [`<span class="kh-mouse">scroll</span>`,     "Zoom"],
-      [`<span class="kh-mouse">right-drag</span>`, "Pan"],
+      [`<span class="kh-mouse">drag</span>`,   "Rotate"],
+      [`<span class="kh-mouse">scroll</span>`, "Zoom"],
     ],
   },
   {
-    title: "Viewpoints",
+    title: "Jump to a view",
     rows: [
-      [`<kbd>1</kbd>&ndash;<kbd>9</kbd>`, "Jump to viewpoint"],
-      [`<kbd>V</kbd>`,                   "Add at next click"],
-      [`<kbd>C</kbd>`,                   "Overwrite Center"],
-      [`<kbd>R</kbd>`,                   "Reset framing"],
+      [`<kbd>1</kbd>&ndash;<kbd>7</kbd>`, "Numbered viewpoints"],
     ],
   },
   {
-    title: "Flythrough",
+    title: "Walk around",
     rows: [
       [`<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>`, "Move"],
-      [`<kbd>Q</kbd> <kbd>E</kbd>`,                       "Down / Up"],
-      [`<kbd>&#x21E7;</kbd>`,                             "3× boost"],
     ],
   },
   {
     title: "Panels",
     rows: [
-      [`<kbd>T</kbd>`,   "Pipeline doc"],
-      [`<kbd>P</kbd>`,   "Profiler"],
-      [`<kbd>K</kbd>`,   "Viewport tuner"],
-      [`<kbd>H</kbd>`,   "Toggle this guide"],
-      [`<kbd>Esc</kbd>`, "Close panels"],
+      [`<kbd>T</kbd>`, "Pipeline drawer"],
+      [`<kbd>H</kbd>`, "This guide"],
     ],
   },
 ];
