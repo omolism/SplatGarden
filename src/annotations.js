@@ -306,12 +306,12 @@ export class AnnotationManager {
     // the splat's geometric centroid (which gets pulled off by outlier
     // splats). The four cardinal cameras + Top all orbit around this.
     const SUBJECT = new THREE.Vector3(0.594, -0.561, 3.774);
-    // Fixed cardinal-orbit radius. The whole authored content (gazebo +
-    // hyacinth + daffodil + landscape patch) sits inside a ~2 m sphere
-    // around SUBJECT, so 3.5 m from the subject frames it tightly without
-    // pulling outlier splats into shot. boundsRadius can be 10 m+ once
-    // the noisy far splats are counted in, hence we don't scale by it.
-    const r = 3.5;
+    // Fixed cardinal-orbit radius. Calibrated so the cardinal cameras
+    // sit far enough back to see the gazebo + flower cluster *and* the
+    // surrounding landscape patch in frame, without pulling outlier
+    // splats from the bounding sphere in. boundsRadius can be 10 m+
+    // once those outliers are counted, so we don't scale by it.
+    const r = 6.0;
     const presets = [
       { name: "Front",  subject: SUBJECT, pos: new THREE.Vector3( 0, r * 0.30,  r) },
       { name: "Right",  subject: SUBJECT, pos: new THREE.Vector3( r, r * 0.30,  0) },

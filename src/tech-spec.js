@@ -20,10 +20,10 @@ export const TECH_SPECS = [
   // glance via the toolchain chips, so even when sections are collapsed
   // the tech stack reads itself.
   {
-    section:   "Authoring",
+    section:   "R&D",
     group:     "layer",
     layerNum:  1,
-    desc:      "Tools the artists used to model, animate, and style every asset.",
+    desc:      "Research + development — modeling, animation, and AI-driven texture stylization.",
     toolchain: ["Houdini", "SpeedTree", "Unreal Engine", "VAT bake", "Python · OSC", "AI Stylization"],
     items: [
       {

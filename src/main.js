@@ -338,10 +338,9 @@ async function loadSplat() {
     statusEl,
     // localStorage key scoped to the splat URL so swapping splats doesn't
     // bring along the wrong viewpoints.
-    // v4 — bumped when the cardinal orbit radius shrank from
-    // boundsRadius * 1.6 (~12-16 m, way too wide) to a fixed 3.5 m that
-    // frames the gazebo + flower cluster tightly.
-    storageKey: "splatgarden:viewpoints:v4:" + SPLAT_URL,
+    // v5 — bumped when the cardinal orbit radius widened 3.5 -> 6.0 m
+    // so the surrounding landscape sits in frame alongside the gazebo.
+    storageKey: "splatgarden:viewpoints:v5:" + SPLAT_URL,
   });
   // Seed defaults silently — without this guard, each seeded add() would
   // write to localStorage and wipe any saved user-added viewpoints (e.g.
