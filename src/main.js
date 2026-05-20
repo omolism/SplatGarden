@@ -1278,15 +1278,16 @@ async function loadSplat() {
         if (camCtrl) camCtrl.updateDisplay();
       }
     }
-    // Lens pulse — restored from commit 2d3a4d3 for review:
-    // lensFisheye = sin(π * t / duration) — full 0 → 1 → 0 bell across
-    // the entire clip, peaking at midpoint. Fires on every play (not
-    // just the first-visit intro). camMoveStartLerps force-set lensOn
-    // + postEnable; revertLerps restores both plus lensFisheye.
+    // Lens pulse — restored from commit a1bbbeb:
+    //   lensFisheye = 0.26 * sin(π * t / duration)
+    // Same full-bell shape but scaled to peak 0.26 at midpoint —
+    // gentler than the unclamped 1.0 version, still reads as a
+    // single sustained pulse across the clip.
     if (camMoveState === "playing" && dur > 0) {
-      _introTouchedLens = true;        // flag the revert path
+      _introTouchedLens = true;
+      const LENS_PULSE_PEAK = 0.26;
       const tNormLens = Math.max(0, Math.min(1, t / dur));
-      postfx.params.lensFisheye = Math.sin(tNormLens * Math.PI);
+      postfx.params.lensFisheye = LENS_PULSE_PEAK * Math.sin(tNormLens * Math.PI);
     }
   };
 
