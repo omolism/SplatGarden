@@ -704,7 +704,6 @@ kbd {
   height: 38px;
   justify-content: center;
 }
-#hand-panel.hand-minimized .hand-head .hand-head-title { display: none; }
 #hand-panel.hand-minimized #hand-min-toggle.sidebar-toggle {
   width: 38px;
   height: 38px;
@@ -714,23 +713,18 @@ kbd {
   width: 16px;
   height: 16px;
 }
-/* Header strip at top of #hand-panel — chevron-left for collapse plus
-   a small uppercase label. Replaces the older absolute-positioned
-   corner chevron, which overlapped the toggle's right-aligned "OFF"
-   badge and broke the visual. */
+/* Slim chevron-only strip at the top of #hand-panel. Dropped the
+   uppercase "HAND TRACKING" label that used to sit next to the
+   chevron — it duplicated the existing "Hand Tracking" text inside
+   the toggle button below, which (a) read as visually redundant
+   and (b) forced the toggle row narrower, clipping the "OFF" badge.
+   Now the chevron sits alone at the top-left as a small affordance
+   and the toggle button is the panel's primary visual surface. */
 #hand-panel .hand-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: -2px 0 2px;
-}
-#hand-panel .hand-head-title {
-  flex: 1;
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--text-mid);
+  height: 18px;
+  margin: -2px 0 4px -2px;
 }
 #hand-panel #hand-min-toggle.sidebar-toggle {
   background: transparent;
