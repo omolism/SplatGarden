@@ -142,7 +142,6 @@ class BottomSheet {
     this.open = true;
     this.el.style.transform = "";
     this.el.classList.add("open");
-    this.backdrop.classList.add("open");
   }
 
   close() {
@@ -151,7 +150,6 @@ class BottomSheet {
     const prevKey = this.activeKey;
     this.activeKey = null;
     this.el.classList.remove("open");
-    this.backdrop.classList.remove("open");
     this.el.style.transform = "";
     this._onDismiss?.(prevKey);
   }
@@ -508,7 +506,7 @@ export class MobileUI {
         <div class="ms-info-k">Scene</div>
         <div class="ms-info-v">SplatGarden</div>
       </div>
-      <button class="ms-action" data-act="pipeline">Open Pipeline</button>
+      <button class="ms-action" data-act="pipeline">Open Tech Breakdown</button>
       <button class="ms-action" data-act="guide">Open Quick Guide</button>
       <button class="ms-action" data-act="credits">Credits</button>
     `;

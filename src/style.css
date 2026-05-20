@@ -200,15 +200,83 @@ html, body {
   max-height: 60%;          /* shares space with #scene-panel below */
   overflow: hidden;
   box-shadow: var(--shadow-soft);
+  /* Slides off-screen when the user collapses the panel (see
+     .sidebar-minimized below). Transition matches the iOS-y feel
+     used by the bottom sheet. */
+  transition: transform 0.28s cubic-bezier(.22, 1, .36, 1),
+              opacity 0.22s ease;
 }
+/* Collapsed state — anchored to the left edge of #left-stack and
+   slid out far enough that only a thin glow remains. The dedicated
+   floating "expand" handle (#sidebar-expand) is what brings it back. */
+#sidebar.sidebar-minimized {
+  transform: translateX(calc(-100% - 18px));
+  opacity: 0;
+  pointer-events: none;
+}
+/* Collapse / expand chevron — lives inside #sidebar header. When the
+   sidebar is collapsed, the OUTER #sidebar-expand affordance takes
+   over (this button is gone from view because its parent is). */
+#sidebar .sidebar-toggle {
+  background: transparent;
+  border: 0;
+  color: var(--text-mid);
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  margin-right: 4px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+#sidebar .sidebar-toggle:hover { background: rgba(255, 255, 255, 0.06); color: var(--text); }
+#sidebar .sidebar-toggle svg { width: 16px; height: 16px; display: block; }
+
+/* Floating expand handle, shown ONLY when #sidebar is collapsed.
+   Sits at the left edge so the user can re-summon the panel with one
+   tap; persistent across sessions via localStorage. */
+#sidebar-expand {
+  position: fixed;
+  top: 26px;
+  left: 0;
+  width: 28px;
+  height: 56px;
+  border: 1px solid var(--hair);
+  border-left: 0;
+  border-radius: 0 8px 8px 0;
+  background: var(--panel);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  color: var(--text-mid);
+  cursor: pointer;
+  display: none;        /* shown when body.has-collapsed-sidebar */
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+#sidebar-expand:hover  { background: var(--hover-strong); color: var(--text); }
+#sidebar-expand:active { transform: translateX(1px); }
+#sidebar-expand svg    { width: 16px; height: 16px; display: block; }
+body.has-collapsed-sidebar #sidebar-expand { display: flex; }
+/* Mobile already hides #sidebar entirely; the floating expand handle
+   would be a UI ghost there — suppress it. */
+body.mobile #sidebar-expand { display: none !important; }
+
 #sidebar header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
+  gap: 8px;
   padding: 12px 14px 10px;
   border-bottom: 1px solid var(--hair);
 }
 #sidebar header .title {
+  flex: 1;
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.18em;

@@ -334,7 +334,7 @@ export class TechSpec {
         <header class="ts-header">
           <div class="ts-title">
             <span class="dot"></span>
-            <span class="t">PIPELINE</span>
+            <span class="t">TECH BREAKDOWN</span>
             <span class="ts-key">T</span>
           </div>
           <button class="ts-close" title="Close (T or Esc)">×</button>

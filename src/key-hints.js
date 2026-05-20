@@ -66,17 +66,20 @@ export class KeyHints {
     this._visible   = false;
     this._timer     = null;
 
-    // Touch devices get the gesture-only variant; no H key chip and no
-    // keyboard listener since there's no physical keyboard to fire it.
-    const isTouch  = document.body.classList.contains("touch");
-    const sections = isTouch ? TOUCH_SECTIONS : DESKTOP_SECTIONS;
+    // PHONES get the gesture-only variant; iPad and desktop see the
+    // full keyboard-shortcut guide. (iPad can pair a Bluetooth
+    // keyboard and the touch-only guide hid useful info from desktop
+    // users browsing on a touch laptop.) The check uses .mobile
+    // because that class is set ONLY on phone-class touch devices.
+    const isPhone  = document.body.classList.contains("mobile");
+    const sections = isPhone ? TOUCH_SECTIONS : DESKTOP_SECTIONS;
 
     this.el = document.createElement("aside");
     this.el.id = "key-hints";
     this.el.innerHTML = `
       <header class="kh-head">
         <span class="kh-title">Quick Guide</span>
-        ${isTouch ? "" : `<span class="kh-key">H</span>`}
+        ${isPhone ? "" : `<span class="kh-key">H</span>`}
         <button class="kh-close" data-act="close" title="${isTouch ? "Close" : "Close (H or Esc)"}">&times;</button>
       </header>
       <div class="kh-body">
@@ -99,8 +102,9 @@ export class KeyHints {
 
     this.el.querySelector('[data-act="close"]').addEventListener("click", () => this.hide());
 
-    // H toggles; Esc closes — desktop only; phones have no keyboard.
-    if (!isTouch) {
+    // H toggles; Esc closes — desktop & iPad (iPad can pair a keyboard).
+    // Skipped only on phones, which have no physical keyboard.
+    if (!isPhone) {
       window.addEventListener("keydown", (e) => {
         const tag = e.target?.tagName;
         if (tag === "INPUT" || tag === "TEXTAREA" || e.target?.isContentEditable) return;

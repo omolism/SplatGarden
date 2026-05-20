@@ -38,7 +38,7 @@ const TIPS_DESKTOP = [
     side: "left",
   },
   {
-    label: "Pipeline",
+    label: "Tech Breakdown",
     sub: "Press T",
     selector: "#toolbar, #status",
     side: "above",

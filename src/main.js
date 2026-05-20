@@ -116,6 +116,8 @@ const loadingText  = document.getElementById("loading-text");
 const annoLayer    = document.getElementById("annotation-layer");
 const viewList     = document.getElementById("viewpoint-list");
 const addBtn       = document.getElementById("add-viewpoint");
+const sidebarEl    = document.getElementById("sidebar");
+const sidebarToggleBtn = document.getElementById("sidebar-toggle");
 const statusEl     = document.getElementById("status");
 const handToggle   = document.getElementById("hand-toggle");
 const handVideo    = document.getElementById("hand-video");
@@ -153,6 +155,48 @@ document.body.classList.toggle("touch",  IS_TOUCH);
 document.body.classList.toggle("phone",  IS_PHONE);
 document.body.classList.toggle("tablet", IS_TABLET);
 document.body.classList.toggle("mobile", IS_MOBILE);   // legacy alias
+
+// ---------------------------------------------------------------------------
+// Sidebar collapse / expand. Desktop + iPad — phone hides the sidebar
+// entirely so the collapse affordance is irrelevant there. State is
+// persisted in localStorage so the user's "I don't need this right now"
+// choice survives reloads.
+// ---------------------------------------------------------------------------
+const SIDEBAR_COLLAPSED_KEY = "splatgarden:sidebar-collapsed";
+const sidebarExpandBtn = (() => {
+  // Build the floating expand handle once at startup. CSS hides it
+  // unless body has .has-collapsed-sidebar, so creating it here is
+  // free for users who never collapse.
+  const btn = document.createElement("button");
+  btn.id = "sidebar-expand";
+  btn.title = "Expand panel";
+  btn.setAttribute("aria-label", "Expand panel");
+  btn.innerHTML = `
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polyline points="10 6 16 12 10 18"/>
+    </svg>`;
+  document.body.appendChild(btn);
+  return btn;
+})();
+function setSidebarCollapsed(on, persist = true) {
+  if (!sidebarEl) return;
+  sidebarEl.classList.toggle("sidebar-minimized", on);
+  document.body.classList.toggle("has-collapsed-sidebar", on);
+  sidebarToggleBtn?.setAttribute("aria-expanded", String(!on));
+  if (persist) {
+    try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, on ? "1" : "0"); } catch {}
+  }
+}
+sidebarToggleBtn?.addEventListener("click", () => setSidebarCollapsed(true));
+sidebarExpandBtn .addEventListener("click", () => setSidebarCollapsed(false));
+// Restore previous state on load. Skipped on phone (sidebar is hidden
+// via CSS there anyway, and we don't want a stray floating expand
+// handle showing up next to the bottom-bar).
+if (!IS_PHONE) {
+  try {
+    if (localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1") setSidebarCollapsed(true, false);
+  } catch {}
+}
 
 // ---------------------------------------------------------------------------
 // Renderer / scene / camera
