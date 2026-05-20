@@ -87,13 +87,6 @@ export class Credits {
           </ul>
         </section>
         <section class="cr-sec">
-          <div class="cr-sec-title">Software</div>
-          <div class="cr-chips">
-            ${SOFTWARE_FEATURED.map(s => `<span class="cr-chip cr-chip-featured">${s}</span>`).join("")}
-            ${SOFTWARE_OTHER   .map(s => `<span class="cr-chip">${s}</span>`).join("")}
-          </div>
-        </section>
-        <section class="cr-sec">
           <div class="cr-sec-title">Special Thanks</div>
           <ul class="cr-list cr-list-thanks">
             ${SPECIAL_THANKS.map(p => {
@@ -109,6 +102,13 @@ export class Credits {
                 </li>`;
             }).join("")}
           </ul>
+        </section>
+        <section class="cr-sec">
+          <div class="cr-sec-title">Software</div>
+          <div class="cr-chips">
+            ${SOFTWARE_FEATURED.map(s => `<span class="cr-chip cr-chip-featured">${s}</span>`).join("")}
+            ${SOFTWARE_OTHER   .map(s => `<span class="cr-chip">${s}</span>`).join("")}
+          </div>
         </section>
         <section class="cr-sec">
           <div class="cr-sec-title">Tech Stack</div>
