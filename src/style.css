@@ -3015,15 +3015,13 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   50%      { transform: translateX(-6px); }
 }
 
-/* Pointer placement — pinned to viewport edges. Three right-side
- * pointers stack vertically (3DGS/USD at top of lil-gui, Pipeline T
- * mid-right, Viewport Tuner K lower-right). Scene panel sits on the
- * left rail. */
+/* Pointer placement — three callouts: Pipeline (right rail, mid-
+ * height), Scene panel (left rail), 3DGS/USD (right rail, near the
+ * top of the embedded panel in lil-gui). */
 #onboarding-pointers .op-tip[data-i="0"] { top: 30%; right: 5vw; }
-#onboarding-pointers .op-tip[data-i="1"] { top: 50%; right: 5vw; }
-#onboarding-pointers .op-tip[data-i="2"] { top: 30%; left:  5vw; flex-direction: row-reverse; }
-#onboarding-pointers .op-tip[data-i="3"] { top: 10%; right: 5vw; }
-#onboarding-pointers .op-tip[data-i="2"] .op-arrow {
+#onboarding-pointers .op-tip[data-i="1"] { top: 30%; left:  5vw; flex-direction: row-reverse; }
+#onboarding-pointers .op-tip[data-i="2"] { top: 10%; right: 5vw; }
+#onboarding-pointers .op-tip[data-i="1"] .op-arrow {
   /* Mirror the arrow so it points back at the left-side Scene panel.
    * Compose with the bob animation by using a separate keyframe set. */
   transform: scaleX(-1);
@@ -3581,9 +3579,10 @@ body.touch #mobile-nav-btn { display: flex; }
     z-index: 25;
   }
   /* Onboarding pointers — repositioned for narrow screens */
-  #onboarding-pointers .op-tip[data-i="0"] { top: 12vh; right: 3vw; }
-  #onboarding-pointers .op-tip[data-i="1"] { top: 28vh; right: 3vw; }
-  #onboarding-pointers .op-tip[data-i="2"] { top: 12vh; left: 3vw; }
+  /* Phone layout — 3 tips: Pipeline (right), Scene (left), 3DGS/USD (right) */
+  #onboarding-pointers .op-tip[data-i="0"] { top: 18vh; right: 3vw; }
+  #onboarding-pointers .op-tip[data-i="1"] { top: 18vh; left:  3vw; }
+  #onboarding-pointers .op-tip[data-i="2"] { top:  6vh; right: 3vw; }
   #onboarding-pointers .op-arrow { width: 60px; height: 30px; }
   /* Asset hover card — full-width sheet */
   #asset-hover-card {

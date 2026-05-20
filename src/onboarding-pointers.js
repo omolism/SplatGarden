@@ -7,17 +7,14 @@
 
 // Each callout points at a screen-space target. We resolve `selector` at
 // reveal time so panels added later still get a valid pointer.
+// Viewport Tuner (K) was dropped from the onboarding — it's a dev /
+// authoring tool, not something a first-time viewer needs to know
+// about. Remaining tips point at panels the player will actually use.
 const TIPS = [
   {
     label: "Pipeline",
     sub:   "Press T",
     selector: "#tech-spec, #left-stack",
-    anchor:   "top-right",      // where the arrow originates relative to viewport
-  },
-  {
-    label: "Viewport Tuner",
-    sub:   "Press K",
-    selector: "#viewport-tuner",
     anchor:   "top-right",
   },
   {
