@@ -23,9 +23,9 @@ import { uniforms as effectUniforms } from "./effects.js";
 import { loadColmapImages, buildColmapFrustums } from "./colmap-loader.js";
 
 // All public-folder assets resolve against BASE_URL so the same build
-// works at the root (Cloudflare Pages, `npm run dev`) and under a sub-
-// path (GitHub Pages — `/SplatGarden-WebViewer/`). BASE_URL always ends
-// with "/" so plain concatenation is safe.
+// works at the root (`npm run dev`) and under a sub-path (GitHub Pages
+// — `/SplatGarden-WebViewer/`). BASE_URL always ends with "/" so plain
+// concatenation is safe.
 const BASE = import.meta.env.BASE_URL;
 const SPLAT_URL = `${BASE}Whole_With_Statue.splat`;
 
@@ -806,40 +806,9 @@ async function loadSplat() {
           statusEl.textContent = "Camera move complete";
         });
 
-        // ----- Center viewpoint = camera-move frame CENTER_FRAME ------
-        // Sample the animation POSITION at that time, but override the look
-        // direction to point at the scene bounds centre (the gazebo). The
-        // FBX keyframe's forward vector isn't aimed at the subject — we
-        // want Center to literally face the gazebo regardless.
-        const CENTER_FRAME = 460;
-        const centerVpRef = annotations?.viewpoints.find(v => v.name === "Center");
-        if (centerVpRef) {
-          const dur = camAction.getClip().duration;
-          const t   = Math.min(Math.max(CENTER_FRAME / CAM_FPS, 0), dur);
-          camAction.enabled = true;
-          camAction.paused  = true;
-          camAction.time    = t;
-          camMixer.update(0);
-          camAnimNode.updateWorldMatrix(true, false);
-
-          const sampledPos  = new THREE.Vector3();
-          camAnimNode.getWorldPosition(sampledPos);
-
-          // Reset the action so the Play button starts from the top.
-          camAction.stop();
-          camAction.time = 0;
-
-          centerVpRef.position.copy(sampledPos);
-          // Target = scene bounds centre (the gazebo / subject area). This
-          // guarantees the Center viewpoint faces the subject no matter
-          // where on the FBX path frame 460 lands.
-          centerVpRef.target.copy(center);
-          if (annotations.activeId === centerVpRef.id) {
-            camera.position.copy(centerVpRef.position);
-            controls.target.copy(centerVpRef.target);
-            controls.update();
-          }
-        }
+        // Center viewpoint is now seeded with an absolute target on the
+        // Grape Hyacinth (see annotations.seedDefaults), not derived from
+        // the FBX. No camera-move patching needed.
       } catch (err) {
         console.warn("[CameraMove] failed:", err?.message ?? err);
         statusEl.textContent = "Camera move failed: " + (err?.message ?? err);

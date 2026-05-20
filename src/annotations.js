@@ -300,24 +300,23 @@ export class AnnotationManager {
       { name: "Back",   pos: new THREE.Vector3( 0, boundsRadius * 0.3, -r) },
       { name: "Left",   pos: new THREE.Vector3(-r, boundsRadius * 0.3,  0) },
       { name: "Top",    pos: new THREE.Vector3( 0,  r * 1.1,  0.001) },
-      // Center = camera placed at the geometric center of the splat bounds,
-      // looking forward into the scene. OrbitControls treats the offset
-      // between pos and target as the orbit radius, so we keep target ahead
-      // by half the bounds radius — a sane distance to scroll-zoom from.
-      { name: "Center", pos: new THREE.Vector3(0, 0, 0),
-                        targetOffset: new THREE.Vector3(0, 0, -boundsRadius * 0.5) },
-      // Gazebo viewpoint — anchors at the gazebo asset's world position.
-      // (Tree / Grape Hyacinth / Daffodil are not viewpoints; their world
-      // positions live on the TECH_SPECS asset items as `worldPos` and drive
-      // the upcoming hover info card.)
-      { name: "Gazebo", absoluteTarget: new THREE.Vector3(0.616, -0.937, 3.695) },
+      // Center = framed close on the Grape Hyacinth cluster — the showcase's
+      // hero asset. Camera sits ~1.6 m behind and slightly above, target lands
+      // on the flowers themselves. Worldpos uses the Z-flipped frame (the
+      // same one asset-hover hotspots project in) so the framing matches the
+      // floating hotspot location.
+      { name: "Center",
+        absoluteTarget: new THREE.Vector3(-0.195, -0.730, -2.379),
+        positionOffset: new THREE.Vector3(0, 0.4, 1.5) },
     ];
     let centerVp = null;
     for (const p of presets) {
       let position, target, anchor;
       if (p.absoluteTarget) {
         target   = p.absoluteTarget.clone();
-        position = target.clone().add(new THREE.Vector3(0, boundsRadius * 0.3, r));
+        position = p.positionOffset
+          ? target.clone().add(p.positionOffset)
+          : target.clone().add(new THREE.Vector3(0, boundsRadius * 0.3, r));
         anchor   = target.clone();
       } else {
         position = boundsCenter.clone().add(p.pos);

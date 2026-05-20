@@ -39,8 +39,7 @@ jobs:
 
       - name: Build
         # VITE_BASE matches the repo name so absolute asset paths resolve
-        # under https://<user>.github.io/SplatGarden-WebViewer/. Cloudflare
-        # Pages serves at root and does not set this env var.
+        # under https://<user>.github.io/SplatGarden-WebViewer/.
         env:
           VITE_BASE: /SplatGarden-WebViewer/
         run: npm run build
