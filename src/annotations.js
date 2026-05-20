@@ -300,12 +300,19 @@ export class AnnotationManager {
       { name: "Back",   pos: new THREE.Vector3( 0, boundsRadius * 0.3, -r) },
       { name: "Left",   pos: new THREE.Vector3(-r, boundsRadius * 0.3,  0) },
       { name: "Top",    pos: new THREE.Vector3( 0,  r * 1.1,  0.001) },
-      // Center = framed close on the Grape Hyacinth cluster — the showcase's
-      // hero asset. Camera sits ~1.6 m behind and slightly above, target lands
-      // on the flowers themselves. Worldpos uses the Z-flipped frame (the
-      // same one asset-hover hotspots project in) so the framing matches the
-      // floating hotspot location.
-      { name: "Center",
+      // Center = camera placed at the geometric center of the splat bounds,
+      // looking forward into the scene. OrbitControls treats the offset
+      // between pos and target as the orbit radius, so we keep target ahead
+      // by half the bounds radius — a sane distance to scroll-zoom from.
+      // This pose is re-patched by main.js once the FBX preload finishes
+      // (Center sampled at frame 460 of the cinematic flythrough).
+      { name: "Center", pos: new THREE.Vector3(0, 0, 0),
+                        targetOffset: new THREE.Vector3(0, 0, -boundsRadius * 0.5) },
+      // Zoom = close-up on the Grape Hyacinth — the showcase's hero asset.
+      // worldPos uses the Z-flipped frame (same one the hover hotspot
+      // projects in) so the framing matches the floating dot's position.
+      // Camera sits ~1.6 m behind and slightly above the flower cluster.
+      { name: "Zoom",
         absoluteTarget: new THREE.Vector3(-0.195, -0.730, -2.379),
         positionOffset: new THREE.Vector3(0, 0.4, 1.5) },
     ];

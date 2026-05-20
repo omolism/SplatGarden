@@ -338,7 +338,9 @@ async function loadSplat() {
     statusEl,
     // localStorage key scoped to the splat URL so swapping splats doesn't
     // bring along the wrong viewpoints.
-    storageKey: "splatgarden:viewpoints:" + SPLAT_URL,
+    // v2 — bumped when 'Zoom' was introduced, to evict stale localStorage
+    // entries that pre-date the new preset list.
+    storageKey: "splatgarden:viewpoints:v2:" + SPLAT_URL,
   });
   // Seed defaults silently — without this guard, each seeded add() would
   // write to localStorage and wipe any saved user-added viewpoints (e.g.
@@ -806,9 +808,37 @@ async function loadSplat() {
           statusEl.textContent = "Camera move complete";
         });
 
-        // Center viewpoint is now seeded with an absolute target on the
-        // Grape Hyacinth (see annotations.seedDefaults), not derived from
-        // the FBX. No camera-move patching needed.
+        // ----- Center viewpoint = camera-move frame CENTER_FRAME ------
+        // Sample the animation POSITION at frame 460, override the look
+        // direction to point at the scene bounds centre (the gazebo area).
+        // The FBX keyframe's forward vector isn't aimed at the subject —
+        // we want Center to literally face the gazebo regardless.
+        const CENTER_FRAME = 460;
+        const centerVpRef = annotations?.viewpoints.find(v => v.name === "Center");
+        if (centerVpRef) {
+          const dur = camAction.getClip().duration;
+          const t   = Math.min(Math.max(CENTER_FRAME / CAM_FPS, 0), dur);
+          camAction.enabled = true;
+          camAction.paused  = true;
+          camAction.time    = t;
+          camMixer.update(0);
+          camAnimNode.updateWorldMatrix(true, false);
+
+          const sampledPos = new THREE.Vector3();
+          camAnimNode.getWorldPosition(sampledPos);
+
+          // Reset the action so the Play button starts from the top.
+          camAction.stop();
+          camAction.time = 0;
+
+          centerVpRef.position.copy(sampledPos);
+          centerVpRef.target.copy(center);
+          if (annotations.activeId === centerVpRef.id) {
+            camera.position.copy(centerVpRef.position);
+            controls.target.copy(centerVpRef.target);
+            controls.update();
+          }
+        }
       } catch (err) {
         console.warn("[CameraMove] failed:", err?.message ?? err);
         statusEl.textContent = "Camera move failed: " + (err?.message ?? err);
