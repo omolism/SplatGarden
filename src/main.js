@@ -23,6 +23,7 @@ import { ViewpointTuner } from "./viewpoint-tuner.js";
 import { Credits } from "./credits.js";
 import { IntroOverlay } from "./intro-overlay.js";
 import { OnboardingPointers } from "./onboarding-pointers.js";
+import { MobileNav } from "./mobile-nav.js";
 import { uniforms as effectUniforms } from "./effects.js";
 import { loadColmapImages, buildColmapFrustums, colmapCameraPosition, colmapCameraRotation } from "./colmap-loader.js";
 
@@ -57,10 +58,23 @@ const handModeEl   = document.getElementById("hand-mode");
 // it doesn't eat half the screen, and hides hand-tracking (front-cam +
 // MediaPipe is battery murder on phones).
 // ---------------------------------------------------------------------------
-const IS_MOBILE =
-  /Mobi|Android|iPhone|iPad|iPod|Tablet/i.test(navigator.userAgent) ||
-  (window.matchMedia?.("(pointer: coarse)").matches && window.innerWidth < 900);
-document.body.classList.toggle("mobile", IS_MOBILE);
+// Touch / mobile detection. IS_TOUCH catches iPad-in-desktop-UA mode
+// (iPadOS 13+ lies about being macOS) via maxTouchPoints. IS_PHONE is for
+// the narrow-viewport case where panels need to go near-full-width;
+// IS_TABLET sits in between (iPad portrait/landscape, big Android tablets).
+const IS_TOUCH = (
+  ('ontouchstart' in window) ||
+  navigator.maxTouchPoints > 0 ||
+  window.matchMedia?.("(pointer: coarse)").matches
+);
+const IS_PHONE  = IS_TOUCH && window.innerWidth <  768;
+const IS_TABLET = IS_TOUCH && window.innerWidth >= 768;
+// Back-compat name — legacy code paths read IS_MOBILE.
+const IS_MOBILE = IS_PHONE;
+document.body.classList.toggle("touch",  IS_TOUCH);
+document.body.classList.toggle("phone",  IS_PHONE);
+document.body.classList.toggle("tablet", IS_TABLET);
+document.body.classList.toggle("mobile", IS_MOBILE);   // legacy alias
 
 // ---------------------------------------------------------------------------
 // Renderer / scene / camera
@@ -218,14 +232,24 @@ window.__keyHints = keyHints;
 // gizmos) live here so they bypass the post-FX composer pipeline. Rendered
 // AFTER postfx.render() with autoClear=false so they sit cleanly on top.
 const techOverlayScene = new THREE.Scene();
-// Mobile: kill post-processing by default — Bloom is the biggest GPU tax,
-// and the Polish pass is fill-rate heavy on mobile GPUs.
-if (IS_MOBILE) {
-  postfx.params.postEnable = false;
-  postfx.params.bloomEnable = false;
+// Touch defaults — kill the heavy post-process passes (Bloom is the biggest
+// GPU tax; Underwater is fill-rate-heavy), hide the Hand Tracking panel
+// (needs a webcam aimed at the user's hands, awkward on a held device).
+// Tablets keep post-fx on; only phones get the full quality cut.
+if (IS_TOUCH) {
   const handPanel = document.getElementById("hand-panel");
   if (handPanel) handPanel.style.display = "none";
 }
+if (IS_PHONE) {
+  postfx.params.postEnable    = false;
+  postfx.params.bloomEnable   = false;
+  postfx.params.underwaterOn  = false;
+  // gpParticleParams.enable already defaults to false, so particles stay
+  // off on phones without extra plumbing.
+}
+// Mobile nav drawer (top-right hamburger). CSS hides it on non-touch.
+const mobileNav = new MobileNav();
+window.__mobileNav = mobileNav;
 
 function onResize() {
   const w = window.innerWidth;

@@ -72,7 +72,10 @@ Floating panel that shows the live camera position + target and lets you commit 
 Bottom-center card listing mouse + key shortcuts. Auto-pops after the intro and dismisses after a few seconds; press `H` to summon back, `Esc` to close.
 
 ### Credits panel
-Toggled by the `Credits` checkbox under the lil-gui Tech Spec folder. Sections: Team, Software, Special Thanks, Tech Stack. Closes when clicked outside the panel.
+Toggled by the `Credits` checkbox under the lil-gui Tech Spec folder. Sections: Team, Special Thanks, Software, Tech Stack. Draggable from the header bar; closes when clicked outside the panel.
+
+### Mobile nav (touch only)
+On touch devices a hamburger button sits in the top-right corner. Tapping it opens a slide-down drawer with shortcuts to Pipeline / Viewport Tuner / Quick Guide / Profiler / Credits — equivalent to the T / K / H / P keyboard shortcuts on desktop. The Hand Tracking panel is hidden on touch; on phones the heavier post-process passes (Bloom, Underwater) default off.
 
 ### Pipeline HUD — RENDER (top-left)
 Live render readout:
