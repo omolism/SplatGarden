@@ -1225,12 +1225,13 @@ async function loadSplat() {
     if (window.__autoPlayedIntro && introOverlay) {
       const tNorm = dur > 0 ? t / dur : 0;
       introOverlay.update(tNorm, camMoveState === "playing");
-      // CAPTURE + POSE phases mention cameras — fade the Training
-      // Cameras frustum overlay on so the viewer sees the 990 capture
-      // poses while reading "990 camera poses solved with COLMAP". The
-      // edge-detect (only toggling when the window state changes) keeps
-      // us from thrashing cameraFrustums.visible every frame.
-      const inCameraWindow = tNorm >= 0.02 && tNorm <= 0.50 && camMoveState === "playing";
+      // POSE phase only — light the Training Cameras frustum overlay
+      // up exactly while the caption reads "990 camera poses solved
+      // with COLMAP" (clip-norm 0.27 → 0.50). CAPTURE phase keeps
+      // the scene clean so the multi-camera-capture line plays
+      // against the splat without competing iconography. Edge-detect
+      // keeps us from thrashing visibility every frame.
+      const inCameraWindow = tNorm >= 0.27 && tNorm <= 0.50 && camMoveState === "playing";
       if (inCameraWindow !== _introFrustumsOn) {
         _introFrustumsOn      = inCameraWindow;
         _introTouchedFrustums = true;
