@@ -843,8 +843,11 @@ async function loadSplat() {
   let camMoveLoading = false;
   let camMoveState = "idle";   // "idle" | "playing" | "paused"
   let camPhaseTimers = [];           // staged transition timers
-  let camMovePrevSubform = 0;        // restore on stop / finish
-  let camMovePrevQuadVis = 0;
+  let camMovePrevSubform   = 0;      // restore on stop / finish
+  let camMovePrevQuadVis   = 0;
+  let camMovePrevVoxelVis  = 0;
+  let camMovePrevQuadShape  = null;  // "quad" | "circle"
+  let camMovePrevVoxelShape = null;  // "cube" | "sphere"
   let camMovePrevLensOn      = false;     // lens-pulse state restore
   let camMovePrevLensFisheye = 0;
   let camMovePrevLensSqueeze = 1;
@@ -908,8 +911,20 @@ async function loadSplat() {
     camSoftEndTgt  = null;
 
     if (!effects) return;
-    camMovePrevSubform = effects.targetSubform ?? 0;
-    camMovePrevQuadVis = effects.targetVis?.quad ?? 0;
+    camMovePrevSubform   = effects.targetSubform ?? 0;
+    camMovePrevQuadVis   = effects.targetVis?.quad  ?? 0;
+    camMovePrevVoxelVis  = effects.targetVis?.voxel ?? 0;
+    camMovePrevQuadShape  = effectParams.quadShape;
+    camMovePrevVoxelShape = effectParams.voxelShape;
+    // Force the showcase subforms (Quad as 'quad' rectangle, Voxel as
+    // sphere) regardless of what the user picked. Both renderers handle
+    // the swap lazily — Quadizer flips a uniform, Voxelizer queues a
+    // rebuild that runs the next time the layer is shown.
+    effectParams.quadShape  = "quad";
+    effectParams.voxelShape = "sphere";
+    if (quadizer)  quadizer.setShape("quad");
+    if (voxelizer) voxelizer.setShape("sphere");
+    usdLayers?.refresh();      // sync the UsdLayers pill highlight
 
     const dur  = camAction?.getClip ? camAction.getClip().duration : 25;
     const beat = (dur / 4) * 1000;   // ms per equal phase
@@ -917,22 +932,30 @@ async function loadSplat() {
     camPhaseTimers.forEach(t => clearTimeout(t));
     camPhaseTimers = [];
 
-    // Phase 1 — fire now: Gaussian → Point
+    // 4 equally-spaced phases across the clip duration:
+    //   0    Gaussian → Point + lens pulse arms (ends by t=0.50)
+    //   ¼    Quad (billboard) fades in
+    //   ½    Quad fades out, Voxel-as-Sphere fades in
+    //   ¾    Voxel fades out, Point → Gaussian (back to 3DGS by end)
     effects.targetSubform = 1.0;
 
-    // Phase 2 — Quad fades in
+    // Phase 2 — Quad fades in (showcase the Billboard subform)
     camPhaseTimers.push(setTimeout(() => {
       if (camMoveState === "playing") effects.setLayerVis("quad", true);
     }, beat));
 
-    // Phase 3 — Quad fades out
+    // Phase 3 — Quad fades out, Voxel (sphere) fades in
     camPhaseTimers.push(setTimeout(() => {
-      if (camMoveState === "playing") effects.setLayerVis("quad", false);
+      if (camMoveState !== "playing") return;
+      effects.setLayerVis("quad",  false);
+      effects.setLayerVis("voxel", true);
     }, beat * 2));
 
-    // Phase 4 — Point → Gaussian (return to 3DGS)
+    // Phase 4 — Voxel fades out, Point → Gaussian (return to 3DGS)
     camPhaseTimers.push(setTimeout(() => {
-      if (camMoveState === "playing") effects.targetSubform = 0.0;
+      if (camMoveState !== "playing") return;
+      effects.setLayerVis("voxel", false);
+      effects.targetSubform = 0.0;
     }, beat * 3));
   }
   function camMoveRevertLerps() {
@@ -948,7 +971,22 @@ async function loadSplat() {
 
     if (!effects) return;
     effects.targetSubform = camMovePrevSubform;
-    if (effects.targetVis) effects.targetVis.quad = camMovePrevQuadVis;
+    if (effects.targetVis) {
+      effects.targetVis.quad  = camMovePrevQuadVis;
+      effects.targetVis.voxel = camMovePrevVoxelVis;
+    }
+    // Restore the user's chosen subform shapes (Quad vs Circle, Cube vs
+    // Sphere). Same setShape() calls as the panel uses, so a hidden
+    // Voxelizer rebuild is queued only if its shape actually changed.
+    if (camMovePrevQuadShape) {
+      effectParams.quadShape = camMovePrevQuadShape;
+      if (quadizer) quadizer.setShape(camMovePrevQuadShape);
+    }
+    if (camMovePrevVoxelShape) {
+      effectParams.voxelShape = camMovePrevVoxelShape;
+      if (voxelizer) voxelizer.setShape(camMovePrevVoxelShape);
+    }
+    usdLayers?.refresh();
   }
 
   // Live-tunable transform on the FBX root so the user can frame the gazebo.
@@ -1148,23 +1186,23 @@ async function loadSplat() {
     if (window.__autoPlayedIntro && introOverlay) {
       introOverlay.update(dur > 0 ? t / dur : 0, camMoveState === "playing");
     }
-    // Lens shape — peak-at-midpoint pulse over the user's saved values, so
-    // both ends settle exactly onto the pre-play state (no snap when the
-    // mixer 'finished' handler restores them):
+    // Lens shape — peak-at-midpoint pulse confined to the FIRST HALF of
+    // the clip ([PULSE_START, PULSE_END]). The lens is back at the user's
+    // pre-play values by t = 0.50, leaving the second half clear for the
+    // Quad → Voxel-Sphere showcase to read uncluttered.
     //   fisheye(t) = prev + (PEAK    - prev) * sinT
     //   squeeze(t) = prev + (PEAK_SQ - prev) * sinT
-    // sinT is shifted so the pulse only ramps up after PULSE_START_AT,
-    // letting the camera framing settle for a beat before the lens kicks
-    // in. At t < PULSE_START_AT and at t = 1.0, sinT = 0 → both params
-    // sit on the user's pre-play values.
+    // Outside the [start, end] window sinT = 0 → both params sit on the
+    // user's pre-play state, so revertLerps is a no-op for them visually.
     if (camMoveState === "playing" && dur > 0) {
       const PULSE_START_AT    = 0.15;
+      const PULSE_END_AT      = 0.50;
       const LENS_FISHEYE_PEAK = 0.26;
       const LENS_SQUEEZE_PEAK = 1.20;
       const tNorm = Math.max(0, Math.min(1, t / dur));
       let sinT = 0;
-      if (tNorm >= PULSE_START_AT) {
-        const tLocal = (tNorm - PULSE_START_AT) / (1 - PULSE_START_AT);
+      if (tNorm >= PULSE_START_AT && tNorm <= PULSE_END_AT) {
+        const tLocal = (tNorm - PULSE_START_AT) / (PULSE_END_AT - PULSE_START_AT);
         sinT = Math.sin(tLocal * Math.PI);
       }
       postfx.params.lensFisheye = camMovePrevLensFisheye + (LENS_FISHEYE_PEAK - camMovePrevLensFisheye) * sinT;
