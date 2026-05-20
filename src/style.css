@@ -2988,13 +2988,14 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 #usd-layers-panel {
   /* Pinned to the right rail, above the lil-gui Customize folder.
    * lil-gui's own top offset is bumped down (see main.js) to clear
-   * this panel. */
+   * this panel. z-index 1002 sits above lil-gui (1001) so even if
+   * vertical positions accidentally overlap, the layer panel wins. */
   position: fixed;
   top: 18px;
   right: 18px;
   width: 280px;
   max-height: 420px;
-  z-index: 21;
+  z-index: 1002;
   display: flex;
   flex-direction: column;
   overflow: hidden;
