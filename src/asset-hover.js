@@ -277,16 +277,19 @@ export class AssetHoverManager {
     this.card.classList.remove("pinned");
   }
 
-  // Toggle the entire hotspot layer. Used to hide the bundled scene's
-  // asset markers when the user drops in their own splat.
+  // Toggle the entire hotspot layer. Used both by the Tech Spec master
+  // Enable and by user-uploaded splats (which hide the bundled markers).
+  // When turning OFF we explicitly hide every dot; when turning ON we
+  // let the per-frame update() loop restore visibility so per-asset
+  // _hiddenNames entries stay hidden (no flash on master re-enable).
   setVisible(on) {
     this._visible = !!on;
     if (!on) {
       this._pinned = null;
       this._hide();
-    }
-    for (const d of this.dots) {
-      d.el.style.display = this._visible ? "" : "none";
+      for (const d of this.dots) {
+        d.el.style.display = "none";
+      }
     }
   }
 

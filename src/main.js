@@ -574,26 +574,22 @@ async function loadSplat() {
     });
 
   // ---- Tech Spec — split out from Overlays --------------------------------
-  // Data Labels + Training Cameras live here. Master Enable toggles both
-  // together. Future tech-breakdown rows (AI Stylization / VAT Anim / GPU /
-  // Postshot Pipeline) will sit under the same parent.
+  // Master Enable controls the ASSET HOTSPOT layer (vine / gazebo / grape /
+  // daffodil — the dots floating on the splat). Training Cameras and Data
+  // Labels are independent sub-toggles so they stay off at startup even
+  // when Enable is on. Future tech-breakdown rows (AI Stylization / VAT
+  // Anim / GPU / Postshot Pipeline) will sit under the same parent.
   const dataParams = { enabled: false, dataLabels: false };
-  const techParams = { techEnable: false, credits: false };
+  const techParams = { techEnable: true, credits: false };
   const fTechSpec = gui.addFolder("Tech Spec");
-  // Master Enable cascades to both sub-toggles so flipping it (via lil-gui
-  // OR via opening the Pipeline drawer with T) lights up Training Cameras
-  // and Data Labels together.
   const techEnableCtrl = fTechSpec.add(techParams, "techEnable").name("Enable").onChange((v) => {
-    dataParams.enabled    = v;
-    dataParams.dataLabels = v;
-    if (camCtrl)        camCtrl.updateDisplay();
-    if (dataLabelsCtrl) dataLabelsCtrl.updateDisplay();
-    if (cameraFrustums) cameraFrustums.visible = v;
-    if (dataLabels)     dataLabels.setEnabled(v);
+    // Asset hotspot layer is the only thing the master gates now.
+    if (assetHover) assetHover.setVisible(!!v);
   });
+  techEnableCtrl.domElement.title = "Show / hide the floating asset hotspots (Vine / Gazebo / Grape Hyacinth / Daffodil) on the splat.";
 
   const camCtrl = fTechSpec.add(dataParams, "enabled").name("Training Cameras").onChange(v => {
-    if (cameraFrustums) cameraFrustums.visible = v && techParams.techEnable;
+    if (cameraFrustums) cameraFrustums.visible = !!v;
   });
   // Postshot-style: small wireframe pyramid icon next to the label.
   const camIcon = `<svg class="ctrl-icon" viewBox="0 0 24 16" aria-hidden="true">
@@ -607,7 +603,7 @@ async function loadSplat() {
   camCtrl.domElement.title = "Lets you toggle whether training camera poses are shown in the viewport.";
 
   const dataLabelsCtrl = fTechSpec.add(dataParams, "dataLabels").name("Data Labels").onChange(v => {
-    if (dataLabels) dataLabels.setEnabled(v && techParams.techEnable);
+    if (dataLabels) dataLabels.setEnabled(!!v);
   });
   dataLabelsCtrl.domElement.title = "Surveillance-card overlay showing per-viewpoint metadata.";
 
@@ -625,12 +621,9 @@ async function loadSplat() {
     }
   };
 
-  // Tie the Pipeline drawer (T key) to the Tech Spec master Enable. Opening
-  // the drawer lights up Training Cameras + Data Labels; closing turns them
-  // off again. The setValue() call routes through the onChange cascade above.
-  techSpec.onOpenChange = (open) => {
-    if (techEnableCtrl) techEnableCtrl.setValue(!!open);
-  };
+  // Pipeline drawer is intentionally decoupled from Tech Spec Enable now.
+  // The asset hotspots are on by default and the drawer is pure asset
+  // documentation — flipping one shouldn't toggle the other.
 
   // ---- HDR sky toggle (inside Customize) ---------------------------------
   // Loads /Skybox.hdr lazily on first activation, applies as scene.background
