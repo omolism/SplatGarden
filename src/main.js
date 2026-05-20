@@ -665,16 +665,33 @@ async function loadSplat() {
   // The asset hotspots are on by default and the drawer is pure asset
   // documentation — flipping one shouldn't toggle the other.
 
-  // ---- HDR sky toggle (inside Customize) ---------------------------------
+  // ---- HDR sky folder (inside Customize) ---------------------------------
   // Loads /Skybox.hdr lazily on first activation, applies as scene.background
   // + scene.environment. Most visible when the splat is rendered as points
   // so the sky shows through; available in Gaussian mode too.
+  //
+  // Folder mirrors the Post-Process shape: an Enable checkbox, a Rotation
+  // slider (0-360°, mapped to scene.backgroundRotation.y and
+  // scene.environmentRotation.y), and the "Use My Own HDRI" button.
   const fOverlay = gui.addFolder("Camera Movement");   // renamed from "Overlays"
   let hdrTex = null;
   let hdrLoading = false;
-  const hdrParams = { hdr: false };
+  const hdrParams = { hdr: false, rotation: 0 };
   const hdrParent = gui.fCustomize || fOverlay;
-  const hdrCtrl = hdrParent.add(hdrParams, "hdr").name("HDR Sky").onChange(async (v) => {
+  const fHdr = hdrParent.addFolder("HDR Sky").close();
+
+  // Ensure scene.backgroundRotation / environmentRotation Eulers exist
+  // (Three.js r158+ initialises them, but guard for safety).
+  scene.backgroundRotation  = scene.backgroundRotation  || new THREE.Euler();
+  scene.environmentRotation = scene.environmentRotation || new THREE.Euler();
+
+  const applyHdrRotation = (deg) => {
+    const rad = deg * Math.PI / 180;
+    scene.backgroundRotation.y  = rad;
+    scene.environmentRotation.y = rad;
+  };
+
+  const hdrCtrl = fHdr.add(hdrParams, "hdr").name("Enable").onChange(async (v) => {
     if (v) {
       if (!hdrTex && !hdrLoading) {
         hdrLoading = true;
@@ -694,6 +711,7 @@ async function loadSplat() {
       if (hdrTex) {
         scene.background = hdrTex;
         scene.environment = hdrTex;
+        applyHdrRotation(hdrParams.rotation);
       }
     } else {
       scene.background = null;
@@ -701,6 +719,9 @@ async function loadSplat() {
     }
   });
   hdrCtrl.domElement.title = "Show the HDR environment behind the splat — most visible in Point mode.";
+
+  fHdr.add(hdrParams, "rotation", 0, 360, 1).name("Rotation")
+    .onChange(applyHdrRotation);
 
   // ---- HDR drag-and-drop upload -------------------------------------------
   // "Use My Own HDRI" button opens a centred drop zone; drag any .hdr file
@@ -753,8 +774,9 @@ async function loadSplat() {
     }
   });
 
-  // GUI button to open the drop zone — sits right under HDR Sky in Customize.
-  hdrParent.add({ pick: showHdrDrop }, "pick").name("⤓ Use My Own HDRI");
+  // "Use My Own HDRI" button — lives inside the HDR Sky folder alongside
+  // Enable + Rotation so the entire HDR control surface is in one place.
+  fHdr.add({ pick: showHdrDrop }, "pick").name("⤓ Use My Own HDRI");
 
   // ---- 3DGS drag-and-drop upload ------------------------------------------
   // "Use My Own 3DGS" button under 3DGS/USD opens a drop overlay; drag any
