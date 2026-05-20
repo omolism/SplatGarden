@@ -278,13 +278,25 @@ export function renderCompare(c) {
     </div>`;
 }
 
-// Wire the drag-to-wipe interaction on a single compare frame. The "A"
-// layer's clip-path follows the handle; clicking anywhere on the frame
-// snaps the split to that x.
+// Wire the drag-to-wipe interaction on a single compare frame.
+//
+// Listeners live on the FRAME itself (not the tiny 2 px handle), so the
+// grab target is the whole 16:9 area — much more forgiving. pointerdown
+// also snaps the split to where the user clicked, so single-click works
+// the same as drag. setPointerCapture on the frame routes pointermove
+// events through even if the cursor drifts off the card, which means
+// the compare slider keeps tracking inside draggable parents (the asset
+// hover card has its own pointer handlers, but they early-return for
+// targets outside .ah-head).
 export function wireCompareFrame(frame) {
+  // Idempotent — _show() re-runs this every time the card rebuilds, so
+  // bail if we've already wired this frame.
+  if (frame.dataset.cmpWired === "1") return;
+  frame.dataset.cmpWired = "1";
+
+  const imgA = frame.querySelector(".cmp-img-a");
   const handle = frame.querySelector(".cmp-handle");
-  const imgA   = frame.querySelector(".cmp-img-a");
-  if (!handle || !imgA) return;
+  if (!imgA || !handle) return;
 
   let split = 0.5;
   const apply = () => {
@@ -295,23 +307,35 @@ export function wireCompareFrame(frame) {
 
   const setAt = (clientX) => {
     const r = frame.getBoundingClientRect();
+    if (r.width <= 0) return;
     split = Math.max(0, Math.min(1, (clientX - r.left) / r.width));
     apply();
   };
 
   let dragging = false;
-  handle.addEventListener("pointerdown", (e) => {
+  frame.addEventListener("pointerdown", (e) => {
+    // Left button / primary touch only — and don't fight other handlers
+    // (e.g., the asset card's text-selection on the body).
+    if (e.button !== undefined && e.button !== 0) return;
     dragging = true;
-    handle.setPointerCapture?.(e.pointerId);
-  });
-  handle.addEventListener("pointermove", (e) => {
-    if (dragging) setAt(e.clientX);
-  });
-  handle.addEventListener("pointerup", () => { dragging = false; });
-  frame.addEventListener("click", (e) => {
-    if (e.target === handle || handle.contains(e.target)) return;
+    try { frame.setPointerCapture(e.pointerId); } catch {}
     setAt(e.clientX);
+    e.preventDefault();
+    e.stopPropagation();
   });
+  frame.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    setAt(e.clientX);
+    e.preventDefault();
+  });
+  const endDrag = (e) => {
+    if (!dragging) return;
+    dragging = false;
+    try { frame.releasePointerCapture(e.pointerId); } catch {}
+  };
+  frame.addEventListener("pointerup",     endDrag);
+  frame.addEventListener("pointercancel", endDrag);
+  frame.addEventListener("pointerleave",  endDrag);
 }
 
 export class TechSpec {
