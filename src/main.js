@@ -893,6 +893,13 @@ async function loadSplat() {
   let camMovePrevPostEnable  = true;
   let _introLensActive       = false;     // currently inside the stab window
   let _introTouchedLens      = false;     // ever fired during this play
+  // Lens outro fade: when the cinematic ends, hand off to a short smooth
+  // fade on lensFisheye → 0 instead of snapping back to the user's
+  // pre-intro state. Keeps the camera move from "blinking" out of fisheye
+  // on the last frame. 0 = no fade in progress.
+  let _introLensFadeStart    = 0;
+  let _introLensFadeFrom     = 0;
+  const INTRO_LENS_FADE_MS   = 700;
   let camMovePrevCamFrustumsVisible = false;  // Training Cameras restore
   let camMovePrevCamFrustumsOpacity = 0.85;
   let _introFrustumsOn      = false;          // intra-tick edge detect
@@ -928,6 +935,18 @@ async function loadSplat() {
   //   1 — Point → Gaussian         (back to 3DGS as the clip ends)
   function camMoveStartLerps() {
     camTimeline.style.display = "flex";
+    // If a previous outro fade is still in flight (rapid re-Play), finalize
+    // it before re-stashing — otherwise camMovePrev* would snapshot the
+    // mid-fade lens state instead of the user's true pre-intro values.
+    if (_introLensFadeStart > 0) {
+      postfx.params.lensOn      = camMovePrevLensOn;
+      postfx.params.lensFisheye = camMovePrevLensFisheye;
+      postfx.params.lensSqueeze = camMovePrevLensSqueeze;
+      postfx.params.lensAmt     = camMovePrevLensAmt;
+      postfx.params.postEnable  = camMovePrevPostEnable;
+      _introLensFadeStart = 0;
+      _introTouchedLens   = false;
+    }
     // Lens-stab: stash user's pre-play state. Stab itself fires per-
     // frame in __camMoveTick only when window.__autoPlayedIntro is set,
     // so manual Play Camera Move presses don't get the sting.
@@ -1015,17 +1034,16 @@ async function loadSplat() {
     camPhaseTimers.forEach(t => clearTimeout(t));
     camPhaseTimers = [];
     camTimeline.style.display = "none";
-    // Restore lens distortion + post master if the stab ever touched
-    // them. Skip when no stab fired (manual play) so we don't fight
-    // any post-fx changes the user made mid-play.
+    // Hand off lens restore to a short outro fade — the sin pulse's final
+    // value isn't exactly 0 by the time `finished` fires, and disabling
+    // the lens pass + reverting postEnable in one tick reads as a snap.
+    // The fade keeps lensOn live and lerps lensFisheye → 0 over
+    // INTRO_LENS_FADE_MS, then restores the user's pre-intro state.
     if (_introTouchedLens) {
-      postfx.params.lensOn      = camMovePrevLensOn;
-      postfx.params.lensFisheye = camMovePrevLensFisheye;
-      postfx.params.lensSqueeze = camMovePrevLensSqueeze;
-      postfx.params.lensAmt     = camMovePrevLensAmt;
-      postfx.params.postEnable  = camMovePrevPostEnable;
-      _introLensActive  = false;
-      _introTouchedLens = false;
+      _introLensFadeFrom  = postfx.params.lensFisheye;
+      _introLensFadeStart = performance.now();
+      _introLensActive    = false;
+      // _introTouchedLens stays true; the fade tick clears it on completion.
     }
     // Restore Training Cameras visibility to its pre-intro state and
     // resync the lil-gui Tech Spec checkbox so the UI matches reality.
@@ -1219,6 +1237,26 @@ async function loadSplat() {
   // camera. When PAUSED the mixer's deltaTime is 0 so the camera holds still
   // but the scene continues to render normally.
   window.__camMoveTick = (dt) => {
+    // Lens outro fade — runs after camMoveRevertLerps hands off and keeps
+    // ticking even once camMoveState is "idle", so the pass smoothly
+    // settles to 0 before the user's pre-intro lens state is restored.
+    if (_introLensFadeStart > 0) {
+      const tFade = (performance.now() - _introLensFadeStart) / INTRO_LENS_FADE_MS;
+      if (tFade >= 1) {
+        postfx.params.lensOn      = camMovePrevLensOn;
+        postfx.params.lensFisheye = camMovePrevLensFisheye;
+        postfx.params.lensSqueeze = camMovePrevLensSqueeze;
+        postfx.params.lensAmt     = camMovePrevLensAmt;
+        postfx.params.postEnable  = camMovePrevPostEnable;
+        _introLensFadeStart = 0;
+        _introTouchedLens   = false;
+      } else {
+        // Ease-out cubic: starts at fade-from, decays to 0.
+        const k = 1 - tFade;
+        postfx.params.lensFisheye = _introLensFadeFrom * k * k * k;
+      }
+    }
+
     if (!camMixer || !camAnimNode) return;
     if (camMoveState === "idle") return;
 

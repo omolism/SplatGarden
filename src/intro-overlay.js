@@ -27,7 +27,7 @@ const HERO = {
 // text describes the step concretely (tool + scale where useful). No
 // decorative separators in the copy — commas only.
 const PHASES = [
-  { at: 0.02, until: 0.25, eyebrow: "CAPTURE", text: "Multi-camera capture at Lichtfeld Studio" },
+  { at: 0.02, until: 0.25, eyebrow: "CAPTURE", text: "Captured in Unreal Engine" },
   { at: 0.27, until: 0.50, eyebrow: "POSE",    text: "990 camera poses solved with COLMAP" },
   { at: 0.52, until: 0.75, eyebrow: "TRAIN",   text: "3 million Gaussians optimized in Postshot" },
   { at: 0.77, until: 0.99, eyebrow: "RENDER",  text: "Real-time WebGL playback via Spark" },
