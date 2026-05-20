@@ -1222,6 +1222,15 @@ kbd {
   overflow: hidden;
   cursor: ew-resize;
   user-select: none;
+  -webkit-user-select: none;
+  /* touch-action: pan-y — iOS Safari otherwise claims horizontal touches
+     as browser-level gestures (back-swipe / page pan) before the JS
+     pointer handlers get them, so the compare slider couldn't be
+     dragged on mobile. Reserving horizontal for our JS while letting
+     vertical scroll bubble up to the parent (the bottom sheet on phone,
+     the asset card on desktop / iPad) is the right shape for a
+     compare slider nested inside a scrollable region. */
+  touch-action: pan-y;
   background: rgba(255, 255, 255, 0.03);
 }
 .ts-compare .cmp-img {
