@@ -852,9 +852,7 @@ async function loadSplat() {
   let camPhaseTimers = [];           // staged transition timers
   let camMovePrevSubform   = 0;      // restore on stop / finish
   let camMovePrevQuadVis   = 0;
-  let camMovePrevVoxelVis  = 0;
-  let camMovePrevQuadShape  = null;  // "quad" | "circle"
-  let camMovePrevVoxelShape = null;  // "cube" | "sphere"
+  let camMovePrevQuadShape = null;   // "quad" | "circle"
   let camMovePrevLensOn      = false;     // lens-pulse state restore
   let camMovePrevLensFisheye = 0;
   let camMovePrevLensSqueeze = 1;
@@ -910,17 +908,14 @@ async function loadSplat() {
     if (!effects) return;
     camMovePrevSubform   = effects.targetSubform ?? 0;
     camMovePrevQuadVis   = effects.targetVis?.quad  ?? 0;
-    camMovePrevVoxelVis  = effects.targetVis?.voxel ?? 0;
-    camMovePrevQuadShape  = effectParams.quadShape;
-    camMovePrevVoxelShape = effectParams.voxelShape;
-    // Force the showcase subforms (Quad as 'quad' rectangle, Voxel as
-    // sphere) regardless of what the user picked. Both renderers handle
-    // the swap lazily — Quadizer flips a uniform, Voxelizer queues a
-    // rebuild that runs the next time the layer is shown.
-    effectParams.quadShape  = "quad";
-    effectParams.voxelShape = "sphere";
-    if (quadizer)  quadizer.setShape("quad");
-    if (voxelizer) voxelizer.setShape("sphere");
+    camMovePrevQuadShape = effectParams.quadShape;
+    // Voxel is no longer part of the cinematic — Voxelizer.setShape(
+    // "sphere") would queue a slow rebuild (2-3 s on the 3 M splats)
+    // that lands mid-playback. Showcasing the Circle subform in
+    // Quadizer is a flat shader-uniform swap instead, so the second
+    // half of the clip flips Billboard from Quad → Circle in place.
+    effectParams.quadShape = "quad";
+    if (quadizer) quadizer.setShape("quad");
     usdLayers?.refresh();      // sync the UsdLayers pill highlight
 
     const dur  = camAction?.getClip ? camAction.getClip().duration : 25;
@@ -930,48 +925,36 @@ async function loadSplat() {
     camPhaseTimers = [];
 
     // Phased schedule across the clip duration:
-    //   0       Gaussian → Point + lens pulse arms (lens ends by t=0.50)
-    //   ¼       Quad (quad shape) fades in
-    //   ½       Quad fades out, Voxel-as-Sphere fades in
-    //   ¾       Voxel fades out, Point → Gaussian, Billboard (CIRCLE) in
-    //   ~0.92   Billboard fades out — clip ends on splat-only
+    //   0    Gaussian → Point + lens pulse arms (lens ends by t=0.50)
+    //   ¼    Quad (square) fades in
+    //   ½    Billboard subform swaps Quad → Circle (in place, no fade)
+    //   ¾    Billboard fades out + Point → Gaussian (back to splat)
     effects.targetSubform = 1.0;
 
-    // Phase 2 — Quad fades in (showcase the Billboard subform, square)
+    // Phase 2 — Billboard (square shape) fades in
     camPhaseTimers.push(setTimeout(() => {
       if (camMoveState !== "playing") return;
-      effectParams.quadShape = "quad";
-      if (quadizer) quadizer.setShape("quad");
-      usdLayers?.refresh();
       effects.setLayerVis("quad", true);
     }, beat));
 
-    // Phase 3 — Quad fades out, Voxel (sphere) fades in
+    // Phase 3 — Billboard shape changes to Circle while still visible.
+    // No layer fade — Quadizer flips the uIsCircle uniform and the
+    // squares become discs on the very next frame.
     camPhaseTimers.push(setTimeout(() => {
       if (camMoveState !== "playing") return;
-      effects.setLayerVis("quad",  false);
-      effects.setLayerVis("voxel", true);
-    }, beat * 2));
-
-    // Phase 4 — Voxel fades out, Point → Gaussian (back to splat), and
-    // a final Billboard pulse — this time as a CIRCLE — so the closing
-    // beat reads as splat + circle disc before resolving to splat-only.
-    camPhaseTimers.push(setTimeout(() => {
-      if (camMoveState !== "playing") return;
-      effects.setLayerVis("voxel", false);
-      effects.targetSubform = 0.0;
       effectParams.quadShape = "circle";
       if (quadizer) quadizer.setShape("circle");
       usdLayers?.refresh();
-      effects.setLayerVis("quad", true);
-    }, beat * 3));
+    }, beat * 2));
 
-    // Phase 5 — Billboard (circle) fades out so the very last seconds of
-    // the clip are pure splat, and revertLerps lands on a clean canvas.
+    // Phase 4 — Billboard fades out + Point → Gaussian; the last beat
+    // of the clip plays out as splat-only, leaving 1 full beat (≈ ¼ of
+    // the clip) for the layer opacity to decay cleanly to zero.
     camPhaseTimers.push(setTimeout(() => {
       if (camMoveState !== "playing") return;
       effects.setLayerVis("quad", false);
-    }, beat * 3.7));
+      effects.targetSubform = 0.0;
+    }, beat * 3));
   }
   function camMoveRevertLerps() {
     camPhaseTimers.forEach(t => clearTimeout(t));
@@ -986,20 +969,13 @@ async function loadSplat() {
 
     if (!effects) return;
     effects.targetSubform = camMovePrevSubform;
-    if (effects.targetVis) {
-      effects.targetVis.quad  = camMovePrevQuadVis;
-      effects.targetVis.voxel = camMovePrevVoxelVis;
-    }
-    // Restore the user's chosen subform shapes (Quad vs Circle, Cube vs
-    // Sphere). Same setShape() calls as the panel uses, so a hidden
-    // Voxelizer rebuild is queued only if its shape actually changed.
+    if (effects.targetVis) effects.targetVis.quad = camMovePrevQuadVis;
+    // Restore the user's chosen Quad shape (Quad vs Circle). Voxel is
+    // no longer touched by the cinematic, so its shape/visibility need
+    // no restore.
     if (camMovePrevQuadShape) {
       effectParams.quadShape = camMovePrevQuadShape;
       if (quadizer) quadizer.setShape(camMovePrevQuadShape);
-    }
-    if (camMovePrevVoxelShape) {
-      effectParams.voxelShape = camMovePrevVoxelShape;
-      if (voxelizer) voxelizer.setShape(camMovePrevVoxelShape);
     }
     usdLayers?.refresh();
   }
