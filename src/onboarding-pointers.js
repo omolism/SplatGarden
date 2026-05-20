@@ -1,62 +1,92 @@
 // ---------------------------------------------------------------------------
-// OnboardingPointers — three animated arrow-tooltip pairs that pop up at
-// the end of the intro camera move, calling out the discoverable panels
-// (Pipeline T, Viewport Tuner K, Scene layers). Auto-dismisses after a
-// short hold; dismissable early by clicking anywhere or hitting Escape.
+// OnboardingPointers — animated arrow-tooltip pairs that pop up at the end
+// of the intro camera move, calling out the discoverable surfaces of the
+// app. Each tip resolves its `selector` to a live element at show time
+// and anchors itself relative to that element's bounding rect, so the
+// pointer always lands on its target regardless of layout (panel moved,
+// viewport rotated, sidebar hidden on touch, etc.).
+//
+// Auto-dismisses after `autoHideMs`; clicking anywhere or pressing Esc
+// dismisses early. Tips whose target isn't in the DOM (or has zero size,
+// i.e. CSS-hidden) are silently skipped — that's how the touch layout
+// avoids pointing at the desktop-only sidebar, and how desktop avoids
+// pointing at the bottom-bar that doesn't exist there.
 // ---------------------------------------------------------------------------
 
-// Each callout points at a screen-space target. We resolve `selector` at
-// reveal time so panels added later still get a valid pointer.
-// Viewport Tuner (K) was dropped from the onboarding — it's a dev /
-// authoring tool, not something a first-time viewer needs to know
-// about. Remaining tips point at panels the player will actually use.
-const TIPS = [
-  {
-    label: "Pipeline",
-    sub:   "Press T",
-    selector: "#tech-spec, #left-stack",
-    anchor:   "top-right",
-  },
+// Per-tip schema:
+//   label    — bold heading on the card
+//   sub      — small mono caption under the label
+//   selector — querySelector for the target; multiple selectors allowed
+//              comma-separated and the first match wins
+//   side     — which side of the target to place the card on:
+//              "above" | "below" | "left" | "right"
+//              The arrow's rotation + the card-vs-arrow order in flex
+//              are derived from this so the arrow always points AT the
+//              target's nearest edge.
+
+const TIPS_DESKTOP = [
   {
     label: "Scene layers",
-    sub:   "Drag-drop a .splat to add",
-    selector: "#scene-panel, #left-stack",
-    anchor:   "top-left",
+    sub: "Drag-drop a .splat to add",
+    selector: "#scene-panel, #sidebar",
+    side: "right",
   },
   {
     label: "3DGS / USD",
-    sub:   "Toggle layers + swap subforms",
+    sub: "Toggle layers + swap subforms",
     selector: "#usd-layers-panel",
-    anchor:   "mid-left",
+    side: "left",
+  },
+  {
+    label: "Pipeline",
+    sub: "Press T",
+    selector: "#toolbar, #status",
+    side: "above",
   },
 ];
+
+// On touch the desktop panels are CSS-hidden — point at the bottom-bar
+// tabs instead, since that's the canonical mobile entry point for the
+// same actions.
+const TIPS_TOUCH = [
+  {
+    label: "Views",
+    sub: "Jump between viewpoints",
+    selector: '#mobile-bottombar [data-tab="views"]',
+    side: "above",
+  },
+  {
+    label: "Effects",
+    sub: "Click effects + Studio Advanced",
+    selector: '#mobile-bottombar [data-tab="fx"]',
+    side: "above",
+  },
+  {
+    label: "Camera",
+    sub: "Play / replay the move",
+    selector: '#mobile-bottombar [data-tab="cam"]',
+    side: "above",
+  },
+];
+
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
 
 export class OnboardingPointers {
   constructor({ mountEl = document.body, autoHideMs = 5500 } = {}) {
     this.autoHideMs = autoHideMs;
     this._visible   = false;
     this._timer     = null;
+    this._tips      = [];
 
     this.el = document.createElement("div");
     this.el.id = "onboarding-pointers";
     this.el.setAttribute("hidden", "");
-    this.el.innerHTML = TIPS.map((t, i) => `
-      <div class="op-tip op-anchor-${t.anchor}" data-i="${i}" style="--delay:${i * 0.35}s">
-        <div class="op-card">
-          <div class="op-label">${t.label}</div>
-          <div class="op-sub">${t.sub}</div>
-        </div>
-        <svg class="op-arrow" viewBox="0 0 80 40" aria-hidden="true">
-          <path d="M5 20 Q 40 5 75 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-          <path d="M68 14 L 76 20 L 68 26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
-      </div>
-    `).join("");
     mountEl.appendChild(this.el);
 
-    // Dismiss on any click outside (we don't want to capture canvas clicks
-    // forever) — listener is added on show() and removed on hide() so the
-    // splash doesn't eat input when we're not visible.
     this._onAnyKey = (e) => {
       if (!this._visible) return;
       if (e.key === "Escape") { e.preventDefault(); this.hide(); }
@@ -64,12 +94,87 @@ export class OnboardingPointers {
     this._onAnyClick = () => { if (this._visible) this.hide(); };
   }
 
+  // Build (or rebuild) the tip DOM and anchor each one to its target's
+  // current rect. Called on every show() so layout changes between calls
+  // (touch ⇆ desktop, viewport rotation, panels added later) re-position
+  // cleanly. Tips without a visible target are silently skipped.
+  _build() {
+    const isTouch = document.body.classList.contains("touch");
+    const defs    = isTouch ? TIPS_TOUCH : TIPS_DESKTOP;
+    this.el.innerHTML = "";
+    this._tips = [];
+
+    let revealedIndex = 0;
+    for (const def of defs) {
+      const target = document.querySelector(def.selector);
+      if (!target) continue;
+      const r = target.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) continue;   // hidden element
+
+      const tip = document.createElement("div");
+      tip.className = `op-tip op-side-${def.side}`;
+      tip.style.setProperty("--delay", `${revealedIndex * 0.35}s`);
+      tip.innerHTML = `
+        <div class="op-card">
+          <div class="op-label">${escapeHtml(def.label)}</div>
+          <div class="op-sub">${escapeHtml(def.sub)}</div>
+        </div>
+        <div class="op-arrow-wrap">
+          <svg class="op-arrow" viewBox="0 0 80 40" aria-hidden="true">
+            <path d="M5 20 Q 40 5 75 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path d="M68 14 L 76 20 L 68 26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      `;
+      this.el.appendChild(tip);
+      this._positionTip(tip, r, def.side);
+      this._tips.push(tip);
+      revealedIndex++;
+    }
+  }
+
+  // Place `tipEl` next to the target rect on the given side. Sets the
+  // anchor point with `left/top` and offsets the tip's own box via a
+  // transform so its arrow-edge sits at `gap` pixels from the target.
+  _positionTip(tipEl, r, side, gap = 22) {
+    let x, y, transform;
+    switch (side) {
+      case "above":
+        x = r.left + r.width / 2;
+        y = r.top  - gap;
+        transform = "translate(-50%, -100%)";   // bottom-centre at (x, y)
+        break;
+      case "below":
+        x = r.left + r.width / 2;
+        y = r.bottom + gap;
+        transform = "translate(-50%, 0%)";      // top-centre at (x, y)
+        break;
+      case "left":
+        x = r.left - gap;
+        y = r.top  + r.height / 2;
+        transform = "translate(-100%, -50%)";   // right-centre at (x, y)
+        break;
+      case "right":
+      default:
+        x = r.right + gap;
+        y = r.top   + r.height / 2;
+        transform = "translate(0%, -50%)";      // left-centre at (x, y)
+        break;
+    }
+    tipEl.style.left      = `${Math.round(x)}px`;
+    tipEl.style.top       = `${Math.round(y)}px`;
+    tipEl.style.transform = transform;
+  }
+
   show() {
+    this._build();
+    if (this._tips.length === 0) return;     // nothing to point at — skip silently
     this._visible = true;
     this.el.removeAttribute("hidden");
     this.el.classList.add("show");
-    // Force a fresh CSS animation cycle on each show — strip + restore the
-    // class so the delay-staggered fade-ins re-trigger.
+    // Force a reflow so the staggered .show fade-ins re-trigger after
+    // a rebuild (replaceChildren / innerHTML doesn't re-fire transitions
+    // automatically).
     void this.el.offsetHeight;
     window.addEventListener("keydown", this._onAnyKey, { capture: true });
     // Single-shot click dismiss; capture=false so it fires after the

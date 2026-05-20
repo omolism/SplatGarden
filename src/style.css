@@ -2995,20 +2995,30 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 #onboarding-pointers[hidden] { display: none; }
 
 #onboarding-pointers .op-tip {
+  /* Position + transform are set inline by JS (left/top = anchor point
+     on the target's edge, transform = align tip's own arrow-side edge
+     to that anchor). We animate opacity only so the JS transform isn't
+     fought over by a CSS keyframe. */
   position: absolute;
   display: flex;
   align-items: center;
   gap: 10px;
   opacity: 0;
-  transform: translateY(8px);
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  transition: opacity 0.35s ease;
   color: rgba(255, 255, 255, 0.92);
 }
 #onboarding-pointers.show .op-tip {
   opacity: 1;
-  transform: translateY(0);
   transition-delay: var(--delay, 0s);
 }
+
+/* Flex direction per side so the arrow always sits on the side of the
+   card that faces the target (e.g. tip placed to the LEFT of the
+   target → arrow on the RIGHT of the card, pointing right at it). */
+#onboarding-pointers .op-side-right { flex-direction: row;            }
+#onboarding-pointers .op-side-left  { flex-direction: row-reverse;    }
+#onboarding-pointers .op-side-above { flex-direction: column;         }
+#onboarding-pointers .op-side-below { flex-direction: column-reverse; }
 
 #onboarding-pointers .op-card {
   background: rgba(15, 16, 18, 0.78);
@@ -3018,6 +3028,9 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   padding: 10px 14px;
   border-radius: 8px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  text-align: center;
+  max-width: min(70vw, 320px);
 }
 #onboarding-pointers .op-label {
   font-size: 13px;
@@ -3033,6 +3046,21 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.65);
 }
+
+/* Wrapper does the per-side rotation; the inner SVG does the bob, so
+   the two transforms compose without stomping each other. The SVG
+   itself draws a right-pointing arrow at rest; the wrapper rotates it
+   to face the target. */
+#onboarding-pointers .op-arrow-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+#onboarding-pointers .op-side-right .op-arrow-wrap { transform: rotate(180deg); }  /* arrow points LEFT toward target */
+#onboarding-pointers .op-side-left  .op-arrow-wrap { transform: rotate(0deg);   }  /* arrow points RIGHT toward target */
+#onboarding-pointers .op-side-above .op-arrow-wrap { transform: rotate(90deg);  }  /* arrow points DOWN toward target */
+#onboarding-pointers .op-side-below .op-arrow-wrap { transform: rotate(-90deg); }  /* arrow points UP toward target */
+
 #onboarding-pointers .op-arrow {
   width: 80px;
   height: 40px;
@@ -3040,26 +3068,12 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
   animation: op-arrow-bob 1.6s ease-in-out infinite;
 }
+/* Positive translateX in the arrow's local frame leans the arrowhead
+   toward the target after the wrapper's rotation — works correctly for
+   every side (rotated frames remap +X to the correct visual axis). */
 @keyframes op-arrow-bob {
   0%, 100% { transform: translateX(0); }
-  50%      { transform: translateX(-6px); }
-}
-
-/* Pointer placement — three callouts: Pipeline (right rail, mid-
- * height), Scene panel (left rail), 3DGS/USD (right rail, near the
- * top of the embedded panel in lil-gui). */
-#onboarding-pointers .op-tip[data-i="0"] { top: 30%; right: 5vw; }
-#onboarding-pointers .op-tip[data-i="1"] { top: 30%; left:  5vw; flex-direction: row-reverse; }
-#onboarding-pointers .op-tip[data-i="2"] { top: 10%; right: 5vw; }
-#onboarding-pointers .op-tip[data-i="1"] .op-arrow {
-  /* Mirror the arrow so it points back at the left-side Scene panel.
-   * Compose with the bob animation by using a separate keyframe set. */
-  transform: scaleX(-1);
-  animation: op-arrow-bob-left 1.6s ease-in-out infinite;
-}
-@keyframes op-arrow-bob-left {
-  0%, 100% { transform: scaleX(-1) translateX(0); }
-  50%      { transform: scaleX(-1) translateX(-6px); }
+  50%      { transform: translateX(6px); }
 }
 
 /* ============================================================
@@ -4062,12 +4076,12 @@ body.touch #intro-overlay .io-phase {
     max-height: 50vh !important;
     z-index: 25;
   }
-  /* Onboarding pointers — repositioned for narrow screens */
-  /* Phone layout — 3 tips: Pipeline (right), Scene (left), 3DGS/USD (right) */
-  #onboarding-pointers .op-tip[data-i="0"] { top: 18vh; right: 3vw; }
-  #onboarding-pointers .op-tip[data-i="1"] { top: 18vh; left:  3vw; }
-  #onboarding-pointers .op-tip[data-i="2"] { top:  6vh; right: 3vw; }
-  #onboarding-pointers .op-arrow { width: 60px; height: 30px; }
+  /* Onboarding pointers — narrower arrow on phone so the tip fits next
+     to small targets like a 1/5-width bottom-bar tab. Positions are
+     handled by JS (see onboarding-pointers.js), so no more hardcoded
+     [data-i=…] overrides here. */
+  #onboarding-pointers .op-arrow      { width: 60px; height: 30px; }
+  #onboarding-pointers .op-arrow-wrap { transform-origin: center; }
   /* Asset hover card — full-width sheet */
   #asset-hover-card {
     width: calc(100vw - 16px) !important;
