@@ -886,6 +886,9 @@ async function loadSplat() {
   let camMovePrevLensSqueeze = 1;
   let camMovePrevLensAmt     = 0;
   let camMovePrevPostEnable  = true;
+  let camMovePrevCamFrustumsVisible = false;  // Training Cameras restore
+  let _introFrustumsOn      = false;          // intra-tick edge detect
+  let _introTouchedFrustums = false;          // ever toggled during intro?
   // No more tail-ease — the previous 0.10x dt slowdown was perceived as a
   // stutter ("顿了一下") rather than a smooth deceleration. Let the FBX
   // run at its authored speed; the Houdini camera's own end-of-clip
@@ -928,6 +931,9 @@ async function loadSplat() {
     camMovePrevLensSqueeze = postfx.params.lensSqueeze;
     camMovePrevLensAmt     = postfx.params.lensAmt;
     camMovePrevPostEnable  = postfx.params.postEnable;
+    camMovePrevCamFrustumsVisible = cameraFrustums?.visible ?? false;
+    _introFrustumsOn      = false;
+    _introTouchedFrustums = false;
     postfx.params.lensOn     = true;
     postfx.params.postEnable = true;
     // No snap on fisheye / squeeze — the per-frame pulse formula evaluates
@@ -1009,6 +1015,17 @@ async function loadSplat() {
     postfx.params.lensSqueeze = camMovePrevLensSqueeze;
     postfx.params.lensAmt     = camMovePrevLensAmt;
     postfx.params.postEnable  = camMovePrevPostEnable;
+    // Restore Training Cameras visibility to its pre-intro state and
+    // resync the lil-gui Tech Spec checkbox so the UI matches reality.
+    // Check the touched flag (not the on flag) so we still restore when
+    // the intro ended while the frustums had just been turned off.
+    if (_introTouchedFrustums) {
+      if (cameraFrustums) cameraFrustums.visible = camMovePrevCamFrustumsVisible;
+      dataParams.enabled = camMovePrevCamFrustumsVisible;
+      if (camCtrl) camCtrl.updateDisplay();
+      _introFrustumsOn      = false;
+      _introTouchedFrustums = false;
+    }
 
     if (!effects) return;
     effects.targetSubform = camMovePrevSubform;
@@ -1206,7 +1223,21 @@ async function loadSplat() {
     // armed it; manual user-triggered playback skips the title sequence
     // so it doesn't get in the way.
     if (window.__autoPlayedIntro && introOverlay) {
-      introOverlay.update(dur > 0 ? t / dur : 0, camMoveState === "playing");
+      const tNorm = dur > 0 ? t / dur : 0;
+      introOverlay.update(tNorm, camMoveState === "playing");
+      // CAPTURE + POSE phases mention cameras — fade the Training
+      // Cameras frustum overlay on so the viewer sees the 990 capture
+      // poses while reading "990 camera poses solved with COLMAP". The
+      // edge-detect (only toggling when the window state changes) keeps
+      // us from thrashing cameraFrustums.visible every frame.
+      const inCameraWindow = tNorm >= 0.02 && tNorm <= 0.50 && camMoveState === "playing";
+      if (inCameraWindow !== _introFrustumsOn) {
+        _introFrustumsOn      = inCameraWindow;
+        _introTouchedFrustums = true;
+        if (cameraFrustums) cameraFrustums.visible = inCameraWindow;
+        dataParams.enabled = inCameraWindow;
+        if (camCtrl) camCtrl.updateDisplay();
+      }
     }
     // Lens shape — active across t = [0.15, 0.625] with a quick attack
     // then a slow decay (cosine ease-out) so the lens reads as a single
