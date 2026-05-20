@@ -24,6 +24,7 @@ import { Credits } from "./credits.js";
 import { IntroOverlay } from "./intro-overlay.js";
 import { OnboardingPointers } from "./onboarding-pointers.js";
 import { MobileNav } from "./mobile-nav.js";
+import { MobileUI } from "./mobile-ui.js";
 import { UsdLayers } from "./usd-layers.js";
 import { UsdAnnotations } from "./usd-annotations.js";
 import { uniforms as effectUniforms } from "./effects.js";
@@ -34,7 +35,77 @@ import { loadColmapImages, buildColmapFrustums, colmapCameraPosition, colmapCame
 // — `/SplatGarden-WebViewer/`). BASE_URL always ends with "/" so plain
 // concatenation is safe.
 const BASE = import.meta.env.BASE_URL;
-const SPLAT_URL = `${BASE}Whole_With_Statue.splat`;
+const SPLAT_URL = `${BASE}SplatGarden_PC.splat`;
+// Optional mobile-only variant — a smaller asset (lower splat count or
+// the .spz compressed format) dropped into /public for phones / tablets.
+// Loader probes via HEAD and silently falls through when missing, so
+// this is a zero-cost addition. Format is auto-detected from the file
+// extension via splatTypeFromUrl() below, so swapping in an .spz later
+// requires only renaming the constant.
+const SPLAT_MOBILE_URL = `${BASE}SplatGarden_Mobile.splat`;
+
+// Map a URL's extension to Spark's SplatFileType enum value. Used so
+// the mobile variant can be either .splat or .spz / .ply / .ksplat
+// without the call-site having to special-case each format.
+function splatTypeFromUrl(url) {
+  const m = String(url).toLowerCase().match(/\.(splat|spz|ply|ksplat)(?:\?|#|$)/);
+  return m ? m[1] : "splat";
+}
+
+// ---------------------------------------------------------------------------
+// High-end mobile heuristic. Returns true for touch devices whose
+// browser-observable signals correlate with iPhone 13+ (or equivalent
+// Android flagship / modern iPad). The browser doesn't expose enough
+// info to identify exact chips (Apple intentionally hides it), so this
+// is a multi-signal proxy that intentionally errs on the conservative
+// side — false-negatives just mean a powerful device gets the smaller
+// asset, which still works fine; false-positives risk a slow phone
+// trying to render 3M splats. Tune the thresholds if real-world data
+// suggests they're too tight / loose.
+//
+// Signals used:
+//   • UA → which OS family + iOS major version
+//   • devicePixelRatio: dpr 3 ≈ iPhone 12+ (iPhone 11 = dpr 2)
+//   • hardwareConcurrency: 6+ cores ≈ A14+, 8+ ≈ flagship Android
+//   • deviceMemory: 4 GB+ where exposed (Chromium-only, not Safari)
+//
+// Window-exposed (__isHighEndMobile) so the call can be inspected /
+// overridden from DevTools without a rebuild.
+function isHighEndMobile() {
+  if (!IS_TOUCH) return false;
+
+  const ua    = navigator.userAgent || "";
+  const cores = navigator.hardwareConcurrency || 0;
+  const dpr   = window.devicePixelRatio || 1;
+  const mem   = navigator.deviceMemory || 0;
+
+  // iPad / iPadOS-in-desktop-UA. M1/M2 iPads and A14+ models all handle
+  // the 3M-splat asset comfortably; older ones are rare in the wild.
+  if (/iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) {
+    return cores >= 6;
+  }
+
+  // iPhone. The cleanest browser-observable cutoff is dpr === 3 (iPhone
+  // 12+) — iPhone 11 and below report dpr 2. Combined with iOS 15+ and
+  // 6+ cores this approximates "A14 chip or newer", which includes the
+  // iPhone 13 family the user named plus iPhone 12 (A14, ~20% slower
+  // than A15 but still well within the 3M-splat budget).
+  if (/iPhone|iPod/.test(ua)) {
+    const m    = ua.match(/OS (\d+)_/);
+    const iosV = m ? parseInt(m[1], 10) : 0;
+    return iosV >= 15 && cores >= 6 && dpr >= 3;
+  }
+
+  // Android flagship signature: 8+ cores, 4+ GB exposed RAM (or
+  // unexposed — some browsers omit deviceMemory), dpr ≥ 2.5.
+  if (/Android/.test(ua)) {
+    return cores >= 8 && (mem === 0 || mem >= 4) && dpr >= 2.5;
+  }
+
+  // Other touch surfaces (touchscreen laptops, niche): default to false.
+  return false;
+}
+window.__isHighEndMobile = isHighEndMobile;
 
 // ---------------------------------------------------------------------------
 // DOM
@@ -258,6 +329,53 @@ function hideLoading() {
   loadingEl?.classList.add("hidden");
 }
 
+// Determinate fill driver for the splash progress bar. First call with a
+// real total flips the bar out of its CSS keyframe slide (`.ld-bar-indef`)
+// and into a width-driven fill. Silently no-ops when the splash isn't
+// mounted (HMR / tests) or when Content-Length is unknown.
+const _ldFill = loadingEl?.querySelector?.(".ld-fill") ?? null;
+function setLoadProgress(loaded, total) {
+  if (!_ldFill || total <= 0) return;
+  if (!_ldFill.classList.contains("determinate")) {
+    _ldFill.classList.add("determinate");
+  }
+  const pct = Math.max(0, Math.min(100, (100 * loaded) / total));
+  _ldFill.style.width = `${pct}%`;
+}
+
+// Stream a binary asset with byte-level progress. Used instead of letting
+// SplatMesh fetch the URL itself, because the indeterminate slash bar
+// looks broken on slow mobile networks where the 96 MB scene takes 7+
+// seconds to arrive. Returns a Uint8Array that goes straight into
+// `new SplatMesh({ fileBytes })`. Memory peak is roughly 2x file size
+// briefly during the concat; acceptable on modern phones (1 GB+ RAM).
+async function fetchWithProgress(url, onProgress) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Fetch ${url}: ${res.status} ${res.statusText}`);
+  const total  = Number(res.headers.get("Content-Length")) || 0;
+  const reader = res.body?.getReader?.();
+  if (!reader) {
+    // Old browser fallback (no ReadableStream support) — one-shot, no
+    // intermediate progress, but at least functionally correct.
+    const buf = new Uint8Array(await res.arrayBuffer());
+    onProgress?.(buf.length, buf.length);
+    return buf;
+  }
+  const chunks = [];
+  let loaded = 0;
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.length;
+    onProgress?.(loaded, total);
+  }
+  const out = new Uint8Array(loaded);
+  let off = 0;
+  for (const c of chunks) { out.set(c, off); off += c.length; }
+  return out;
+}
+
 let splat = null;
 let effects = null;
 let annotations = null;
@@ -286,10 +404,115 @@ async function createSplat(options) {
   return { splat: m, center, size, radius };
 }
 
+// Mobile splat budgets. Caps the number of points uploaded to the GPU on
+// touch devices — bytes on the wire are unchanged (no Range support in
+// Spark yet) but per-frame render cost + VRAM scale ~linearly with the
+// cap, which is the actual bottleneck on phone silicon. The .splat
+// format from Inria / Postshot exporters is typically sorted by
+// importance, so the first N splats are the visually-dominant ones.
+// Set both to 0 to disable the cap (full-quality on touch too).
+const SPLAT_MAX_PHONE  = 1_500_000;
+const SPLAT_MAX_TABLET = 2_000_000;
+
+// HEAD-probe a URL — returns true when the server responds with a 2xx.
+// Used to detect optional mobile-only assets without triggering a 404
+// download in the network panel (cleaner than a try/catch on GET, and
+// faster: HEAD is one round-trip with no body transfer).
+async function urlExists(url) {
+  try {
+    const res = await fetch(url, { method: "HEAD" });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 async function loadSplat() {
   setLoading("Fetching splat…");
 
-  const built = await createSplat({ url: SPLAT_URL });
+  // Asset selection:
+  //   • Desktop                         → SPLAT_URL (PC, full 3M splats)
+  //   • Touch + high-end (iPhone 13+ /  → SPLAT_URL (PC; chip can take it)
+  //     M-series iPad / Android flagship)
+  //   • Touch + everything else         → SPLAT_MOBILE_URL when present
+  //                                      (≈45% smaller), else falls back
+  //                                      to SPLAT_URL with maxSplats cap.
+  // The high-end check happens before the HEAD probe so we don't waste
+  // a round-trip on devices that won't use the mobile variant anyway.
+  const highEnd = isHighEndMobile();
+  let assetUrl  = SPLAT_URL;
+  let assetType = "splat";
+  if (IS_TOUCH && !highEnd && await urlExists(SPLAT_MOBILE_URL)) {
+    assetUrl  = SPLAT_MOBILE_URL;
+    assetType = splatTypeFromUrl(SPLAT_MOBILE_URL);
+    console.info("[Splat] Using mobile variant:", SPLAT_MOBILE_URL, "(", assetType, ")");
+  } else if (IS_TOUCH && highEnd) {
+    console.info("[Splat] High-end mobile detected — using PC asset:", SPLAT_URL);
+  }
+
+  // Stream-fetch so the splash bar shows a real %. A 96 MB asset over a
+  // 4G link takes 7+ seconds; the original indeterminate slide animation
+  // makes that feel broken. Bytes are accumulated then handed to
+  // SplatMesh via `fileBytes` (vs. letting the library fetch the URL),
+  // which is the only way to surface byte-level progress.
+  const fileBytes = await fetchWithProgress(assetUrl, (loaded, total) => {
+    const mb = (loaded / (1024 * 1024)).toFixed(1);
+    if (total > 0) {
+      const totalMb = (total / (1024 * 1024)).toFixed(1);
+      const pct     = Math.min(100, Math.round((100 * loaded) / total));
+      setLoading(`Fetching splat · ${mb} / ${totalMb} MB · ${pct}%`);
+    } else {
+      setLoading(`Fetching splat · ${mb} MB`);
+    }
+    setLoadProgress(loaded, total);
+  });
+
+  // Sanity-check the payload before handing it to Spark — turns the
+  // opaque "Invalid .splat file size" deep in the parser into a
+  // diagnostic at the actual point of failure (e.g. Vite SPA-fallback
+  // returning index.html for a stale URL, or a truncated download).
+  // For .splat the size must be a multiple of 32; .spz / .ply have
+  // their own header sniffing and skip this check.
+  if (assetType === "splat" && fileBytes.length % 32 !== 0) {
+    const headHex = Array.from(fileBytes.slice(0, 8))
+      .map(b => b.toString(16).padStart(2, "0")).join(" ");
+    const headAscii = Array.from(fileBytes.slice(0, 32))
+      .map(b => (b >= 32 && b < 127) ? String.fromCharCode(b) : ".").join("");
+    const looksLikeHtml = headAscii.toLowerCase().includes("<!doc")
+                       || headAscii.toLowerCase().includes("<html");
+    console.error(
+      "[Splat] Bad payload for", assetUrl,
+      "\n  bytes:", fileBytes.length, "(not divisible by 32)",
+      "\n  head hex:", headHex,
+      "\n  head ascii:", headAscii,
+      looksLikeHtml ? "\n  ⚠ Looks like HTML — the dev server is probably falling back to index.html for a missing URL. Restart Vite / hard-refresh." : "",
+    );
+    throw new Error(
+      looksLikeHtml
+        ? `Splat URL returned HTML (likely a 404 SPA fallback). Check that ${assetUrl} exists in /public and restart the dev server.`
+        : `Truncated splat: got ${fileBytes.length} bytes (not a multiple of 32).`,
+    );
+  }
+
+  setLoading("Decoding splat…");
+  const splatOpts = {
+    fileBytes,
+    fileName: assetUrl.split("/").pop(),
+    fileType: assetType,
+  };
+  // GPU-side cap. Applied only when we're on touch + low-end + serving
+  // the FULL .splat (i.e. a non-flagship phone with no mobile variant
+  // available — the worst case). High-end touch devices opted into the
+  // PC asset deliberately, so we trust them at full resolution. Devices
+  // that picked up the mobile variant don't need capping (the file is
+  // already pre-sized). Desktop never gets capped.
+  const usingMobileVariant = assetUrl !== SPLAT_URL;
+  if (!usingMobileVariant && !highEnd) {
+    if (IS_PHONE       && SPLAT_MAX_PHONE  > 0) splatOpts.maxSplats = SPLAT_MAX_PHONE;
+    else if (IS_TABLET && SPLAT_MAX_TABLET > 0) splatOpts.maxSplats = SPLAT_MAX_TABLET;
+  }
+
+  const built = await createSplat(splatOpts);
   splat = built.splat;
   scene.add(splat);
   _hudRefs.splat = splat;
@@ -349,6 +572,21 @@ async function loadSplat() {
   if (IS_MOBILE) {
     gui.foldersRecursive().forEach(f => f.close());
     gui.close();
+  }
+  // Touch: tap outside the panel collapses it. The panel covers ~half the
+  // phone viewport when open, so the user expects "tap the scene to get
+  // back to the splat" — like an iOS sheet. We whitelist the other UI
+  // panels so their own outside-click handlers can run; everything else
+  // (the canvas, the splash, the annotation layer) closes the GUI.
+  if (IS_TOUCH) {
+    document.addEventListener("pointerdown", (e) => {
+      if (gui._closed) return;
+      const t = e.target;
+      if (gui.domElement.contains(t)) return;
+      // Don't fight modal-ish panels that handle their own dismissal.
+      if (t?.closest?.("#mobile-nav-btn, #mobile-nav-menu, #mobile-bottombar, #mobile-sheet, #mobile-sheet-backdrop, #mobile-toast, #key-hints, #credits, #profiler, #tech-spec, #asset-hover-card, #usd-annotations, .ah-tip-portal, dialog")) return;
+      gui.close();
+    }, true);
   }
 
   // ---- Voxelizer + Quadizer (USD PointInstancer-style overlays) -----------
@@ -489,6 +727,27 @@ async function loadSplat() {
       annotations,
     });
     window.__viewpointTuner = viewpointTuner;
+  }
+
+  // Mobile bottom-bar + slide-up sheet. Replaces the scattered corner
+  // panels with a one-thumb-friendly bottom-up layout. Built only on
+  // touch — desktop keeps its lil-gui + sidebar untouched. Constructed
+  // after annotations so the Views sheet has its viewpoint list, and
+  // after assetHover so the short-tap / long-press hooks attach. The
+  // camera-move handles (window.__camMovePlayPause / __camMoveStop) are
+  // resolved lazily at click time, so it's fine that they don't exist yet.
+  let mobileUI = null;
+  if (IS_TOUCH) {
+    mobileUI = new MobileUI({
+      annotations,
+      gui,
+      effectParams,
+      effects,
+      postfx,
+      assetHover,
+      splat,
+    });
+    window.__mobileUI = mobileUI;
   }
 
   // ---- Data-label surveillance overlay (sits over the canvas) ----
@@ -1249,6 +1508,10 @@ async function loadSplat() {
   }
 
   const camMoveParams = { play: () => playPauseCameraMove(), stop: () => stopCameraMove() };
+  // Expose so the mobile bottom-bar's Camera sheet can drive playback
+  // without having to reach into this closure.
+  window.__camMovePlayPause = () => playPauseCameraMove();
+  window.__camMoveStop      = () => stopCameraMove();
   const playCtrl = fOverlay.add(camMoveParams, "play").name("▶ Play Camera Move");
   playCtrl.domElement.title = "Play / pause the pre-authored camera move (Shot4B_GS-FX_Camera_V01.fbx).";
   const stopCtrl = fOverlay.add(camMoveParams, "stop").name("■ Stop Camera Move");
@@ -2308,6 +2571,9 @@ renderer.setAnimationLoop(() => {
       const base = statusEl.textContent.replace(/\s*•\s*[\d.]+\s*fps$/, '');
       statusEl.textContent = `${base} • ${fps} fps`;
     }
+    // Feed the mobile Info sheet's FPS readout (cheap; the sheet only
+    // reads it the next time it opens — no DOM thrash here).
+    window.__mobileUI?.tickFps?.(dt);
     frameCount = 0;
     fpsLastMs = _fpsNow;
   }

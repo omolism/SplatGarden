@@ -91,7 +91,7 @@ export const TECH_SPECS = [
       {
         name:      "Daffodil",
         location:  "Near gazebo",
-        worldPos:  [0.28, -0.773, 2.226],
+        worldPos:  [0.18, -0.773, 2.226],
         toolchain: ["Houdini", "VAT bake", "Unreal Engine (set dress)", "Python · OSC · MediaPipe", "AI texture stylization"],
         output:    "Mesh + VAT animation · interactively driven in Unreal",
         note:      "Animated procedurally in Houdini and VAT-baked, then set-dressed in Unreal. Inside the Unreal session, Python · OSC · MediaPipe drives the rig live (hand gesture → OSC → blueprint). Diffuse texture passes through the AI Texture Stylization tool from L1.",
@@ -167,7 +167,7 @@ export const TECH_SPECS = [
       {
         name: "Splat training (parallel)",
         ref:  "Postshot · Lichtfeld Studio",
-        note: "Two trainers fit the captured frames into a 3D Gaussian Splat at the same time. Postshot is the artist-driven path; Lichtfeld is the studio's in-house pipeline. We compare outputs and ship the cleaner one as public/Whole_With_Statue.splat (≈ 3M splats).",
+        note: "Two trainers fit the captured frames into a 3D Gaussian Splat at the same time. Postshot is the artist-driven path; Lichtfeld is the studio's in-house pipeline. We compare outputs and ship the cleaner one as public/SplatGarden_PC.splat (≈ 3M splats).",
       },
     ],
   },

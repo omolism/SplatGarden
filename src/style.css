@@ -1620,6 +1620,15 @@ kbd {
   0%   { transform: translateX(-110%); }
   100% { transform: translateX(540%); }
 }
+/* Determinate state: real % fill driven inline by JS (setLoadProgress in
+   main.js). We need to kill the indeterminate keyframe slide + the
+   translateX it leaves behind so it stops fighting the live width. The
+   width transition smooths chunk-by-chunk updates into a gliding bar. */
+#loading .ld-fill.determinate {
+  animation: none;
+  transform: none;
+  transition: width 0.18s ease-out;
+}
 #loading .ld-status {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -1803,6 +1812,14 @@ body.mobile #sidebar,
 body.touch  #viewpoint-tuner,
 body.touch  #scene-panel,
 body.touch  #sidebar { display: none !important; }
+/* Museum-style hover cards — both the asset-hotspot card (#asset-hover-card)
+   and the USD layer-toggle annotation (#usd-annotations) take up roughly
+   half the phone viewport and obstruct the splat. The clicks that trigger
+   them still fly the camera / toggle the layer; we just suppress the card. */
+body.mobile #asset-hover-card,
+body.mobile #usd-annotations,
+body.touch  #asset-hover-card,
+body.touch  #usd-annotations { display: none !important; }
 body.mobile .lil-gui.root {
   font-size: 12px;
   width: min(280px, 92vw);
@@ -2376,7 +2393,9 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   font-size: 10px;
   font-weight: 500;
   letter-spacing: 0.10em;
-  text-transform: uppercase;
+  /* Honour the asset's authored casing (e.g. "Gazebo", "Daffodil")
+     instead of forcing ALL CAPS — the names read more naturally and
+     match how the assets are referenced in the rest of the UI. */
   color: var(--text);
   background: rgba(8, 12, 18, 0.82);
   border: 1px solid var(--hair-strong);
@@ -3475,9 +3494,29 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
   transition: background 0.15s ease, border-color 0.15s ease;
 }
-#mobile-nav-btn svg { width: 22px; height: 22px; }
-#mobile-nav-btn:active { background: rgba(40, 42, 48, 0.9); }
-body.touch #mobile-nav-btn { display: flex; }
+#mobile-nav-btn svg {
+  width: 22px;
+  height: 22px;
+  /* Slight cross-fade between the hamburger ↔ × glyphs feels less abrupt
+     when the JS swaps innerHTML. Transition is on the wrapping svg
+     attributes (opacity), but the actual cross-fade is implicit since
+     innerHTML replacement is instant — this just keeps the existing
+     line work crisp during press. */
+  transition: transform 0.18s ease;
+}
+#mobile-nav-btn:hover         { background: rgba(28, 30, 34, 0.85); }
+#mobile-nav-btn:active        { background: rgba(40, 42, 48, 0.90); transform: scale(0.96); }
+/* Open state: subtle lift so users can tell at a glance whether the
+   drawer is open without having to spot the × vs. ≡ glyph. */
+#mobile-nav-btn[aria-expanded="true"] {
+  background: rgba(28, 30, 34, 0.92);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+/* Touch hamburger is dormant — every menu item moved into the bottom-bar
+   sheets (Info / Camera) so the trigger button has nothing to surface.
+   Hidden rather than removed so a future Pipeline-only menu can be
+   re-enabled by toggling this rule. */
+body.touch #mobile-nav-btn { display: none !important; }
 
 #mobile-nav-menu {
   position: fixed;
@@ -3525,10 +3564,25 @@ body.touch #mobile-nav-btn { display: flex; }
   background: rgba(255, 255, 255, 0.07);
 }
 #mobile-nav-menu .mn-icon {
+  /* Hosts an inline SVG icon (see mobile-nav.js ICON map). Use flex so
+     the SVG centres within the column lil-gui grid cell regardless of
+     intrinsic SVG height. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--text-mid);
-  font-size: 16px;
-  text-align: center;
+  width: 22px;
+  height: 22px;
 }
+#mobile-nav-menu .mn-icon svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+/* Active / hover row pulls the icon a touch brighter for an extra
+   tactile cue alongside the row background flash. */
+#mobile-nav-menu .mn-list button:hover  .mn-icon,
+#mobile-nav-menu .mn-list button:active .mn-icon { color: rgba(255, 255, 255, 0.92); }
 #mobile-nav-menu .mn-key {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -3539,6 +3593,410 @@ body.touch #mobile-nav-btn { display: flex; }
   border-radius: 4px;
   padding: 2px 6px;
 }
+
+/* ============================================================
+ * MobileUI — bottom toolbar + slide-up sheet + asset toast.
+ * All scoped to body.touch so desktop never sees this surface.
+ * ============================================================ */
+#mobile-bottombar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: calc(54px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  display: none;             /* shown on body.touch only */
+  align-items: stretch;
+  gap: 2px;
+  z-index: 1490;
+  background: rgba(15, 16, 18, 0.92);
+  border-top: 1px solid var(--hair-strong);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  font-family: var(--font-ui);
+}
+body.touch #mobile-bottombar { display: flex; }
+#mobile-bottombar button {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: transparent;
+  border: 0;
+  color: var(--text-mid);
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  padding: 6px 4px;
+  border-radius: 8px;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+#mobile-bottombar button .mb-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+}
+#mobile-bottombar button .mb-ico svg { width: 22px; height: 22px; display: block; }
+#mobile-bottombar button:active           { background: rgba(255, 255, 255, 0.04); }
+#mobile-bottombar button:hover            { color: rgba(255, 255, 255, 0.85); }
+#mobile-bottombar button.active           { color: rgba(255, 255, 255, 0.96); }
+#mobile-bottombar button.active .mb-ico   { color: rgba(255, 255, 255, 0.96); }
+/* Subtle active underline so the highlight reads even in low light */
+#mobile-bottombar button.active::before {
+  content: "";
+  position: absolute;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 4px);
+  width: 22px;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.92);
+}
+#mobile-bottombar button { position: relative; }
+
+/* ---- Sheet backdrop ---- */
+#mobile-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  visibility: hidden;
+  z-index: 1495;
+  transition: opacity 0.22s ease, visibility 0.22s ease;
+}
+#mobile-sheet-backdrop.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ---- Sheet ---- */
+#mobile-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  max-height: 78vh;
+  z-index: 1496;
+  background: rgba(15, 16, 18, 0.96);
+  border-top: 1px solid var(--hair-strong);
+  border-radius: 14px 14px 0 0;
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  font-family: var(--font-ui);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  transform: translateY(100%);
+  transition: transform 0.28s cubic-bezier(.22, 1, .36, 1);
+  box-shadow: 0 -12px 36px rgba(0, 0, 0, 0.5);
+  /* Reserve room for the bottom-bar — the sheet sits on top of it but
+     its content shouldn't be obscured. */
+  padding-bottom: calc(54px + env(safe-area-inset-bottom, 0px));
+}
+#mobile-sheet.open { transform: translateY(0); }
+#mobile-sheet.dragging { transition: none; }   /* finger-follow is direct */
+
+#mobile-sheet .ms-handle {
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  touch-action: none;        /* swallow vertical-scroll while dragging */
+}
+#mobile-sheet .ms-handle::before {
+  content: "";
+  width: 38px;
+  height: 4px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.22);
+}
+#mobile-sheet .ms-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px 10px;
+  border-bottom: 1px solid var(--hair);
+}
+#mobile-sheet .ms-title {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+#mobile-sheet .ms-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text-mid);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+#mobile-sheet .ms-close:active { background: rgba(255, 255, 255, 0.06); }
+#mobile-sheet .ms-body {
+  padding: 14px 18px 20px;
+  overflow: auto;
+  flex: 1 1 auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ---- Reusable sheet primitives ---- */
+#mobile-sheet .ms-row-label {
+  font-size: 10.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin: 6px 0 8px;
+}
+#mobile-sheet .ms-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+#mobile-sheet .ms-chip {
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--hair-strong);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  cursor: pointer;
+}
+#mobile-sheet .ms-chip.on {
+  background: rgba(255, 255, 255, 0.92);
+  color: #0b0f14;
+  border-color: rgba(255, 255, 255, 0.92);
+}
+#mobile-sheet .ms-chip:active { transform: scale(0.97); }
+
+#mobile-sheet .ms-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-top: 1px solid var(--hair);
+}
+#mobile-sheet .ms-toggle-label { font-size: 14px; }
+#mobile-sheet .ms-switch {
+  position: relative;
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid var(--hair-strong);
+  cursor: pointer;
+  transition: background 0.18s ease;
+}
+#mobile-sheet .ms-switch.on { background: rgba(255, 255, 255, 0.88); }
+#mobile-sheet .ms-switch .ms-switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.18s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+#mobile-sheet .ms-switch.on .ms-switch-knob { transform: translateX(18px); background: #0b0f14; }
+
+#mobile-sheet .ms-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 13px 14px;
+  font-family: inherit;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--hair-strong);
+  border-radius: 10px;
+  color: var(--text);
+  cursor: pointer;
+}
+#mobile-sheet .ms-action:active { transform: scale(0.99); background: rgba(255, 255, 255, 0.07); }
+#mobile-sheet .ms-action-primary {
+  background: rgba(255, 255, 255, 0.92);
+  color: #0b0f14;
+  border-color: rgba(255, 255, 255, 0.92);
+  font-weight: 500;
+}
+#mobile-sheet .ms-action.ms-advanced {
+  justify-content: space-between;
+  margin-top: 18px;
+  background: transparent;
+}
+#mobile-sheet .ms-action.ms-advanced .ms-arrow {
+  font-size: 18px;
+  color: var(--text-mid);
+}
+#mobile-sheet .ms-help {
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-dim);
+}
+#mobile-sheet .ms-icon-glyph {
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.85;
+}
+
+/* ---- Views list ---- */
+#mobile-sheet .ms-views-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+#mobile-sheet .ms-views-list li {
+  display: grid;
+  grid-template-columns: 30px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 6px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+#mobile-sheet .ms-views-list li:active { background: rgba(255, 255, 255, 0.05); }
+#mobile-sheet .ms-views-list li.active { background: rgba(255, 255, 255, 0.06); }
+#mobile-sheet .ms-vp-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+  border: 1px solid var(--hair);
+  border-radius: 6px;
+  padding: 4px 0;
+  text-align: center;
+}
+#mobile-sheet .ms-vp-name { font-size: 14px; }
+#mobile-sheet .ms-vp-badge {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+/* ---- Info sheet grid ---- */
+#mobile-sheet .ms-info-grid {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 18px;
+  row-gap: 10px;
+  margin-bottom: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+#mobile-sheet .ms-info-k {
+  color: var(--text-dim);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-size: 10.5px;
+}
+#mobile-sheet .ms-info-v { color: var(--text); }
+
+/* ---- Advanced (full lil-gui) wrapper inside the sheet ---- */
+#mobile-sheet .ms-gui-wrap {
+  /* lil-gui sets its own dark backdrop; reset margins so it fills width */
+  width: 100%;
+}
+#mobile-sheet .ms-gui-wrap > .lil-gui.root {
+  position: static !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  max-height: none !important;
+  margin: 0 !important;
+}
+
+/* ---- Empty state ---- */
+#mobile-sheet .ms-empty {
+  padding: 18px 0;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+
+/* ---- Asset detail card inside the sheet (long-press) ---- */
+#mobile-sheet .ms-asset-card {
+  /* Reuse all the existing #asset-hover-card styles by piggy-backing on
+     the .ah-* class names that renderCard emits. Wrap in our own root
+     so we override absolute positioning / z-index from #asset-hover-card. */
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+}
+#mobile-sheet .ms-asset-card .ah-close { display: none; }   /* sheet has its own × */
+#mobile-sheet .ms-asset-card .ah-head { margin-bottom: 10px; }
+#mobile-sheet .ms-asset-card .ah-name { font-size: 18px; }
+#mobile-sheet .ms-asset-card .ah-loc { font-size: 11px; color: var(--text-dim); }
+#mobile-sheet .ms-asset-card .ah-section {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--hair);
+}
+#mobile-sheet .ms-asset-card .ah-section:last-of-type { border-bottom: none; }
+
+/* ---- Toast ---- */
+#mobile-toast {
+  position: fixed;
+  top: calc(70px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%) translateY(-6px);
+  z-index: 1700;
+  pointer-events: none;
+  max-width: calc(100vw - 32px);
+  padding: 9px 14px;
+  background: rgba(15, 16, 18, 0.92);
+  border: 1px solid var(--hair-strong);
+  border-radius: 999px;
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-size: 12.5px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+#mobile-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ---- Touch-only layout shifts (push existing things out of the way) ---- */
+/* Hide the desktop bottom-right brand/status bar — the new bottom-bar
+   replaces it, and they fight for the same corner. */
+body.touch #toolbar { display: none !important; }
+/* Lift the Quick Guide above the new bottom-bar so it stops being
+   covered by it. 54 (bar) + 18 (gap) + safe-area. */
+body.touch #key-hints {
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+}
+/* Hide the floating lil-gui at top-right on touch — it would sit
+   behind the hamburger anyway, and the bottom-bar's Effects sheet now
+   owns "Open Advanced" as the canonical entry point. We undo the hide
+   when the gui has been re-parented INTO the sheet so power users get
+   the full panel when they ask for it. */
+body.touch .lil-gui.root           { display: none !important; }
+body.touch #mobile-sheet .lil-gui.root { display: block !important; }
 
 /* ============================================================
  * Responsive — phone (<768px) and tablet (768-1024px) tuning
@@ -3630,3 +4088,18 @@ body.touch .cr-close,
 body.touch .ts-close { min-height: 32px; padding: 6px 12px; }
 body.touch #app .annotation { width: 32px; height: 32px; font-size: 13px; }
 body.touch .asset-hotspot .ahot-label { font-size: 12px; }
+/* Touch hit area: 22 px is below Apple 44 / Google 48 minimums, so a
+   finger often lands just-off-dot — and because the dot is transformed
+   every frame, a slow tap can have its pointerdown land on the dot and
+   its pointerup land on empty space, dropping the click. We add an
+   invisible ::before that extends the hit zone to 44 × 44 without
+   resizing the visible dot / ring / label. Pointer events on the
+   pseudo-element bubble to the .asset-hotspot owner so the touch logic
+   in asset-hover.js sees them normally. */
+body.touch .asset-hotspot { touch-action: none; }
+body.touch .asset-hotspot::before {
+  content: "";
+  position: absolute;
+  inset: -11px;
+  border-radius: 50%;
+}
