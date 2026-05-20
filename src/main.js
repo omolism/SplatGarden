@@ -156,50 +156,42 @@ document.body.classList.toggle("mobile", IS_MOBILE);   // legacy alias
 
 // ---------------------------------------------------------------------------
 // Collapsible panels — Viewpoints (#sidebar), Scene (#scene-panel), and
-// Hand Tracking (#hand-panel). Each one gets:
-//   • a chevron-left button in / on the panel that slides it off-screen
-//   • a chevron-right floating handle at the viewport edge that brings
-//     it back, with a per-panel vertical position
-//   • localStorage persistence so the choice survives reloads
-// Skipped on phone — the phone layout hides these panels via CSS and
-// has its own bottom-bar navigation instead.
+// Hand Tracking (#hand-panel). Each one's chevron button toggles in
+// both directions: when expanded the panel shows fully, when collapsed
+// it shrinks to a 38 × 38 tab in place (the chevron flips via CSS to
+// read as "expand"). The collapsed tab IS the affordance, so the
+// expand handle is always at the same Y coordinate as the panel was —
+// no floating-fixed-position math to keep in sync with layout shifts.
+// State persists via localStorage. Skipped on phone (panels CSS-hidden).
 // ---------------------------------------------------------------------------
 function setupCollapsiblePanel({
   panelSelector,      // CSS selector for the panel element
-  toggleSelector,     // CSS selector for the in-panel collapse trigger
+  toggleSelector,     // CSS selector for the in-panel chevron button
   storageKey,         // localStorage key for persisting the collapsed flag
-  expandId,           // id for the floating expand handle to be created
-  expandClass,        // shared class on every expand handle for common styling
-  expandLabel,        // aria-label / title for the expand handle
-  minimizedClass,     // class added to the panel + body when collapsed
-  bodyClass,          // class added to body when collapsed (drives CSS)
+  minimizedClass,     // class added to the panel when collapsed
+  bodyClass,          // class added to body when collapsed (CSS hook)
 }) {
   const panel = document.querySelector(panelSelector);
   if (!panel) return null;
   const toggleBtn = panel.querySelector(toggleSelector);
-
-  const expandBtn = document.createElement("button");
-  expandBtn.id = expandId;
-  expandBtn.className = expandClass;
-  expandBtn.title = expandLabel;
-  expandBtn.setAttribute("aria-label", expandLabel);
-  expandBtn.innerHTML = `
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <polyline points="10 6 16 12 10 18"/>
-    </svg>`;
-  document.body.appendChild(expandBtn);
+  if (!toggleBtn) return null;
 
   const setCollapsed = (on, persist = true) => {
     panel.classList.toggle(minimizedClass, on);
     document.body.classList.toggle(bodyClass, on);
-    toggleBtn?.setAttribute("aria-expanded", String(!on));
+    toggleBtn.setAttribute("aria-expanded", String(!on));
+    toggleBtn.title = on ? "Expand panel" : "Collapse panel";
+    toggleBtn.setAttribute("aria-label", on ? "Expand panel" : "Collapse panel");
     if (persist) {
       try { localStorage.setItem(storageKey, on ? "1" : "0"); } catch {}
     }
   };
 
-  toggleBtn?.addEventListener("click", () => setCollapsed(true));
-  expandBtn .addEventListener("click", () => setCollapsed(false));
+  // Same chevron handles both directions — toggles the current state.
+  toggleBtn.addEventListener("click", () => {
+    setCollapsed(!panel.classList.contains(minimizedClass));
+  });
+
   if (!IS_PHONE) {
     try {
       if (localStorage.getItem(storageKey) === "1") setCollapsed(true, false);
@@ -218,9 +210,6 @@ const _sidebarCollapseCtrl = setupCollapsiblePanel({
   panelSelector:  "#sidebar",
   toggleSelector: "#sidebar-toggle",
   storageKey:     "splatgarden:sidebar-collapsed",
-  expandId:       "sidebar-expand",
-  expandClass:    "panel-expand-handle",
-  expandLabel:    "Expand Viewpoints",
   minimizedClass: "sidebar-minimized",
   bodyClass:      "has-collapsed-sidebar",
 });
@@ -228,9 +217,6 @@ const _handCollapseCtrl = setupCollapsiblePanel({
   panelSelector:  "#hand-panel",
   toggleSelector: "#hand-min-toggle",
   storageKey:     "splatgarden:hand-collapsed",
-  expandId:       "hand-expand",
-  expandClass:    "panel-expand-handle",
-  expandLabel:    "Expand Hand Tracking",
   minimizedClass: "hand-minimized",
   bodyClass:      "has-collapsed-hand",
 });
@@ -346,10 +332,7 @@ _sceneCollapseCtrl = setupCollapsiblePanel({
   panelSelector:  "#scene-panel",
   toggleSelector: "#scene-toggle",
   storageKey:     "splatgarden:scene-collapsed",
-  expandId:       "scene-expand",
-  expandClass:    "panel-expand-handle",
-  expandLabel:    "Expand Scene",
-  minimizedClass: "sidebar-minimized",   // reuse the same slide-off-left class
+  minimizedClass: "sidebar-minimized",   // reuse the same in-place tab idiom
   bodyClass:      "has-collapsed-scene",
 });
 
