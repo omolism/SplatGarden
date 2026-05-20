@@ -118,6 +118,11 @@ export class UsdLayers {
     this.el.id = "usd-layers-panel";
     this.el.innerHTML = `
       <header>
+        <button class="usd-fold-caret" type="button" aria-label="Fold section" title="Fold / unfold">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
         <div class="title">3DGS / USD</div>
         <button class="usd-upload" title="Replace the primary splat — drop a .splat / .ply / .spz / .ksplat">⤓ Use My Own</button>
       </header>
@@ -127,6 +132,23 @@ export class UsdLayers {
 
     this.listEl = this.el.querySelector(".usd-row-list");
     this.el.querySelector(".usd-upload")?.addEventListener("click", () => this.onUploadRequest?.());
+
+    // Fold the section when the header (or its caret) is clicked, like
+    // a lil-gui folder. Same idiom as Customize / Cinematic FX / Tech
+    // Spec / Camera Movement — clicking anywhere on the title row
+    // (except the upload button) toggles the .folded class which hides
+    // the list. The caret rotates via CSS to reflect state.
+    const header = this.el.querySelector("header");
+    const setFolded = (on) => {
+      this.el.classList.toggle("folded", on);
+      header.setAttribute("aria-expanded", String(!on));
+    };
+    header?.addEventListener("click", (e) => {
+      // Let the "Use My Own" button fire its own click without folding.
+      if (e.target?.closest(".usd-upload")) return;
+      setFolded(!this.el.classList.contains("folded"));
+    });
+
     this._render();
   }
 

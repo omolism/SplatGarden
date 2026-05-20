@@ -608,6 +608,65 @@ kbd {
   line-height: 1.3;
 }
 
+/* ============ Hand-tracking gesture toast ============
+ * Appears at the top-centre of the viewport for ~6 s after the user
+ * toggles tracking ON. Teaches the gestures at the moment of relevance
+ * — replaces the permanent sidebar hint rail rows that 99 % of visitors
+ * never used. Glassy capsule to match the rest of the floating UI. */
+#hand-tracking-tip {
+  position: fixed;
+  top: calc(70px + env(safe-area-inset-top, 0px));
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  z-index: 1700;
+  pointer-events: auto;
+  cursor: pointer;
+  padding: 12px 18px;
+  background: rgba(15, 16, 18, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  color: var(--text);
+  font-family: var(--font-ui);
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.22s ease, transform 0.22s ease, visibility 0.22s ease;
+}
+#hand-tracking-tip.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+#hand-tracking-tip .ht-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-mid);
+  margin-bottom: 8px;
+}
+#hand-tracking-tip .ht-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+#hand-tracking-tip .ht-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+#hand-tracking-tip .ht-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
 /* ============ Hand tracking panel ============ */
 #hand-panel {
   position: absolute;
@@ -637,43 +696,58 @@ kbd {
   overflow: hidden;
   gap: 0;
 }
-#hand-panel.hand-minimized > :not(.panel-min-corner) {
-  display: none;
-}
-#hand-panel.hand-minimized .panel-min-corner {
-  position: static;
+/* Hide everything except the header (which holds the chevron). */
+#hand-panel.hand-minimized > :not(.hand-head) { display: none; }
+#hand-panel.hand-minimized .hand-head {
+  margin: 0;
   width: 38px;
   height: 38px;
-  border-radius: 0;
+  justify-content: center;
 }
-#hand-panel.hand-minimized .panel-min-corner svg {
+#hand-panel.hand-minimized .hand-head .hand-head-title { display: none; }
+#hand-panel.hand-minimized #hand-min-toggle.sidebar-toggle {
+  width: 38px;
+  height: 38px;
+}
+#hand-panel.hand-minimized #hand-min-toggle.sidebar-toggle svg {
   transform: rotate(180deg);
   width: 16px;
   height: 16px;
 }
-/* Corner chevron — small absolute button at the top-right of #hand-panel
-   for collapse. Keeps the existing panel layout (toggle / mode / preview /
-   hint) untouched. */
-#hand-panel .panel-min-corner {
-  position: absolute;
-  top: 6px;
-  right: 6px;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  border: 0;
+/* Header strip at top of #hand-panel — chevron-left for collapse plus
+   a small uppercase label. Replaces the older absolute-positioned
+   corner chevron, which overlapped the toggle's right-aligned "OFF"
+   badge and broke the visual. */
+#hand-panel .hand-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -2px 0 2px;
+}
+#hand-panel .hand-head-title {
+  flex: 1;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-mid);
+}
+#hand-panel #hand-min-toggle.sidebar-toggle {
   background: transparent;
-  color: var(--text-dim);
-  cursor: pointer;
+  border: 0;
+  color: var(--text-mid);
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
   padding: 0;
-  z-index: 2;
   transition: background 0.15s ease, color 0.15s ease;
 }
-#hand-panel .panel-min-corner:hover { background: rgba(255, 255, 255, 0.06); color: var(--text); }
-#hand-panel .panel-min-corner svg   { width: 14px; height: 14px; display: block; }
+#hand-panel #hand-min-toggle.sidebar-toggle:hover { background: rgba(255, 255, 255, 0.06); color: var(--text); }
+#hand-panel #hand-min-toggle.sidebar-toggle svg   { width: 14px; height: 14px; display: block; }
   gap: 8px;
   width: 224px;
   box-shadow: var(--shadow-soft);
@@ -3313,10 +3387,40 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 #usd-layers-panel header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   padding: 12px 14px 10px;
   border-bottom: 1px solid var(--hair);
+  cursor: pointer;
+  user-select: none;
 }
+#usd-layers-panel header .title { flex: 1; }
+/* Fold caret — sits on the LEFT of the title, rotates -90° when the
+   section is folded (lil-gui idiom: down = open, right = closed).
+   Click anywhere on the header (except the Use My Own button) folds
+   / unfolds the section. */
+#usd-layers-panel .usd-fold-caret {
+  background: transparent;
+  border: 0;
+  color: var(--text-mid);
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+#usd-layers-panel .usd-fold-caret svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  transition: transform 0.18s ease;
+}
+#usd-layers-panel.folded .usd-fold-caret svg { transform: rotate(-90deg); }
+#usd-layers-panel.folded { border-bottom: none; }
+#usd-layers-panel.folded header { border-bottom: none; }
+#usd-layers-panel.folded .usd-row-list { display: none; }
 #usd-layers-panel header .title {
   font-family: var(--font-ui);
   font-size: 10px;
@@ -3782,33 +3886,35 @@ body.mobile #mobile-nav-btn { display: none !important; }
  * because iPad's screen is wide enough for the lil-gui + sidebar
  * pattern and the user wants iPad === PC.
  * ============================================================ */
+/* Floating capsule bottom-bar — Apple Health / Portfolite-y idiom.
+   Lifted off the viewport edge with a generous radius pill and a soft
+   ambient drop-shadow. Width hugs its content; horizontally centred
+   so the whole bar feels like one polished object instead of a strip
+   bolted to the bottom of the screen. */
 #mobile-bottombar {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: calc(54px + env(safe-area-inset-bottom, 0px));
-  padding: 6px 6px env(safe-area-inset-bottom, 0px);
+  left: 50%;
+  bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  height: 64px;
+  padding: 6px 8px;
   display: none;             /* shown on body.mobile only */
   align-items: stretch;
-  gap: 0;                    /* continuous surface, no inter-tab cracks */
-  /* Sits ABOVE the sheet (1496) and backdrop (1495) so the user never
-     loses their navigation anchor — the active tab stays visible even
-     while a sheet is open. */
+  gap: 2px;
   z-index: 1500;
-  background: rgba(13, 14, 17, 0.94);
-  border-top: 1px solid rgba(255, 255, 255, 0.10);
-  /* A faint inner top highlight catches viewport glow and makes the
-     bar feel like one continuous polished slab instead of a flat strip. */
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06),
-              0 -8px 24px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(22px) saturate(150%);
-  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  background: rgba(15, 16, 20, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.55),
+              0 4px 14px rgba(0, 0, 0, 0.4),
+              inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
   font-family: var(--font-ui);
 }
 body.mobile #mobile-bottombar { display: flex; }
 #mobile-bottombar button {
-  flex: 1;
+  flex: 0 0 auto;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -3822,10 +3928,9 @@ body.mobile #mobile-bottombar { display: flex; }
   font-size: 10px;
   letter-spacing: 0.04em;
   cursor: pointer;
-  padding: 6px 2px;
-  border-radius: 10px;
-  /* Smooth color + bg crossfade between active / inactive so swapping
-     tabs reads as one continuous motion rather than discrete flips. */
+  padding: 6px 14px;
+  border-radius: 999px;
+  min-width: 56px;
   transition: color 0.18s ease, background 0.18s ease;
 }
 #mobile-bottombar button .mb-ico {
@@ -3881,9 +3986,10 @@ body.mobile #mobile-bottombar { display: flex; }
   transition: transform 0.30s cubic-bezier(.22, 1, .36, 1);
   box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.55),
               inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  /* Reserve room for the bar at the bottom of the sheet so body
-     content stays above it. */
-  padding-bottom: calc(54px + env(safe-area-inset-bottom, 0px));
+  /* Reserve room for the floating capsule bar that hovers above the
+     bottom edge — bar height (64) + lift (14) + bar's own safe-area
+     padding + a small gap so the last content row clears the bar. */
+  padding-bottom: calc(64px + 14px + env(safe-area-inset-bottom, 0px) + 12px);
 }
 #mobile-sheet.open { transform: translateY(0); }
 #mobile-sheet.dragging { transition: none; }   /* finger-follow is direct */
@@ -4192,7 +4298,9 @@ body.mobile #toolbar { display: none !important; }
 /* Lift the Quick Guide above the new bottom-bar so it stops being
    covered by it. 54 (bar) + 18 (gap) + safe-area. */
 body.mobile #key-hints {
-  bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
+  /* Lift above the floating capsule bottom-bar (64 px tall, 14 px lift
+     from the bottom edge, plus the device safe-area). */
+  bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
 }
 /* Hide the floating lil-gui at top-right on PHONE — bottom-bar's
    Effects sheet now owns "Open Advanced" as the canonical entry point.
@@ -4211,10 +4319,11 @@ body.mobile #mobile-sheet .lil-gui.root { display: block !important; }
      [timeline strip]            ← bottom: 72  + safe-area
      [bottom bar (54px + safe)]  ← bottom: 0 */
 body.mobile .cam-timeline {
-  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  /* Above the floating capsule bar (64 + 14 lift + safe-area). */
+  bottom: calc(92px + env(safe-area-inset-bottom, 0px));
 }
 body.mobile #intro-overlay .io-phase {
-  bottom: calc(150px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(170px + env(safe-area-inset-bottom, 0px));
 }
 
 /* ============================================================

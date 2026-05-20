@@ -69,11 +69,14 @@
 
       <!-- Hand tracking panel (bottom-left) -->
       <div id="hand-panel">
-        <button id="hand-min-toggle" class="panel-min-corner" title="Collapse panel" aria-label="Collapse panel" aria-expanded="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="14 6 8 12 14 18"/>
-          </svg>
-        </button>
+        <header class="hand-head">
+          <button id="hand-min-toggle" class="sidebar-toggle" title="Collapse panel" aria-label="Collapse panel" aria-expanded="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="14 6 8 12 14 18"/>
+            </svg>
+          </button>
+          <span class="hand-head-title">Hand Tracking</span>
+        </header>
         <button id="hand-toggle" title="Toggle webcam-based hand tracking">
           <span class="icon">🖐</span>
           <span class="label">Hand Tracking</span>
@@ -121,9 +124,12 @@
             <div class="hint-row"><span class="hint-key">🖱</span>
               drag rotate &middot; scroll zoom &middot; right-drag pan
             </div>
-            <div class="hint-row"><span class="hint-key">🖐</span>
-              pinch click / drag orbit &middot; 2-hand zoom / pan
-            </div>
+            <!-- Hand-tracking gestures used to live here; they were noise
+                 for users who never enable hand tracking. We now surface
+                 the gesture cheatsheet only when Hand Tracking is toggled
+                 ON, as a transient onboarding toast in the upper viewport
+                 (see main.js → showHandTrackingTip). -->
+
           </div>
         </aside>
         <!-- Scene layers panel mounts here at runtime (src/scene-layers.js) -->

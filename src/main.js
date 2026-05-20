@@ -2432,8 +2432,48 @@ async function loadSplat() {
     if (!handToggle.classList.contains("error")) {
       handToggle.classList.toggle("active", on);
       handToggle.querySelector(".state").textContent = on ? "ON" : "OFF";
+      // When the user actually engages hand tracking, surface the
+      // gesture cheatsheet as a transient toast — the keyboard /
+      // mouse hints in the sidebar intentionally don't list these
+      // (they were dead weight for anyone not using a webcam) so we
+      // teach the gestures *at the moment of relevance*. Auto-fades.
+      if (on) showHandTrackingTip();
     }
   });
+
+  // ---- Hand-tracking gesture cheatsheet (transient toast) ----
+  // Surfaced only the first ~5 s after the user toggles tracking ON.
+  // Teach the gestures at the moment of relevance instead of squatting
+  // permanent UI real estate (the sidebar hint rail used to list these
+  // alongside WASD / mouse hints, which was wasted bytes for the 99 %
+  // of visitors who never enable hand tracking). Auto-dismisses; tap
+  // anywhere to dismiss earlier.
+  let _handTipEl = null;
+  let _handTipTimer = null;
+  function showHandTrackingTip() {
+    if (!_handTipEl) {
+      _handTipEl = document.createElement("div");
+      _handTipEl.id = "hand-tracking-tip";
+      _handTipEl.innerHTML = `
+        <div class="ht-title">Hand tracking on</div>
+        <div class="ht-rows">
+          <div class="ht-row"><span class="ht-glyph">✧</span><span>Pinch &middot; click</span></div>
+          <div class="ht-row"><span class="ht-glyph">✿</span><span>Drag with one hand &middot; orbit</span></div>
+          <div class="ht-row"><span class="ht-glyph">❀</span><span>Two hands &middot; zoom &amp; pan</span></div>
+        </div>
+      `;
+      document.body.appendChild(_handTipEl);
+      _handTipEl.addEventListener("click", () => hideHandTrackingTip());
+    }
+    _handTipEl.classList.add("show");
+    clearTimeout(_handTipTimer);
+    _handTipTimer = setTimeout(hideHandTrackingTip, 6000);
+  }
+  function hideHandTrackingTip() {
+    _handTipEl?.classList.remove("show");
+    clearTimeout(_handTipTimer);
+    _handTipTimer = null;
+  }
 
   // 1-Hand / 2-Hand mode switch
   handModeEl?.querySelectorAll("button").forEach(btn => {
