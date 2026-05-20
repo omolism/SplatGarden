@@ -938,6 +938,11 @@ async function loadSplat() {
     camMovePrevPostEnable  = postfx.params.postEnable;
     _introLensActive       = false;
     _introTouchedLens      = false;
+    // Force the lens pass on so the per-frame pulse in __camMoveTick
+    // actually renders (the lens pass is gated by lensOn). postEnable
+    // also forced so the composer runs even on phones.
+    postfx.params.lensOn     = true;
+    postfx.params.postEnable = true;
     camMovePrevCamFrustumsVisible = cameraFrustums?.visible ?? false;
     camMovePrevCamFrustumsOpacity = cameraFrustums?.material?.opacity ?? 0.85;
     _introFrustumsOn      = false;
@@ -1273,49 +1278,15 @@ async function loadSplat() {
         if (camCtrl) camCtrl.updateDisplay();
       }
     }
-    // Lens-stab — single short sting at the very start of the intro
-    // auto-play. tNorm 0 → 0.015 ramps the lens in (smoothstep), then
-    // 0.015 → 0.05 eases it back out (squared decay). Effect is gone
-    // by ~830 ms; the rest of the clip plays clean. Only fires for
-    // the first-visit auto-play (window.__autoPlayedIntro) so manual
-    // Play Camera Move presses don't get the sting.
-    if (window.__autoPlayedIntro && camMoveState === "playing" && dur > 0) {
-      const STAB_PEAK_AT   = 0.015;
-      const STAB_END_AT    = 0.050;
-      const PEAK_FISHEYE   = 0.18;
-      const PEAK_AMT       = -0.30;
-      const PEAK_SQUEEZE_D = 0.08;     // delta on top of 1.0
-      const tNormForStab = dur > 0 ? Math.max(0, Math.min(1, t / dur)) : 0;
-      if (tNormForStab <= STAB_END_AT) {
-        if (!_introTouchedLens) {
-          _introTouchedLens = true;
-          // Engage lens pass on first stab frame — keeps cost zero
-          // when the stab isn't running.
-          postfx.params.lensOn     = true;
-          postfx.params.postEnable = true;
-        }
-        let strength;
-        if (tNormForStab < STAB_PEAK_AT) {
-          const u = tNormForStab / STAB_PEAK_AT;
-          strength = u * u * (3 - 2 * u);              // smoothstep up
-        } else {
-          const u = (tNormForStab - STAB_PEAK_AT) / (STAB_END_AT - STAB_PEAK_AT);
-          strength = (1 - u) * (1 - u);                // squared ease-out
-        }
-        postfx.params.lensFisheye = strength * PEAK_FISHEYE;
-        postfx.params.lensAmt     = strength * PEAK_AMT;
-        postfx.params.lensSqueeze = 1 + strength * PEAK_SQUEEZE_D;
-        _introLensActive = true;
-      } else if (_introLensActive) {
-        // Just exited the stab window — restore the user's pre-play
-        // lens values for the remainder of the clip.
-        postfx.params.lensFisheye = camMovePrevLensFisheye;
-        postfx.params.lensSqueeze = camMovePrevLensSqueeze;
-        postfx.params.lensAmt     = camMovePrevLensAmt;
-        postfx.params.lensOn      = camMovePrevLensOn;
-        postfx.params.postEnable  = camMovePrevPostEnable;
-        _introLensActive = false;
-      }
+    // Lens pulse — restored from commit 2d3a4d3 for review:
+    // lensFisheye = sin(π * t / duration) — full 0 → 1 → 0 bell across
+    // the entire clip, peaking at midpoint. Fires on every play (not
+    // just the first-visit intro). camMoveStartLerps force-set lensOn
+    // + postEnable; revertLerps restores both plus lensFisheye.
+    if (camMoveState === "playing" && dur > 0) {
+      _introTouchedLens = true;        // flag the revert path
+      const tNormLens = Math.max(0, Math.min(1, t / dur));
+      postfx.params.lensFisheye = Math.sin(tNormLens * Math.PI);
     }
   };
 
