@@ -1030,18 +1030,18 @@ kbd {
   cursor: pointer;
   user-select: none;
 }
-/* Pillar number prefix (01 / 02 / 03) — only on 3DGS / USD / AI.
- * Sits at the top of the big section title as a small bookend label. */
+/* Layer prefix (L1 / L2 / L3) — sits at the top of the big section
+ * title as a small bookend label that reads as "Layer 1 of 3". */
 #tech-spec .ts-sec-num {
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 500;
-  letter-spacing: 0.10em;
+  letter-spacing: 0.12em;
   color: var(--text-dim);
-  min-width: 28px;
+  min-width: 30px;
   text-align: left;
   align-self: flex-start;
-  margin-top: 6px;
+  margin-top: 8px;
 }
 #tech-spec .ts-sec-name {
   flex: 1;
@@ -1062,17 +1062,28 @@ kbd {
   white-space: nowrap;
 }
 
-/* Pillar sections — left accent rail for visual prominence */
-#tech-spec .ts-sec-pillar {
+/* Layer sections (Authoring / Pipeline / Runtime) — left accent rail */
+#tech-spec .ts-sec-layer {
   border-left: 1px solid rgba(255, 255, 255, 0.18);
-  padding-left: 17px;       /* original 18 minus the 1px rail */
+  padding-left: 17px;       /* original 18 minus the 1 px rail */
 }
 
-/* Main sections (Assets, Input & Sensing) — slight extra top gap so they
- * read as a separate band below the three pillars */
-#tech-spec .ts-sec-main + .ts-sec,
-#tech-spec .ts-sec-pillar + .ts-sec-main {
-  margin-top: 4px;
+/* Toolchain chip row inside a layer header — readable when collapsed */
+#tech-spec .ts-sec-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 0 12px;
+}
+#tech-spec .ts-sec.collapsed .ts-sec-tools { display: none; }
+
+/* Assets section — separator above so it visually breaks from the
+ * three-layer stack */
+#tech-spec .ts-sec-layer + .ts-sec-assets {
+  margin-top: 8px;
+  border-top: 1px solid var(--hair-strong);
+  padding-top: 22px;
 }
 
 /* Play sections (Post-Processing, Click FX) — dimmer, "toy" treatment */
@@ -1083,10 +1094,10 @@ kbd {
 #tech-spec .ts-sec-play .ts-sec-count {
   color: var(--text-faint);
 }
-#tech-spec .ts-sec-main + .ts-sec-play {
+#tech-spec .ts-sec-assets + .ts-sec-play {
   margin-top: 6px;
   border-top: 1px solid var(--hair-strong);
-  padding-top: 22px;        /* extra breathing room before the toy band */
+  padding-top: 22px;
 }
 #tech-spec .ts-caret {
   font-size: 10px;
@@ -2355,7 +2366,15 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   display: flex;
   align-items: baseline;
   gap: 12px;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
 }
+#asset-hover-card.dragging {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  transition: none;
+}
+#asset-hover-card.dragging .ah-head { cursor: grabbing; }
 #asset-hover-card .ah-name {
   flex: 1;
   font-family: var(--font-ui);

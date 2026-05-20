@@ -13,25 +13,55 @@
 // ---------------------------------------------------------------------------
 
 export const TECH_SPECS = [
-  // ============== Three pillars: 3DGS / USD / AI ==============
+  // ============== Three layered groups ==============
+  // Tools WITHIN each layer collaborate (interconnected, not sequential).
+  // Layers stack: Authoring -> Pipeline -> Runtime, with assets falling out
+  // at the bottom. The layer header shows the layer's tool stack at a
+  // glance via the toolchain chips, so even when sections are collapsed
+  // the tech stack reads itself.
   {
-    section: "3DGS",
-    group:   "pillar",
-    pillarIdx: 1,
-    desc:    "The render primitive and the pipeline that produces it",
+    section:   "Authoring",
+    group:     "layer",
+    layerNum:  1,
+    desc:      "Tools the artists used to model, animate, and style every asset.",
+    toolchain: ["Houdini", "SpeedTree", "Unreal Engine", "VAT bake", "Python · OSC", "AI Stylization"],
     items: [
       {
-        name:   "3D Gaussian Splatting",
-        ref:    "Kerbl et al., SIGGRAPH 2023",
-        note:   "Per-splat ellipsoidal Gaussians + SH view-dep color",
-        source: "via @sparkjsdev/spark",
+        name:      "Artist-Directed Style Transfer",
+        ref:       "Diffusion-based texture stylization with controllable color preservation",
+        toolchain: ["IP-Adapter (Ye 2023)", "ControlNet (Zhang 2023)", "AdaIN (Huang & Belongie 2017)", "Diffusion"],
+        output:    "Painterly textures with preserved palette",
+        note:      "Two artist-selectable modes — Full Style Transfer (color + texture + tone from a reference) and Texture-Only Transfer (auto-grayscale reference + AdaIN to apply painterly brushwork while keeping the original color palette intact). Per-channel histogram matching + patch-wise AdaIN run post-generation to deterministically correct residual color drift — output stays faithful to the pre-approved palette across runs.",
+        compare: {
+          before: null,
+          after:  null,
+          labelA: "Original",
+          labelB: "Stylized",
+        },
+        source: "off-repo",
       },
       {
-        name:   "Point subform",
-        ref:    "Gaussian centers collapsed to isotropic points",
-        note:   "Same data, drawn as bare points so the sky shows through gaps",
-        source: "Spark subform · Customize ▸ Splat ▸ Point",
+        name:   "Stylization parameters",
+        ref:    "Artist-controllable knobs",
+        note:   "ControlNet Mode — Tile (colored renders, preserves pixel structure) / Canny (sketches, preserves edges) · ControlNet Strength · IP-Adapter Strength · Inference Steps · Guidance Scale.",
+        source: "Gradio interface",
       },
+      {
+        name:   "Stylization implementation",
+        ref:    "PyTorch 2.11 · CUDA 13.0 · Python",
+        note:   "Runs on NVIDIA RTX PRO 6000 Blackwell (96 GB VRAM); generates a 4K image in ≈ 20 s at 20 inference steps.",
+        source: "off-repo",
+      },
+    ],
+  },
+
+  {
+    section:   "Pipeline",
+    group:     "layer",
+    layerNum:  2,
+    desc:      "Photographing the dressed Unreal scene and reconstructing it as a 3DGS.",
+    toolchain: ["Unreal Engine (assembly)", "Perforce", "Litchfield Studio", "COLMAP", "Postshot"],
+    items: [
       {
         name:   "Scene assembly",
         ref:    "Unreal Engine — every asset set-dressed into one scene",
@@ -53,20 +83,28 @@ export const TECH_SPECS = [
         ref:    "Postshot — per-splat Gaussian fit + SH coefficients",
         source: "off-repo",
       },
-      {
-        name:   "Cinematic flythrough",
-        ref:    "Houdini-authored FBX · 24 fps · 25 s · 600 frames",
-        source: "public/Shot4B_GS-FX_Camera_V01.fbx",
-      },
     ],
   },
 
   {
-    section: "USD",
-    group:   "pillar",
-    pillarIdx: 2,
-    desc:    "OpenUSD interop — alternative subforms expressed as PointInstancer prims",
+    section:   "Runtime",
+    group:     "layer",
+    layerNum:  3,
+    desc:      "Real-time browser playback with USD-compatible subforms and gesture input.",
+    toolchain: ["Spark", "Three.js", "WebGL 2", "OpenUSD", "MediaPipe"],
     items: [
+      {
+        name:   "3D Gaussian Splatting",
+        ref:    "Kerbl et al., SIGGRAPH 2023",
+        note:   "Per-splat ellipsoidal Gaussians + SH view-dep color",
+        source: "via @sparkjsdev/spark",
+      },
+      {
+        name:   "Point subform",
+        ref:    "Gaussian centers collapsed to isotropic points",
+        note:   "Same data, drawn as bare points so the sky shows through gaps",
+        source: "Spark subform · Customize ▸ Splat ▸ Point",
+      },
       {
         name:   "Quad — camera-facing billboard",
         ref:    "OpenUSD UsdGeomPointInstancer · proto = Plane",
@@ -79,52 +117,25 @@ export const TECH_SPECS = [
         note:   "Averaged color per cell — same per-instance arrays as Quad",
         source: "src/voxelizer.js:1",
       },
-    ],
-  },
-
-  {
-    section: "AI",
-    group:   "pillar",
-    pillarIdx: 3,
-    desc:    "Custom diffusion-based texture tool driving the painterly look on Daffodil + Landscape",
-    items: [
       {
-        name:      "Artist-Directed Style Transfer",
-        ref:       "Diffusion-based style transfer with controllable color preservation",
-        toolchain: ["IP-Adapter (Ye 2023)", "ControlNet (Zhang 2023)", "AdaIN (Huang & Belongie 2017)", "Diffusion"],
-        output:    "Painterly textures with preserved palette",
-        note:      "Two artist-selectable modes — Full Style Transfer (color + texture + tone from a reference) and Texture-Only Transfer (auto-grayscale reference + AdaIN to apply painterly brushwork while keeping the original color palette intact). Per-channel histogram matching + patch-wise AdaIN run post-generation to deterministically correct residual color drift — output stays faithful to the pre-approved palette across runs.",
-        // Drag the handle on the compare widget below to wipe between the
-        // original photograph / render texture and the AI-stylized result.
-        // Patch `before` / `after` with real image URLs once they land.
-        compare: {
-          before: null,
-          after:  null,
-          labelA: "Original",
-          labelB: "Stylized",
-        },
-        source:    "off-repo",
+        name:   "Cinematic flythrough",
+        ref:    "Houdini-authored FBX · 24 fps · 25 s · 600 frames",
+        source: "public/Shot4B_GS-FX_Camera_V01.fbx",
       },
       {
-        name:   "Generation Parameters",
-        ref:    "Artist-controllable knobs",
-        note:   "ControlNet Mode — Tile (colored renders, preserves pixel structure) / Canny (sketches, preserves edges) · ControlNet Strength · IP-Adapter Strength · Inference Steps · Guidance Scale.",
-        source: "Gradio interface",
-      },
-      {
-        name:   "Implementation",
-        ref:    "PyTorch 2.11 · CUDA 13.0 · Python",
-        note:   "Runs on NVIDIA RTX PRO 6000 Blackwell (96 GB VRAM); generates a 4K image in ≈ 20 s at 20 inference steps.",
-        source: "off-repo",
+        name:   "Hand tracking",
+        ref:    "MediaPipe HandLandmarker (tasks-vision 0.10.35)",
+        note:   "Pinch = click, drag = orbit. Two-hand mode = pinch-to-zoom + parallel-drag pan.",
+        source: "src/handtracking.js:1",
       },
     ],
   },
 
-  // ============== Per-asset cards (consume the three pillars above) ==============
+  // ============== Per-asset inventory ==============
   {
-    section: "ASSETS",
-    group:   "main",
-    desc:    "Per-object authoring — set-dressed in Unreal, then captured together as one 3DGS",
+    section: "Assets",
+    group:   "assets",
+    desc:    "Per-object inventory — set-dressed in Unreal, then captured together as one 3DGS.",
     items: [
       {
         name:      "Grape Hyacinth",
@@ -168,15 +179,6 @@ export const TECH_SPECS = [
         note:      "All set-dressed assets composited in Unreal, then captured at Litchfield Studio and trained as a single 3D Gaussian Splat in Postshot. The only stage where Postshot enters the pipeline.",
         source:    "public/Whole_With_Statue.splat",
       },
-    ],
-  },
-
-  {
-    section: "INPUT & SENSING",
-    group:   "main",
-    desc:    "MediaPipe-driven interaction surface",
-    items: [
-      { name: "Hand tracking", ref: "MediaPipe HandLandmarker (tasks-vision 0.10.35)", source: "src/handtracking.js:1" },
     ],
   },
 
@@ -332,10 +334,17 @@ export class TechSpec {
         <div class="ts-body">
           ${TECH_SPECS.map((s, i) => {
             const groupCls = s.group ? ` ts-sec-${s.group}` : "";
-            const numChip  = s.pillarIdx
-              ? `<span class="ts-sec-num">${String(s.pillarIdx).padStart(2, "0")}</span>`
-              : "";
+            const numChip  = (s.layerNum != null)
+              ? `<span class="ts-sec-num">L${s.layerNum}</span>`
+              : (s.pillarIdx
+                  ? `<span class="ts-sec-num">${String(s.pillarIdx).padStart(2, "0")}</span>`
+                  : "");
             const itemLbl  = s.items.length === 1 ? "item" : "items";
+            // Layer sections show their tool stack as a chip row in the
+            // header — readable even when the section is collapsed.
+            const layerTools = (s.group === "layer" && Array.isArray(s.toolchain))
+              ? `<div class="ts-sec-tools">${s.toolchain.map(t => `<span class="ts-chip">${t}</span>`).join("")}</div>`
+              : "";
             return `
               <section class="ts-sec${groupCls}" data-idx="${i}">
                 <header class="ts-sec-head">
@@ -345,6 +354,7 @@ export class TechSpec {
                   <span class="ts-caret">▾</span>
                 </header>
                 <div class="ts-sec-desc">${s.desc}</div>
+                ${layerTools}
                 <ul class="ts-list">
                   ${s.items.map(renderItem).join("")}
                 </ul>

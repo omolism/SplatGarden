@@ -159,12 +159,65 @@ export class AssetHoverManager {
       this._pinned = null;
       this._hide();
     });
+
+    // Draggable card — pointerdown on the header (anywhere except the
+    // close button) starts a drag. Position is persisted across hide /
+    // re-show so the user's preferred slot survives switching assets.
+    this._cardPos = null;     // { x, y } once the user drags
+    this._dragState = null;
+    this.card.addEventListener("pointerdown", (e) => {
+      const target = /** @type {HTMLElement} */ (e.target);
+      if (!target.closest(".ah-head")) return;       // only the header is the grab handle
+      if (target.closest("[data-act]")) return;      // skip the × button
+      const rect = this.card.getBoundingClientRect();
+      this._dragState = {
+        ox: e.clientX - rect.left,
+        oy: e.clientY - rect.top,
+        pid: e.pointerId,
+      };
+      this.card.setPointerCapture?.(e.pointerId);
+      this.card.classList.add("dragging");
+      e.preventDefault();
+    });
+    this.card.addEventListener("pointermove", (e) => {
+      if (!this._dragState || e.pointerId !== this._dragState.pid) return;
+      const x = e.clientX - this._dragState.ox;
+      const y = e.clientY - this._dragState.oy;
+      this._setCardPos(x, y);
+    });
+    const endDrag = (e) => {
+      if (!this._dragState || (e && e.pointerId !== undefined && e.pointerId !== this._dragState.pid)) return;
+      this._dragState = null;
+      this.card.classList.remove("dragging");
+    };
+    this.card.addEventListener("pointerup", endDrag);
+    this.card.addEventListener("pointercancel", endDrag);
+  }
+
+  // Pin the card to an explicit (x, y) screen coordinate. Once dragged,
+  // the position is remembered so subsequent _show() calls don't snap
+  // back to the centered default.
+  _setCardPos(x, y) {
+    // Clamp into the viewport so the card never escapes off-screen.
+    const margin = 8;
+    const w  = this.card.offsetWidth;
+    const h  = this.card.offsetHeight;
+    const cx = Math.max(margin, Math.min(window.innerWidth  - w - margin, x));
+    const cy = Math.max(margin, Math.min(window.innerHeight - h - margin, y));
+    this._cardPos = { x: cx, y: cy };
+    this.card.style.left      = cx + "px";
+    this.card.style.top       = cy + "px";
+    this.card.style.transform = "none";   // drop the default centering transform
   }
 
   _show(it) {
     this.card.innerHTML = renderCard(it);
     this.card.removeAttribute("hidden");
     this.card.classList.toggle("pinned", !!this._pinned);
+    // Re-apply any user-dragged position so the card stays where the user
+    // parked it across asset swaps. First-time show uses the default
+    // top-centre CSS layout.
+    if (this._cardPos) this._setCardPos(this._cardPos.x, this._cardPos.y);
   }
 
   _hide() {
