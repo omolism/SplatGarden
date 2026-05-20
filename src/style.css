@@ -200,11 +200,17 @@ html, body {
   max-height: 60%;          /* shares space with #scene-panel below */
   overflow: hidden;
   box-shadow: var(--shadow-soft);
-  /* Slides off-screen when the user collapses the panel (see
-     .sidebar-minimized below). Transition matches the iOS-y feel
-     used by the bottom sheet. */
-  transition: transform 0.28s cubic-bezier(.22, 1, .36, 1),
-              opacity 0.22s ease;
+  /* Shrink-in-place transition for the collapse / expand motion.
+     IMPORTANT: do NOT declare `transition: transform` here — Chromium
+     promotes any element with that declaration onto its own GPU
+     compositor layer, and once it's a separate layer the panel's own
+     backdrop-filter can no longer reach the scene behind it (shows
+     as faint / broken glass). We animate the actual box-model
+     properties we use (max-width / max-height / padding) instead. */
+  transition: max-width 0.28s cubic-bezier(.22, 1, .36, 1),
+              max-height 0.28s cubic-bezier(.22, 1, .36, 1),
+              min-height 0.28s cubic-bezier(.22, 1, .36, 1),
+              padding 0.28s cubic-bezier(.22, 1, .36, 1);
 }
 /* Collapsed state — the panel SHRINKS IN PLACE to a 38 × 38 chevron
    tab. No floating-handle trick: the affordance lives at the panel's
@@ -252,9 +258,12 @@ html, body {
   transform: rotate(180deg);
 }
 #scene-panel {
-  /* Match the smooth slide motion that #sidebar uses. */
-  transition: transform 0.28s cubic-bezier(.22, 1, .36, 1),
-              opacity 0.22s ease;
+  /* Same shrink-in-place transition as #sidebar — no `transform` in
+     the transition list (would break backdrop-filter, see #sidebar). */
+  transition: max-width 0.28s cubic-bezier(.22, 1, .36, 1),
+              max-height 0.28s cubic-bezier(.22, 1, .36, 1),
+              min-height 0.28s cubic-bezier(.22, 1, .36, 1),
+              padding 0.28s cubic-bezier(.22, 1, .36, 1);
 }
 /* Scene panel header — same flex shape as sidebar header so the new
    chevron, the title, and "+ Add" align. */
@@ -681,9 +690,11 @@ kbd {
   padding: 10px;
   display: flex;
   flex-direction: column;
-  /* Slide off-screen left when collapsed (same idiom as #sidebar). */
-  transition: transform 0.28s cubic-bezier(.22, 1, .36, 1),
-              opacity 0.22s ease;
+  /* Shrink-in-place transition (no `transform` declared — would
+     break backdrop-filter; see notes on #sidebar). */
+  transition: width 0.28s cubic-bezier(.22, 1, .36, 1),
+              height 0.28s cubic-bezier(.22, 1, .36, 1),
+              padding 0.28s cubic-bezier(.22, 1, .36, 1);
 }
 /* Collapsed: panel shrinks in place to a 38 × 38 chevron tab anchored
    at its bottom-left position. The absolute-positioned corner chevron
