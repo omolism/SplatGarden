@@ -859,13 +859,10 @@ async function loadSplat() {
   let camMovePrevLensFisheye = 0;
   let camMovePrevLensSqueeze = 1;
   let camMovePrevPostEnable  = true;
-  // Last 15% of the clip slows the mixer's effective dt so the FBX path's
-  // own velocity tapers to a near-stop before the 'finished' event fires.
-  // Replaces an earlier lerp-toward-pose-at-0.85 approach that was
-  // pulling the camera BACKWARD in the tail (visible as the weird
-  // last-few-frames motion the user reported).
-  const EASE_TAIL_FROM = 0.85;
-  const EASE_TAIL_MIN  = 0.10;
+  // No more tail-ease — the previous 0.10x dt slowdown was perceived as a
+  // stutter ("顿了一下") rather than a smooth deceleration. Let the FBX
+  // run at its authored speed; the Houdini camera's own end-of-clip
+  // motion is what the viewer should see.
   const _camFwd = new THREE.Vector3();
 
   // Timeline / frame readout — visible only while the camera move is loaded.
@@ -1063,10 +1060,10 @@ async function loadSplat() {
           camMoveRevertLerps();
           camMoveState = "idle";
           controls.enabled = true;
-          // OrbitControls cached its spherical coords from the pre-play
-          // pose; re-sync them to the FBX endpoint so the orbit doesn't
-          // snap to its old position the moment the user pans.
-          controls.update();
+          // No extra controls.update() — the render-loop's per-frame
+          // call (line ~2116) already runs every frame and re-reads
+          // camera.position / target each pass, so the spherical state
+          // syncs naturally without an explicit second update here.
           playCtrl.name("▶ Play Camera Move");
           statusEl.textContent = "Camera move complete";
           // Tear down the intro overlay and, if this was the first-visit
@@ -1141,7 +1138,6 @@ async function loadSplat() {
     camMoveRevertLerps();
     camMoveState = "idle";
     controls.enabled = true;
-    controls.update();             // resync OrbitControls (see finished handler)
     playCtrl.name("▶ Play Camera Move");
     statusEl.textContent = "Camera move stopped";
   }
@@ -1165,27 +1161,14 @@ async function loadSplat() {
     if (!camMixer || !camAnimNode) return;
     if (camMoveState === "idle") return;
 
-    // Slow the mixer's effective dt across the tail so the FBX's own
-    // velocity ramps to (near) zero before 'finished' fires. tNorm read
-    // BEFORE mixer.update so a frame-late tNorm doesn't matter — the
-    // taper is gradual.
-    let effectiveDt = camMoveState === "paused" ? 0 : dt;
-    const dur = camAction.getClip().duration;
-    const tNormBefore = dur > 0 ? camAction.time / dur : 0;
-    if (tNormBefore > EASE_TAIL_FROM) {
-      const tail = Math.min(1, (tNormBefore - EASE_TAIL_FROM) / (1 - EASE_TAIL_FROM));
-      const eased = tail * tail * (3 - 2 * tail);             // smoothstep
-      const scale = 1 - eased * (1 - EASE_TAIL_MIN);          // 1.0 → 0.10
-      effectiveDt *= scale;
-    }
-    camMixer.update(effectiveDt);
+    camMixer.update(camMoveState === "paused" ? 0 : dt);
     camAnimNode.updateWorldMatrix(true, false);
     camAnimNode.getWorldPosition(camera.position);
     camAnimNode.getWorldQuaternion(camera.quaternion);
     _camFwd.set(0, 0, -1).applyQuaternion(camera.quaternion);
     controls.target.copy(camera.position).add(_camFwd);
 
-    // For downstream label / lens-pulse code: use the post-update time.
+    const dur = camAction.getClip().duration;
     const t = Math.min(camAction.time, dur);
     const frT = Math.floor(t   * CAM_FPS);
     const frD = Math.floor(dur * CAM_FPS);
