@@ -2830,3 +2830,298 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   flex: 1;
   word-break: break-word;
 }
+
+/* ============================================================
+ * Credits — centered slide-up panel (team + software)
+ * ============================================================ */
+#credits {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, calc(-50% + 24px));
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100vh - 80px);
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-bg);
+  border: 1px solid var(--hair-strong);
+  border-radius: var(--radius);
+  backdrop-filter: blur(28px) saturate(140%);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s ease, transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: hidden;
+  font-family: var(--font-ui);
+}
+#credits.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, -50%);
+}
+#credits .cr-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--hair);
+  background: rgba(255, 255, 255, 0.03);
+}
+#credits .cr-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+#credits .cr-close {
+  background: transparent;
+  border: 0;
+  color: var(--text-dim);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+#credits .cr-close:hover { color: var(--text); background: rgba(255, 255, 255, 0.08); }
+#credits .cr-body {
+  padding: 18px 20px 22px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+#credits .cr-sec-title {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+#credits .cr-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+#credits .cr-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 9px 4px;
+  border-bottom: 1px solid var(--hair);
+}
+#credits .cr-row:last-child { border-bottom: 0; }
+#credits .cr-name {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 500;
+}
+#credits .cr-role {
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+#credits .cr-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  color: var(--text-mid);
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+#credits .cr-link svg { width: 14px; height: 14px; }
+#credits .cr-link:hover { color: var(--text); background: rgba(255, 255, 255, 0.08); }
+#credits .cr-link-empty { color: var(--text-dim); opacity: 0.35; cursor: not-allowed; }
+#credits .cr-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+#credits .cr-chip {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--hair);
+  color: var(--text-mid);
+}
+
+/* ============================================================
+ * IntroOverlay — hero title + phase callouts over the auto-play
+ * camera move (first visit only)
+ * ============================================================ */
+#intro-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 950;
+  font-family: var(--font-ui);
+}
+#intro-overlay[hidden] { display: none; }
+
+#intro-overlay .io-hero {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.18s linear;
+  text-shadow: 0 2px 30px rgba(0, 0, 0, 0.75);
+}
+#intro-overlay .io-hero-title {
+  font-size: clamp(40px, 6.5vw, 88px);
+  font-weight: 200;
+  letter-spacing: 0.12em;
+  color: #fff;
+  margin: 0;
+  line-height: 1;
+}
+#intro-overlay .io-hero-sub {
+  margin-top: 14px;
+  font-family: var(--font-mono);
+  font-size: clamp(11px, 1.1vw, 14px);
+  letter-spacing: 0.36em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+#intro-overlay .io-phase {
+  position: absolute;
+  left: 4vw;
+  bottom: 8vh;
+  max-width: 480px;
+  opacity: 0;
+  transition: opacity 0.18s linear;
+  padding-left: 14px;
+  border-left: 2px solid rgba(255, 255, 255, 0.85);
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.8);
+}
+#intro-overlay .io-phase-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.36em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.82);
+  margin-bottom: 8px;
+}
+#intro-overlay .io-phase-text {
+  font-size: clamp(22px, 3vw, 38px);
+  font-weight: 300;
+  color: #fff;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+}
+
+#intro-overlay .io-bottom-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.10);
+}
+#intro-overlay .io-bottom-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, rgba(255,255,255,0.45), rgba(255,255,255,0.95));
+  transition: width 0.08s linear;
+}
+
+/* ============================================================
+ * OnboardingPointers — animated arrows + label cards pointing at
+ * T (Pipeline) / K (Tuner) / Scene panel after the intro
+ * ============================================================ */
+#onboarding-pointers {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1050;
+  font-family: var(--font-ui);
+}
+#onboarding-pointers[hidden] { display: none; }
+
+#onboarding-pointers .op-tip {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+  color: rgba(255, 255, 255, 0.92);
+}
+#onboarding-pointers.show .op-tip {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: var(--delay, 0s);
+}
+
+#onboarding-pointers .op-card {
+  background: rgba(15, 16, 18, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 10px 14px;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+#onboarding-pointers .op-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+#onboarding-pointers .op-sub {
+  margin-top: 3px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.65);
+}
+#onboarding-pointers .op-arrow {
+  width: 80px;
+  height: 40px;
+  color: rgba(255, 255, 255, 0.85);
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.5));
+  animation: op-arrow-bob 1.6s ease-in-out infinite;
+}
+@keyframes op-arrow-bob {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(-6px); }
+}
+
+/* Pointer placement — pinned to viewport edges. data-i drives the
+ * stacking so the two right-anchored callouts don't sit on top of each
+ * other. Pipeline (T) sits high-right, Tuner (K) mid-right, Scene panel
+ * card mirrors to the left. */
+#onboarding-pointers .op-tip[data-i="0"] { top: 22%; right: 5vw; }
+#onboarding-pointers .op-tip[data-i="1"] { top: 42%; right: 5vw; }
+#onboarding-pointers .op-tip[data-i="2"] { top: 22%; left: 5vw; flex-direction: row-reverse; }
+#onboarding-pointers .op-tip[data-i="2"] .op-arrow {
+  /* Mirror the arrow so it points back at the left-side Scene panel.
+   * Compose with the bob animation by using a separate keyframe set. */
+  transform: scaleX(-1);
+  animation: op-arrow-bob-left 1.6s ease-in-out infinite;
+}
+@keyframes op-arrow-bob-left {
+  0%, 100% { transform: scaleX(-1) translateX(0); }
+  50%      { transform: scaleX(-1) translateX(-6px); }
+}

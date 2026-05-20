@@ -20,6 +20,9 @@ import { PipelineHUD } from "./pipeline-hud.js";
 import { SceneLayers } from "./scene-layers.js";
 import { KeyHints } from "./key-hints.js";
 import { ViewpointTuner } from "./viewpoint-tuner.js";
+import { Credits } from "./credits.js";
+import { IntroOverlay } from "./intro-overlay.js";
+import { OnboardingPointers } from "./onboarding-pointers.js";
 import { uniforms as effectUniforms } from "./effects.js";
 import { loadColmapImages, buildColmapFrustums, colmapCameraPosition, colmapCameraRotation } from "./colmap-loader.js";
 
@@ -192,6 +195,17 @@ for (const [name, on] of techSpec.assetVisible) {
   if (on === false) assetHover.setItemVisible(name, false);
 }
 techSpec.onAssetToggle = (name, on) => assetHover.setItemVisible(name, on);
+
+// Credits, intro overlay, onboarding pointers — first-visit cinematic.
+// Credits is toggled from the lil-gui "Credits" checkbox (added below
+// under the Tech Spec folder). The other two are driven by the camera
+// move's playback state (see __camMoveTick + the mixer 'finished' hook).
+const credits = new Credits({ mountEl: document.body });
+window.__credits = credits;
+const introOverlay = new IntroOverlay({ mountEl: document.body });
+window.__introOverlay = introOverlay;
+const onboardingPointers = new OnboardingPointers({ mountEl: document.body });
+window.__onboardingPointers = onboardingPointers;
 
 // Quick Guide — bottom-centre card with mouse + key shortcuts. Auto-pops on
 // scene entry (showFor below in loadSplat's end), summon back with H.
@@ -564,7 +578,7 @@ async function loadSplat() {
   // together. Future tech-breakdown rows (AI Stylization / VAT Anim / GPU /
   // Postshot Pipeline) will sit under the same parent.
   const dataParams = { enabled: false, dataLabels: false };
-  const techParams = { techEnable: false };
+  const techParams = { techEnable: false, credits: false };
   const fTechSpec = gui.addFolder("Tech Spec");
   // Master Enable cascades to both sub-toggles so flipping it (via lil-gui
   // OR via opening the Pipeline drawer with T) lights up Training Cameras
@@ -596,6 +610,20 @@ async function loadSplat() {
     if (dataLabels) dataLabels.setEnabled(v && techParams.techEnable);
   });
   dataLabelsCtrl.domElement.title = "Surveillance-card overlay showing per-viewpoint metadata.";
+
+  // Credits — names + software stack. Lives in its own floating panel so
+  // it doesn't compete with the Pipeline drawer for the right edge.
+  const creditsCtrl = fTechSpec.add(techParams, "credits").name("Credits").onChange(v => {
+    credits.setOpen(!!v);
+  });
+  creditsCtrl.domElement.title = "Show the team + software credits for this showcase.";
+  // Keep the lil-gui checkbox in sync if the user closes the panel via ×.
+  credits.onOpenChange = (open) => {
+    if (techParams.credits !== open) {
+      techParams.credits = open;
+      creditsCtrl.updateDisplay();
+    }
+  };
 
   // Tie the Pipeline drawer (T key) to the Tech Spec master Enable. Opening
   // the drawer lights up Training Cameras + Data Labels; closing turns them
@@ -859,6 +887,16 @@ async function loadSplat() {
           controls.enabled = true;
           playCtrl.name("▶ Play Camera Move");
           statusEl.textContent = "Camera move complete";
+          // Tear down the intro overlay and, if this was the first-visit
+          // auto-play, prompt the user with the Quick Guide + animated
+          // pointers at T / K / Scene panel so they discover the deeper
+          // panels.
+          introOverlay?.hide();
+          if (window.__autoPlayedIntro) {
+            window.__autoPlayedIntro = false;
+            setTimeout(() => keyHints?.showFor(6500), 250);
+            setTimeout(() => onboardingPointers?.show(), 600);
+          }
         });
 
         // Center viewpoint is patched by the COLMAP loader to capture
@@ -945,6 +983,12 @@ async function loadSplat() {
     ctTimeEl.textContent  = `${t.toFixed(2)}s / ${dur.toFixed(2)}s`;
     ctFrameEl.textContent = `F ${frT} / ${frD}`;
     ctFillEl.style.width  = `${(t / dur) * 100}%`;
+    // Drive the intro-title overlay only when the first-visit auto-play
+    // armed it; manual user-triggered playback skips the title sequence
+    // so it doesn't get in the way.
+    if (window.__autoPlayedIntro && introOverlay) {
+      introOverlay.update(dur > 0 ? t / dur : 0, camMoveState === "playing");
+    }
   };
 
 
@@ -1698,9 +1742,27 @@ async function loadSplat() {
   });
 
   hideLoading();
-  // Pop the Quick Guide once the splash is out of the way — short delay
-  // so the user's eye lands on the scene first, then the card slides up.
-  setTimeout(() => keyHints?.showFor(6500), 700);
+
+  // First-visit cinematic: auto-play the preauthored camera move once,
+  // overlaid with the hero title + lower-third phase callouts. After the
+  // clip finishes (or the user interacts), onboarding pointers fade in to
+  // call out the discoverable panels. localStorage flag dedupes so repeat
+  // visitors land directly in the interactive scene.
+  const FIRST_VISIT_KEY = "splatgarden:visited:v1";
+  const isFirstVisit = (() => {
+    try { return !localStorage.getItem(FIRST_VISIT_KEY); } catch { return false; }
+  })();
+  if (isFirstVisit) {
+    try { localStorage.setItem(FIRST_VISIT_KEY, String(Date.now())); } catch {}
+    window.__autoPlayedIntro = true;
+    introOverlay?.show();
+    // Small beat after the splash hide so the camera move doesn't yank
+    // the viewport at exactly the same instant the splash is leaving.
+    setTimeout(() => { playPauseCameraMove(); }, 350);
+  } else {
+    // Repeat visitor — just show the Quick Guide on the usual timing.
+    setTimeout(() => keyHints?.showFor(6500), 700);
+  }
 
   // First-time hint so users know the default FX preset is click-armed —
   // otherwise they open the app, see the splat, don't realize clicking the
