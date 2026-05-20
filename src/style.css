@@ -3379,6 +3379,14 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   text-transform: uppercase;
   color: var(--text-mid);
 }
+/* lil-gui auto-attaches a ▾ caret to anything with `.title` inside it
+   (a hangover from its folder treatment). Our header already has its
+   own .usd-fold-caret SVG, so the lil-gui pseudo-element renders as a
+   redundant second arrow — kill it on our title only. */
+#usd-layers-panel.usd-embedded header .title::before {
+  display: none !important;
+  content: none !important;
+}
 #usd-layers-panel.usd-embedded .usd-upload {
   /* Slightly tighter padding inside lil-gui to match the embed density. */
   font-size: 10.5px;
