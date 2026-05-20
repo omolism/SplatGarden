@@ -7,21 +7,21 @@
 // ---------------------------------------------------------------------------
 
 const TEAM = [
-  { name: "Danci Shen",               role: "Team Member", url: "#" },
-  { name: "Itim Kongsakulvatanasook", role: "Team Member", url: "#" },
+  { name: "Danci Shen",               role: "Team Member", url: "https://omolism.cargo.site/" },
+  { name: "Itim Kongsakulvatanasook", role: "Team Member", url: "https://itimkongs.com" },
   { name: "Xinyi Liang",              role: "Team Member", url: "#" },
-  { name: "Yichen Shi",               role: "Team Member", url: "#" },
-  { name: "Yiqi Zheng",               role: "Team Member", url: "#" },
-  { name: "Yiyi Long",                role: "Team Member", url: "#" },
-  { name: "Ben Jones",                role: "Team Member", url: "#" },
+  { name: "Yichen Shi",               role: "Team Member", url: "https://yichenshi.wixstudio.com/index" },
+  { name: "Yiqi Zheng",               role: "Team Member", url: "https://yiqizheng.wixsite.com/yiqizheng" },
+  { name: "Yiyi Long",                role: "Team Member", url: "https://yiyilongart.wixsite.com/portfolio" },
+  { name: "Ben Jones",                role: "Team Member", url: "https://www.benjvisuals.com" },
 ];
 
 // Special Thanks — advisors, mentors, external teams. Distinct from the
 // team list so credit weight reads correctly.
 const SPECIAL_THANKS = [
-  { name: "Dr. Deborah R. Fowler",                 url: "#" },
-  { name: "Munkhtsetseg Nandigjav",                url: "#" },
-  { name: "NVIDIA Omniverse and OpenUSD team",     url: "#" },
+  { name: "Dr. Deborah R. Fowler",             url: "https://www.deborahrfowler.com/" },
+  { name: "Munkhtsetseg Nandigjav",            url: "https://www.linkedin.com/in/munkhtsetseg-nandigjav" },
+  { name: "NVIDIA Omniverse and OpenUSD team", url: "https://www.linkedin.com/showcase/nvidia-omniverse/" },
 ];
 
 // Software — commercial / production DCC tools the team authored in.
@@ -129,6 +129,41 @@ export class Credits {
       if (e.key === "Escape" && this.open) { e.preventDefault(); this.close(); }
     });
 
+    // Draggable from the header. Once dragged, the panel detaches from the
+    // CSS centering transform and is positioned by absolute left/top; the
+    // chosen spot is remembered for subsequent show() calls so users don't
+    // lose their preferred slot when they reopen Credits.
+    this._panelPos  = null;
+    this._dragState = null;
+    this.el.addEventListener("pointerdown", (e) => {
+      const target = e.target;
+      if (!target?.closest?.(".cr-head")) return;          // header is the grab handle
+      if (target.closest?.("[data-act]"))  return;          // skip the × button
+      const rect = this.el.getBoundingClientRect();
+      this._dragState = {
+        ox: e.clientX - rect.left,
+        oy: e.clientY - rect.top,
+        pid: e.pointerId,
+      };
+      // Pin to the current rect so transform-centering doesn't snap the
+      // panel mid-drag — every subsequent move uses absolute coords.
+      this._setPanelPos(rect.left, rect.top);
+      this.el.setPointerCapture?.(e.pointerId);
+      this.el.classList.add("dragging");
+      e.preventDefault();
+    });
+    this.el.addEventListener("pointermove", (e) => {
+      if (!this._dragState || e.pointerId !== this._dragState.pid) return;
+      this._setPanelPos(e.clientX - this._dragState.ox, e.clientY - this._dragState.oy);
+    });
+    const endDrag = (e) => {
+      if (!this._dragState || (e?.pointerId !== undefined && e.pointerId !== this._dragState.pid)) return;
+      this._dragState = null;
+      this.el.classList.remove("dragging");
+    };
+    this.el.addEventListener("pointerup",     endDrag);
+    this.el.addEventListener("pointercancel", endDrag);
+
     // Click outside the panel closes it. Captures pointerdown so the dismiss
     // fires before any other click handler downstream. Skips clicks on
     // lil-gui (the Credits checkbox lives there — let lil-gui's own
@@ -145,6 +180,9 @@ export class Credits {
   show()  {
     this.open = true;
     this.el.classList.add("show");
+    // Re-apply the user's last drag position if there is one — otherwise
+    // the CSS transform centering kicks back in for first-time opens.
+    if (this._panelPos) this._setPanelPos(this._panelPos.x, this._panelPos.y);
     this.onOpenChange?.(true);
     // Defer attaching the outside-click listener one tick so the click
     // that opened us doesn't immediately close us.
@@ -160,4 +198,18 @@ export class Credits {
   }
   toggle()  { this.open ? this.close() : this.show(); }
   setOpen(v){ v ? this.show() : this.close(); }
+
+  // Pin the panel to an absolute viewport coordinate, clamped so it can't
+  // escape off-screen. Drops the CSS transform centering on first call.
+  _setPanelPos(x, y) {
+    const margin = 8;
+    const w  = this.el.offsetWidth;
+    const h  = this.el.offsetHeight;
+    const cx = Math.max(margin, Math.min(window.innerWidth  - w - margin, x));
+    const cy = Math.max(margin, Math.min(window.innerHeight - h - margin, y));
+    this._panelPos = { x: cx, y: cy };
+    this.el.style.left      = cx + "px";
+    this.el.style.top       = cy + "px";
+    this.el.style.transform = "none";
+  }
 }

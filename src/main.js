@@ -919,7 +919,7 @@ async function loadSplat() {
             setTimeout(() => keyHints?.showFor(6500), 250);
             setTimeout(() => onboardingPointers?.show(), 600);
             setTimeout(() => {
-              const quadWrap = document.querySelector('.usd-spec-wrap[data-proto="Plane"]');
+              const quadWrap = document.querySelector('.usd-spec-wrap[data-proto="billboard"]');
               if (quadWrap?._show) {
                 quadWrap._show();
                 setTimeout(() => quadWrap._hide?.(), 5500);

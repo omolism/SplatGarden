@@ -2868,7 +2868,11 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   padding: 14px 18px;
   border-bottom: 1px solid var(--hair);
   background: rgba(255, 255, 255, 0.03);
+  cursor: grab;            /* header is the drag handle */
+  user-select: none;
 }
+#credits.dragging .cr-head { cursor: grabbing; }
+#credits.dragging { transition: none; }
 #credits .cr-title {
   font-family: var(--font-mono);
   font-size: 11px;

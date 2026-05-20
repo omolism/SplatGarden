@@ -1265,11 +1265,11 @@ export function buildGUI(controller) {
     Gaussian: `<div class="k">SOURCE</div><div class="v">Unreal Engine capture</div>
                <div class="k">TRAIN</div><div class="v">Postshot</div>
                <div class="k">SHAPE</div><div class="v">3D anisotropic Gaussian</div>
-               <div class="k">DATA</div><div class="v">RGB · scales · quaternion · alpha</div>`,
+               <div class="k">DATA</div><div class="v">RGB, scales, quaternion, alpha</div>`,
     Point:    `<div class="k">SOURCE</div><div class="v">Gaussian centres collapsed</div>
                <div class="k">SHAPE</div><div class="v">isotropic point</div>
-               <div class="k">SIZE</div><div class="v">uniform — set by "Point Size"</div>
-               <div class="k">USE</div><div class="v">raw structure / sparse view</div>`,
+               <div class="k">SIZE</div><div class="v">uniform, set by "Point Size"</div>
+               <div class="k">USE</div><div class="v">raw structure, sparse view</div>`,
   };
   subformRow.querySelectorAll(".subform-cell").forEach(cell => {
     const val = cell.querySelector("button")?.dataset.val;
@@ -1297,7 +1297,9 @@ export function buildGUI(controller) {
   fLayers.add(params, "pointSize",  0.0005, 0.05,  0.0005).name("Point Size")
     .onChange(() => controller.applyParams());
 
-  const quadCtrl = fLayers.add(params, "quadLayer").name("Quad")
+  // "Billboard" (rather than "Quad") names the family that contains both
+  // the Quad (square) and Circle (camera-facing disc) subforms.
+  const quadCtrl = fLayers.add(params, "quadLayer").name("Billboard")
     .onChange((v) => controller.setLayerVis("quad", v));
 
   // Quad subform — Quad (square plane) vs Circle (camera-facing disc).
@@ -1338,7 +1340,7 @@ export function buildGUI(controller) {
   const quadRow = quadCtrl.domElement;
   quadRow.insertAdjacentElement("afterend", quadShapeRow);
 
-  fLayers.add(params, "quadSize",   0.0001, 0.05,  0.0001).name("Quad Size")
+  fLayers.add(params, "quadSize",   0.0001, 0.05,  0.0001).name("Billboard Size")
     .onChange(() => controller.applyParams());
 
   const voxelCtrl = fLayers.add(params, "voxelLayer").name("Voxel")
@@ -1354,9 +1356,9 @@ export function buildGUI(controller) {
   `;
   const VOXEL_SHAPE_TIPS = {
     cube:   `<div class="k">TYPE</div><div class="v">Spatial-bin cube</div>
-             <div class="k">PROTO</div><div class="v">BoxGeometry · 12 tris</div>`,
+             <div class="k">PROTO</div><div class="v">BoxGeometry, 12 tris</div>`,
     sphere: `<div class="k">TYPE</div><div class="v">Spatial-bin sphere</div>
-             <div class="k">PROTO</div><div class="v">IcosahedronGeometry · 80 tris</div>`,
+             <div class="k">PROTO</div><div class="v">IcosahedronGeometry, 80 tris</div>`,
   };
   voxelShapeRow.querySelectorAll(".subform-cell").forEach(cell => {
     const val = cell.querySelector("button")?.dataset.val;
@@ -1390,36 +1392,47 @@ export function buildGUI(controller) {
   // tag; hovering opens a styled popover with a short OpenUSD primer and a
   // "Read more" link that jumps to openusd.org.
   const USD_DOCS_URL = "https://openusd.org/release/api/class_usd_geom_point_instancer.html";
-  // Eyebrow line spells out what each prim type is at a glance — "Plane" /
-  // "Cube" don't communicate to a non-USD audience that we mean a camera-
-  // facing billboard / spatial-bin cube, so we surface it explicitly.
-  const PROTO_TYPE = {
-    Plane: "Camera-facing billboard (Quad · Circle)",
-    Cube:  "Spatial-bin instancer (Cube · Sphere)",
+  // Per-family copy. TYPE names the family in plain language. BADGE is the
+  // chip text shown next to the row name. PROTO lists every prototype the
+  // family can hot-swap to (the Voxel family swaps the actual prim; the
+  // Billboard family always uses UsdGeomPlane and changes shading only).
+  const USD_FAMILY = {
+    billboard: {
+      type:  "Camera-facing billboard family",
+      badge: "PointInstancer · Plane",
+      proto: "UsdGeomPlane (Quad, Circle)",
+    },
+    voxel: {
+      type:  "Spatial-bin instancer family",
+      badge: "PointInstancer · Cube, Sphere",
+      proto: "UsdGeomCube, UsdGeomSphere",
+    },
   };
-  const attachUsdBadge = (ctrl, proto) => {
+  const attachUsdBadge = (ctrl, key) => {
     const nameEl = ctrl.domElement.querySelector(".name");
     if (!nameEl) return;
+    const info = USD_FAMILY[key];
+    if (!info) return;
 
     const wrap = document.createElement("span");
     wrap.className = "usd-spec-wrap";
-    wrap.dataset.proto = proto;
+    wrap.dataset.proto = key;
 
     const badge = document.createElement("span");
     badge.className = "usd-spec";
-    badge.textContent = `PointInstancer › ${proto}`;
+    badge.textContent = info.badge;
     wrap.appendChild(badge);
 
     const tip = document.createElement("div");
     tip.className = "usd-tooltip";
     tip.innerHTML =
-      `<div class="k">TYPE</div><div class="v">${PROTO_TYPE[proto] ?? proto}</div>` +
+      `<div class="k">TYPE</div><div class="v">${info.type}</div>` +
       `<div class="k">SCHEMA</div><div class="v">UsdGeomPointInstancer</div>` +
-      `<div class="k">PROTO</div><div class="v">UsdGeom${proto}</div>` +
+      `<div class="k">PROTO</div><div class="v">${info.proto}</div>` +
       `<div class="k">ATTRS</div><div class="v">positions, orientations, scales</div>` +
       `<div class="k">COLOR</div><div class="v">primvars:displayColor (vertex)</div>` +
       `<div class="k">DOCS</div><div class="v">` +
-        `<a class="t-link" href="${USD_DOCS_URL}" target="_blank" rel="noopener noreferrer">openusd.org →</a>` +
+        `<a class="t-link" href="${USD_DOCS_URL}" target="_blank" rel="noopener noreferrer">openusd.org</a>` +
       `</div>`;
     // Portal the tooltip to <body> so position:fixed isn't broken by
     // lil-gui's transform. JS toggles a .show class on hover.
@@ -1427,8 +1440,8 @@ export function buildGUI(controller) {
     wrap._tip = tip;
     nameEl.appendChild(wrap);
   };
-  attachUsdBadge(quadCtrl,  "Plane");
-  attachUsdBadge(voxelCtrl, "Cube");
+  attachUsdBadge(quadCtrl,  "billboard");
+  attachUsdBadge(voxelCtrl, "voxel");
 
   // ---- Hover-tooltip wiring (body-portalled, viewport-clamped) -----------
   // lil-gui panels use CSS transforms which break `position: fixed` on any

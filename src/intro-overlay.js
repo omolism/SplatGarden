@@ -14,22 +14,23 @@
 
 // Hero: fades in immediately, holds, fades out before the first phase
 // callout takes over. Times are in clip-normalized [0..1] units. The clip
-// is ~25 s, so 0.14 ≈ 3.5 s, 0.17 ≈ 4.25 s.
+// is the middle-400-frame subclip of Shot4B (~16.67 s).
 const HERO = {
   text:    "SPLATGARDEN",
-  sub:     "An asset-pipeline showcase",
+  sub:     "A 3D Gaussian Splatting asset showcase",
   inAt:    0.005,
   holdTo:  0.13,
   outAt:   0.17,
 };
 
-// Lower-third callouts: one per ¼ of the clip. label/desc fade together.
-// The fade window is tight so consecutive callouts don't overlap.
+// Lower-third callouts: one per ¼ of the clip. eyebrow names the phase,
+// text describes the step concretely (tool + scale where useful). No
+// decorative separators in the copy — commas only.
 const PHASES = [
-  { at: 0.02, until: 0.25, eyebrow: "01 · CAPTURE",         text: "Lichtfeld Studio" },
-  { at: 0.27, until: 0.50, eyebrow: "02 · POSE",            text: "COLMAP SfM · 990 cameras" },
-  { at: 0.52, until: 0.75, eyebrow: "03 · TRAIN",           text: "Postshot · ~3M Gaussians" },
-  { at: 0.77, until: 0.99, eyebrow: "04 · RENDER",          text: "3DGS · USD · AI" },
+  { at: 0.02, until: 0.25, eyebrow: "CAPTURE", text: "Multi-camera capture at Lichtfeld Studio" },
+  { at: 0.27, until: 0.50, eyebrow: "POSE",    text: "990 camera poses solved with COLMAP" },
+  { at: 0.52, until: 0.75, eyebrow: "TRAIN",   text: "3 million Gaussians optimized in Postshot" },
+  { at: 0.77, until: 0.99, eyebrow: "RENDER",  text: "Real-time WebGL playback via Spark" },
 ];
 
 // Smooth fade window around each boundary, in clip-normalized units.
