@@ -334,6 +334,12 @@ async function loadSplat() {
   splat.updateGenerator();
   const gui = buildGUI(effects);
   postfx.attachGUI(gui);
+  // Push lil-gui down to clear the UsdLayers panel that sits on the
+  // right rail above it (UsdLayers max-height = 420 px + 18 top +
+  // 18 gap = 456). Width matches the panel so the two surfaces line
+  // up vertically.
+  gui.domElement.style.top   = "456px";
+  gui.domElement.style.width = "280px";
   // Top-level "Cinematic FX" — promotes the character-defining post-FX
   // (Lens Distortion / Underwater / Kaleidoscope) out of the colour-grading
   // Post-Process folder so they're immediately discoverable. The Particles

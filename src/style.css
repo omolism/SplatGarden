@@ -2986,11 +2986,14 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
  * panel (same eye buttons, same row shape).
  * ============================================================ */
 #usd-layers-panel {
-  position: absolute;
+  /* Pinned to the right rail, above the lil-gui Customize folder.
+   * lil-gui's own top offset is bumped down (see main.js) to clear
+   * this panel. */
+  position: fixed;
   top: 18px;
-  left: 274px;             /* sit clear of #left-stack (left:18 + width:240 + 16 gap) */
+  right: 18px;
   width: 280px;
-  max-height: calc(100vh - 220px);
+  max-height: 420px;
   z-index: 21;
   display: flex;
   flex-direction: column;
