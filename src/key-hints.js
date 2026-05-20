@@ -94,7 +94,7 @@ export class KeyHints {
       <header class="kh-head">
         <span class="kh-title">Quick Guide</span>
         ${isPhone ? "" : `<span class="kh-key">H</span>`}
-        <button class="kh-close" data-act="close" title="${isTouch ? "Close" : "Close (H or Esc)"}">&times;</button>
+        <button class="kh-close" data-act="close" title="${isPhone ? "Close" : "Close (H or Esc)"}">&times;</button>
       </header>
       <div class="kh-body">
         ${sections.map(s => `
