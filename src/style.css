@@ -2224,12 +2224,27 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   border: 1px solid var(--hair) !important;
   border-radius: var(--radius-sm) !important;
   color: var(--text) !important;
-  transition: background 0.12s, border-color 0.12s !important;
+  /* Subtle spring lift on hover — translate-y + shadow keeps the
+     interaction premium without being bouncy. Easing curve is
+     cubic-bezier(.16,1,.3,1) — "ease-out-quint-ish" — so the lift
+     feels crisp on enter and settles on exit. */
+  transition: background 0.18s cubic-bezier(.16,1,.3,1),
+              border-color 0.18s cubic-bezier(.16,1,.3,1),
+              transform   0.22s cubic-bezier(.16,1,.3,1),
+              box-shadow  0.22s cubic-bezier(.16,1,.3,1) !important;
 }
 .lil-gui .controller button:hover,
 .lil-gui .controller.function .widget:hover {
   background: rgba(255, 255, 255, 0.10) !important;
   border-color: rgba(255, 255, 255, 0.22) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+}
+.lil-gui .controller button:active,
+.lil-gui .controller.function .widget:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition-duration: 0.08s !important;
 }
 
 /* ============================================================
@@ -3524,7 +3539,11 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.78);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-  transition: transform 0.18s ease, background 0.18s ease;
+  /* Snappy snap-back curve with a tiny overshoot — like iOS's switch
+     animation. The knob lands a hair past its target, then settles.
+     Gives the toggle a "decided" feel. */
+  transition: transform 0.28s cubic-bezier(.34, 1.56, .64, 1),
+              background 0.18s ease;
 }
 #usd-layers-panel .usd-row .usd-toggle.on {
   background: rgba(255, 255, 255, 0.92);
@@ -3894,6 +3913,66 @@ body.mobile #mobile-nav-btn { display: none !important; }
   border: 1px solid var(--hair);
   border-radius: 4px;
   padding: 2px 6px;
+}
+
+/* Status-bar crossfade — when #status text changes meaning (not the
+   silent FPS suffix), it flashes a quick fade + slide so the change
+   reads as intentional motion rather than a snap. Driven by a
+   MutationObserver in main.js that only re-adds the class on
+   meaningful changes. */
+@keyframes status-flash {
+  0%   { opacity: 0.35; transform: translateY(3px); filter: blur(1.2px); }
+  100% { opacity: 1;    transform: translateY(0);   filter: blur(0); }
+}
+#status.status-flash {
+  animation: status-flash 0.32s cubic-bezier(.16,1,.3,1);
+}
+
+/* ============================================================
+ * Choreographed entrance — once the splash hides, the major UI
+ * surfaces fade in with a staggered sequence so the viewer's eye
+ * naturally goes hero → side panels → toolbar. Pure CSS, fires
+ * once on page load. The `body.ui-ready` class is added by main.js
+ * right after hideLoading() so the animation never starts behind
+ * a splash. Each surface uses `animation-fill-mode: backwards`
+ * so it's invisible BEFORE its delay (prevents a flash).
+ * ============================================================ */
+@keyframes ui-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes ui-enter-from-right {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes ui-enter-from-left {
+  from { opacity: 0; transform: translateX(-12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+body.ui-ready .lil-gui.root {
+  animation: ui-enter-from-right 0.55s cubic-bezier(.16,1,.3,1) 0.08s both;
+}
+body.ui-ready #left-stack {
+  animation: ui-enter-from-left 0.55s cubic-bezier(.16,1,.3,1) 0.20s both;
+}
+body.ui-ready #hand-panel {
+  animation: ui-enter-from-left 0.50s cubic-bezier(.16,1,.3,1) 0.32s both;
+}
+body.ui-ready #toolbar {
+  animation: ui-enter 0.50s cubic-bezier(.16,1,.3,1) 0.40s both;
+}
+body.ui-ready #mobile-bottombar {
+  animation: ui-enter 0.55s cubic-bezier(.16,1,.3,1) 0.12s both;
+}
+body.ui-ready #mobile-studio-btn {
+  animation: ui-enter-from-right 0.50s cubic-bezier(.16,1,.3,1) 0.22s both;
+}
+/* Asset hotspots pulse in after the chrome UI — final layer in the
+   cinematic reveal sequence. They use opacity-only because the
+   per-frame transform is driven by the projection update. */
+@keyframes ui-hotspot-fade { from { opacity: 0; } to { opacity: 1; } }
+body.ui-ready .asset-hotspot {
+  animation: ui-hotspot-fade 0.6s ease 0.55s both;
 }
 
 /* ============================================================

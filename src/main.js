@@ -424,6 +424,37 @@ function setLoading(msg) {
 }
 function hideLoading() {
   loadingEl?.classList.add("hidden");
+  // Trigger the choreographed entrance — staggered fade-in for the
+  // major UI surfaces (lil-gui, sidebar, toolbar, hotspots). CSS in
+  // style.css under "Choreographed entrance" owns the animations;
+  // body.ui-ready is the single gate that fires the whole sequence.
+  // Use rAF so the splash's own fade-out runs first frame, then the
+  // UI reveal kicks in cleanly behind it.
+  requestAnimationFrame(() => document.body.classList.add("ui-ready"));
+}
+
+// Status-text crossfade — when the human-readable part of #status
+// changes (e.g., "Playing camera move…" → "Camera move complete"),
+// flash the element with a quick fade + slide so the change reads as
+// intentional motion rather than a jarring text swap. The continuous
+// FPS readout that gets appended every 500 ms is FILTERED OUT here so
+// the status doesn't strobe every half-second — we compare the base
+// text (with the " • NN.N fps" suffix stripped) to know whether the
+// MEANING actually changed.
+if (statusEl) {
+  let _lastStatusBase = statusEl.textContent || "";
+  const _statusObserver = new MutationObserver(() => {
+    const current = statusEl.textContent || "";
+    const base = current.replace(/\s*•\s*[\d.]+\s*fps$/, "");
+    if (base !== _lastStatusBase) {
+      _lastStatusBase = base;
+      statusEl.classList.remove("status-flash");
+      // Force a reflow so the class can be re-added and the animation re-fires.
+      void statusEl.offsetHeight;
+      statusEl.classList.add("status-flash");
+    }
+  });
+  _statusObserver.observe(statusEl, { childList: true, characterData: true, subtree: true });
 }
 
 // Determinate fill driver for the splash progress bar. First call with a
