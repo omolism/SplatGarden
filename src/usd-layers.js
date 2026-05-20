@@ -32,7 +32,9 @@ const ROWS = [
     shapeKey: "splatSubform",
     sizeKey:  "pointSize",
     sizeLabel:"Point Size",
-    sizeMin: 0.0005, sizeMax: 0.05,  sizeStep: 0.0005,
+    // Useful range tightened from the old 0.0005-0.05 (100x): tiny dots
+    // at 0.001, chunky dots at 0.01. Default 0.0025 sits ~20% in.
+    sizeMin: 0.001, sizeMax: 0.01, sizeStep: 0.0001,
     shapes: [
       { val: "Gaussian", label: "Gaussian" },
       { val: "Point",    label: "Point"    },
@@ -48,7 +50,9 @@ const ROWS = [
     shapeKey: "quadShape",
     sizeKey:  "quadSize",
     sizeLabel:"Billboard Size",
-    sizeMin: 0.0001, sizeMax: 0.05,  sizeStep: 0.0001,
+    // Tightened from 0.0001-0.05 (500x) to the visually useful slice;
+    // default 0.0064 sits ~30% in.
+    sizeMin: 0.001, sizeMax: 0.02, sizeStep: 0.0005,
     shapes: [
       { val: "quad",   label: "Quad"   },
       { val: "circle", label: "Circle" },
@@ -64,7 +68,10 @@ const ROWS = [
     shapeKey: "voxelShape",
     sizeKey:  "voxelSize",
     sizeLabel:"Voxel Size",
-    sizeMin: 0.0005, sizeMax: 0.40,  sizeStep: 0.0005,
+    // Old range went up to 0.40 (meter-scale boxes), unusable past ~0.05.
+    // Tightened to the usable slice; default 0.013 sits ~18% in. Bigger
+    // step than the others because each move queues a Voxelizer rebuild.
+    sizeMin: 0.005, sizeMax: 0.05, sizeStep: 0.001,
     shapes: [
       { val: "cube",   label: "Cube"   },
       { val: "sphere", label: "Sphere" },
