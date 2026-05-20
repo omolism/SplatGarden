@@ -10,6 +10,7 @@
 // ---------------------------------------------------------------------------
 
 import * as THREE from "three";
+import { renderCompare, wireCompareFrame } from "./tech-spec.js";
 
 const _v = new THREE.Vector3();
 
@@ -80,6 +81,11 @@ function renderCard(it) {
     </section>` : ""}
 
     ${it.note ? `<section class="ah-section ah-note">${escapeHtml(it.note)}</section>` : ""}
+
+    ${it.compare ? `<section class="ah-section">
+      <div class="ah-sec-title">Before / After</div>
+      ${renderCompare(it.compare)}
+    </section>` : ""}
 
     <footer class="ah-foot">
       ${it.output ? `<div class="ah-foot-row"><span class="ah-k">Output</span><span class="ah-v">${escapeHtml(it.output)}</span></div>` : ""}
@@ -214,6 +220,9 @@ export class AssetHoverManager {
     this.card.innerHTML = renderCard(it);
     this.card.removeAttribute("hidden");
     this.card.classList.toggle("pinned", !!this._pinned);
+    // Wire any inline before/after compare widget that's now in the DOM —
+    // the .ts-compare CSS already covers visuals; this binds the drag.
+    this.card.querySelectorAll(".ts-compare .cmp-frame").forEach(wireCompareFrame);
     // Re-apply any user-dragged position so the card stays where the user
     // parked it across asset swaps. First-time show uses the default
     // top-centre CSS layout.

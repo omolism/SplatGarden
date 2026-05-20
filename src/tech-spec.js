@@ -144,6 +144,12 @@ export const TECH_SPECS = [
         toolchain: ["Houdini (procedural)", "Unreal Engine (set dress)"],
         output:    "Mesh dressed into env scene",
         note:      "Houdini-generated cluster scattered across the gazebo planters",
+        compare: {
+          before: null,
+          after:  null,
+          labelA: "Original",
+          labelB: "Stylized",
+        },
         source:    "in-scene",
       },
       {
@@ -153,6 +159,12 @@ export const TECH_SPECS = [
         toolchain: ["Houdini", "VAT bake", "Unreal Engine (set dress)", "Python · OSC · MediaPipe", "AI texture stylization"],
         output:    "Mesh + VAT animation · interactively driven in Unreal",
         note:      "Animated procedurally in Houdini and VAT-baked, then set-dressed in Unreal. Inside the Unreal session, Python · OSC · MediaPipe drives the rig live (hand gesture → OSC → blueprint). Diffuse texture passes through the custom AI stylization tool.",
+        compare: {
+          before: null,
+          after:  null,
+          labelA: "Original",
+          labelB: "Stylized",
+        },
         source:    "in-scene",
       },
       {
@@ -259,7 +271,7 @@ function renderItem(it) {
   return `<li class="ts-item${isAsset ? " ts-item-asset" : ""}">${head}${sub}${chain}${output}${note}${compare}${source}</li>`;
 }
 
-function renderCompare(c) {
+export function renderCompare(c) {
   const lblA = c.labelA || "Before";
   const lblB = c.labelB || "After";
   const layer = (url, fallback, cls) => url
@@ -280,7 +292,7 @@ function renderCompare(c) {
 // Wire the drag-to-wipe interaction on a single compare frame. The "A"
 // layer's clip-path follows the handle; clicking anywhere on the frame
 // snaps the split to that x.
-function wireCompareFrame(frame) {
+export function wireCompareFrame(frame) {
   const handle = frame.querySelector(".cmp-handle");
   const imgA   = frame.querySelector(".cmp-img-a");
   if (!handle || !imgA) return;

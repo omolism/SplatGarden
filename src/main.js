@@ -365,13 +365,13 @@ async function loadSplat() {
   // forward, so any new viewpoint persists automatically.
   const restored = annotations.restoreFromStorage();
   if (!restored) annotations._save();   // first run: persist the defaults
-  // Prefer Gazebo (user-added) → Center → first available. Gazebo only
-  // exists in storage if a previous session saved it via the GUI.
-  const activeVp = restored
-    ? annotations.viewpoints.find(v => v.name === "Gazebo")
-      || annotations.viewpoints.find(v => v.name === "Center")
-      || annotations.viewpoints[0]
-    : centerVp;
+  // Default viewpoint = Center (#6) — landing pose is the COLMAP cam #582
+  // framing patched in by the COLMAP loader. Falls back to the first
+  // available viewpoint if Center somehow isn't present.
+  const activeVp =
+    annotations.viewpoints.find(v => v.name === "Center")
+    || annotations.viewpoints[0]
+    || centerVp;
   if (activeVp) {
     annotations.activeId = activeVp.id;
     annotations._rebuildList();

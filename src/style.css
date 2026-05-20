@@ -1252,8 +1252,8 @@ kbd {
 /* 5b. Inline before/after compare widget — drag the handle to wipe.
  * Placeholder mode (no images yet) shows two subtly tinted panes so the
  * wipe action still reads. */
-#tech-spec .ts-compare { margin-top: 16px; }
-#tech-spec .ts-compare .cmp-frame {
+.ts-compare { margin-top: 16px; }
+.ts-compare .cmp-frame {
   position: relative;
   aspect-ratio: 16 / 9;
   border-radius: var(--radius-sm);
@@ -1263,7 +1263,7 @@ kbd {
   user-select: none;
   background: rgba(255, 255, 255, 0.03);
 }
-#tech-spec .ts-compare .cmp-img {
+.ts-compare .cmp-img {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -1274,22 +1274,22 @@ kbd {
   justify-content: center;
   pointer-events: none;
 }
-#tech-spec .ts-compare .cmp-img-b { z-index: 1; }
-#tech-spec .ts-compare .cmp-img-a { z-index: 2; clip-path: inset(0 50% 0 0); }
-#tech-spec .ts-compare .cmp-ph {
+.ts-compare .cmp-img-b { z-index: 1; }
+.ts-compare .cmp-img-a { z-index: 2; clip-path: inset(0 50% 0 0); }
+.ts-compare .cmp-ph {
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.10em;
   text-transform: uppercase;
   color: var(--text-faint);
 }
-#tech-spec .ts-compare .cmp-ph.cmp-img-a {
+.ts-compare .cmp-ph.cmp-img-a {
   background: linear-gradient(135deg, rgba(190, 200, 220, 0.06), rgba(190, 200, 220, 0.02));
 }
-#tech-spec .ts-compare .cmp-ph.cmp-img-b {
+.ts-compare .cmp-ph.cmp-img-b {
   background: linear-gradient(135deg, rgba(255, 200, 130, 0.10), rgba(255, 160, 90, 0.04));
 }
-#tech-spec .ts-compare .cmp-handle {
+.ts-compare .cmp-handle {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -1303,7 +1303,7 @@ kbd {
     -2px 0 6px rgba(0, 0, 0, 0.45),
      2px 0 6px rgba(0, 0, 0, 0.45);
 }
-#tech-spec .ts-compare .cmp-knob {
+.ts-compare .cmp-knob {
   position: absolute;
   top: 50%;
   left: 50%;
@@ -1317,7 +1317,7 @@ kbd {
   border-radius: 50%;
   cursor: ew-resize;
 }
-#tech-spec .ts-compare .cmp-knob::before {
+.ts-compare .cmp-knob::before {
   content: "⇆";
   position: absolute;
   inset: 0;
@@ -1328,7 +1328,7 @@ kbd {
   font-size: 12px;
   color: var(--text);
 }
-#tech-spec .ts-compare .cmp-tag {
+.ts-compare .cmp-tag {
   position: absolute;
   top: 8px;
   font-family: var(--font-mono);
@@ -1344,8 +1344,8 @@ kbd {
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
 }
-#tech-spec .ts-compare .cmp-tag-a { left: 8px; }
-#tech-spec .ts-compare .cmp-tag-b { right: 8px; }
+.ts-compare .cmp-tag-a { left: 8px; }
+.ts-compare .cmp-tag-b { right: 8px; }
 #tech-spec .ts-footer {
   display: flex;
   justify-content: space-between;
