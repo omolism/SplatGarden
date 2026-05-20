@@ -2197,6 +2197,166 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 }
 
 /* ============================================================
+   Quick Guide — keyboard / mouse shortcut card
+   - Floats bottom-centre on first entry, auto-hides after a few seconds.
+   - Press H to summon back, Esc / × to dismiss, hover to keep open.
+   ============================================================ */
+#key-hints {
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%) translateY(14px);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 25;
+  width: min(560px, calc(100vw - 60px));
+  background: var(--panel-strong);
+  backdrop-filter: blur(28px) saturate(140%);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-soft);
+  color: var(--text);
+  font-family: var(--font-ui);
+  letter-spacing: 0.01em;
+  transition: opacity 0.32s ease, transform 0.32s ease, visibility 0s linear 0.32s;
+  user-select: none;
+}
+#key-hints.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+  transition: opacity 0.32s ease, transform 0.32s ease, visibility 0s linear 0s;
+}
+
+#key-hints .kh-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--hair);
+}
+#key-hints .kh-title {
+  flex: 1;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+#key-hints .kh-key {
+  font-family: var(--font-mono);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  color: var(--text-mid);
+  letter-spacing: 0.10em;
+}
+#key-hints .kh-close {
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--hair-strong);
+  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  color: var(--text-mid);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+#key-hints .kh-close:hover {
+  background: var(--hover-strong);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: var(--text);
+}
+
+#key-hints .kh-body {
+  padding: 14px 16px 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 24px;
+}
+#key-hints .kh-sec-title {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+#key-hints .kh-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+#key-hints .kh-row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+}
+#key-hints .kh-row .kh-k {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+  font-family: var(--font-mono);
+}
+#key-hints .kh-row .kh-v {
+  color: var(--text-mid);
+  font-size: 11.5px;
+  letter-spacing: 0.005em;
+}
+#key-hints .kh-mouse {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-mid);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--hair);
+  padding: 2px 7px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+#key-hints .kh-row kbd {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--hair-strong);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text);
+  line-height: 1.2;
+  min-width: 14px;
+  text-align: center;
+}
+
+@media (max-width: 640px) {
+  #key-hints {
+    bottom: 80px;
+    width: calc(100vw - 32px);
+  }
+  #key-hints .kh-body {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+/* ============================================================
    Asset hotspots + hover info card
    - A small floating dot sits at each TECH_SPECS asset's worldPos
    - Hover the dot → poster-style overlay card pops in the upper-centre

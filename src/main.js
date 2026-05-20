@@ -19,6 +19,7 @@ import { Voxelizer } from "./voxelizer.js";
 import { Quadizer }  from "./quadizer.js";
 import { PipelineHUD } from "./pipeline-hud.js";
 import { SceneLayers } from "./scene-layers.js";
+import { KeyHints } from "./key-hints.js";
 import { uniforms as effectUniforms } from "./effects.js";
 import { loadColmapImages, buildColmapFrustums } from "./colmap-loader.js";
 
@@ -190,6 +191,13 @@ const assetHover = new AssetHoverManager({
   items: TECH_SPECS.flatMap(s => s.items),
 });
 window.__assetHover = assetHover;
+
+// Quick Guide — bottom-centre card with mouse + key shortcuts. Auto-pops on
+// scene entry (showFor below in loadSplat's end), summon back with H.
+const keyHints = new KeyHints({
+  mountEl: document.getElementById("app") || document.body,
+});
+window.__keyHints = keyHints;
 
 // Tech-Spec overlay scene — training cameras (and any future tech-spec 3D
 // gizmos) live here so they bypass the post-FX composer pipeline. Rendered
@@ -1674,6 +1682,10 @@ async function loadSplat() {
   });
 
   hideLoading();
+  // Pop the Quick Guide once the splash is out of the way — short delay
+  // so the user's eye lands on the scene first, then the card slides up.
+  setTimeout(() => keyHints?.showFor(6500), 700);
+
   // First-time hint so users know the default FX preset is click-armed —
   // otherwise they open the app, see the splat, don't realize clicking the
   // model fires the effect, and assume the FX panel is broken. Replaced by
