@@ -437,27 +437,32 @@ export class MobileUI {
     this._toast("Tap-and-hold the URL bar to share");
   }
 
-  // ---- Asset short-tap toast / long-press detail sheet ---------------
+  // ---- Asset tap → detail sheet --------------------------------------
+  // Every tap on a 3D hotspot opens the full asset card in a bottom
+  // sheet (same content the desktop hover card shows). Originally I
+  // gated this behind a 480 ms long-press to keep short-taps light, but
+  // long-press is undiscoverable on mobile — users tapped, nothing
+  // visible happened, and the asset card was effectively missing on
+  // touch. Tap-to-reveal is the conventional pattern and matches what
+  // the desktop click already does (fly + show card).
   _wireAssetTouch() {
     const ah = this.refs.assetHover;
     if (!ah) return;
-    // Short tap: small top toast with the asset name. Camera fly-to
-    // still runs from the existing click handler in asset-hover.js.
-    ah.onAssetShortTap = (it) => {
-      const subtitle = it.location || it.toolchain?.join(" · ") || "";
-      this._toast(`${it.name}${subtitle ? "  ·  " + subtitle : ""}`, 1800);
-    };
-    // Long press: full asset card in a bottom sheet. Reuses the same
-    // renderer the desktop hover card uses so authoring data is identical.
-    ah.onAssetLongPress = (it) => {
+    const openAssetSheet = (it) => {
       const node = document.createElement("div");
       node.className = "ms-asset-card";
       node.innerHTML = renderAssetCard(it);
-      // The internal × button references data-act="close" — wire it.
+      // The card's own × button uses data-act="close"; route it to the
+      // sheet's close so users get one consistent dismiss path.
       node.querySelector('[data-act="close"]')?.addEventListener("click", () => this.sheet.close());
       this.sheet.show("asset", it.name, node);
       this._setActive(null);
     };
+    // Short tap AND long press open the same sheet. The long-press
+    // path stays wired in asset-hover.js as a backup gesture — if a
+    // user holds rather than taps, they still get the card.
+    ah.onAssetShortTap  = openAssetSheet;
+    ah.onAssetLongPress = openAssetSheet;
   }
 
   // ---- Toast helper ---------------------------------------------------

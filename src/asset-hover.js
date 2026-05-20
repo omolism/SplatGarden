@@ -209,76 +209,50 @@ export class AssetHoverManager {
         // transform every frame as the camera moves. A finger that lands
         // on a dot at frame N and lifts at frame N+5 often has its
         // pointerup land on empty space (the dot moved a few px). The
-        // browser then fires no `click` because pointerdown and pointerup
-        // targets differ — and the user sees a "ghost tap" with no
-        // response. Symptoms: tapping daffodil/grape/statue worked some
-        // times and not others, with no logged error.
+        // browser then fires no `click` because pointerdown / pointerup
+        // targets differ — user sees a "ghost tap" with no response.
+        // Symptoms: tapping daffodil/grape/statue worked some times and
+        // not others.
         //
         // Fix: capture the pointer at pointerdown so all subsequent
         // events route to this element regardless of its on-screen
-        // position, and fire the tap action ourselves on pointerup
-        // (gated on small movement + short duration). 480 ms with no
-        // tap = long press → detail sheet.
+        // position, and fire the tap action ourselves on pointerup.
+        // No long-press gate — every tap (any duration, with <12 px of
+        // movement) fires both onAssetSelect (camera fly-to) and
+        // onAssetShortTap (mobile-ui opens the asset card in a sheet).
+        // The card surface is the same one the desktop hover shows; on
+        // mobile it's just routed into a bottom sheet so it doesn't
+        // float-block the viewport.
         let pressX = 0, pressY = 0;
-        let pressStartMs = 0;
-        let pressTimer = null;
         let moved = false;
         let pressActive = false;
 
-        const cancelTimer = () => {
-          if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
-        };
-
         dot.addEventListener("pointerdown", (e) => {
-          pressX        = e.clientX;
-          pressY        = e.clientY;
-          pressStartMs  = performance.now();
-          moved         = false;
-          pressActive   = true;
-          // Pointer capture: all subsequent pointer events for this
-          // gesture fire on this dot, even if the dot's transform moves
-          // it away from the finger. Without this, the moving dot can
-          // "escape" the touch and pointerup fires nowhere useful.
+          pressX      = e.clientX;
+          pressY      = e.clientY;
+          moved       = false;
+          pressActive = true;
+          // Pointer capture: subsequent events for this gesture stay
+          // routed to this dot, even if it transforms away from the
+          // finger between pointerdown and pointerup.
           try { dot.setPointerCapture(e.pointerId); } catch {}
-          cancelTimer();
-          pressTimer = setTimeout(() => {
-            pressTimer = null;
-            if (!pressActive || moved) return;
-            this._longPressFired = true;
-            this.onAssetLongPress?.(it);
-          }, 480);
         });
 
         dot.addEventListener("pointermove", (e) => {
           if (!pressActive) return;
           const dx = Math.abs(e.clientX - pressX);
           const dy = Math.abs(e.clientY - pressY);
-          if (dx + dy > 12) {
-            moved = true;
-            cancelTimer();
-          }
+          if (dx + dy > 12) moved = true;
         });
 
         const endPress = (e, cancelled = false) => {
           if (!pressActive) return;
           pressActive = false;
-          cancelTimer();
           try { dot.releasePointerCapture?.(e.pointerId); } catch {}
-          if (cancelled) return;
-          if (this._longPressFired) {
-            // The long-press already fired its own handler; reset the
-            // flag so the next interaction starts clean.
-            this._longPressFired = false;
-            return;
-          }
-          if (moved) return;                                  // drag / scroll
-          if (performance.now() - pressStartMs > 700) return; // too slow → not a tap
+          if (cancelled || moved) return;
           e.stopPropagation();
-          // Short tap → fly to the asset + toast. Both callbacks tolerate
-          // null subscribers (no-op when MobileUI isn't mounted, e.g.
-          // a touch laptop without the bottom-bar).
-          this.onAssetSelect?.(it);
-          this.onAssetShortTap?.(it);
+          this.onAssetSelect?.(it);     // camera fly-to (main.js)
+          this.onAssetShortTap?.(it);   // open asset sheet (mobile-ui.js)
         };
 
         dot.addEventListener("pointerup",     (e) => endPress(e, false));
