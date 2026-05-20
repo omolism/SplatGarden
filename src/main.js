@@ -338,9 +338,9 @@ async function loadSplat() {
     statusEl,
     // localStorage key scoped to the splat URL so swapping splats doesn't
     // bring along the wrong viewpoints.
-    // v5 — bumped when the cardinal orbit radius widened 3.5 -> 6.0 m
-    // so the surrounding landscape sits in frame alongside the gazebo.
-    storageKey: "splatgarden:viewpoints:v5:" + SPLAT_URL,
+    // v6 — bumped when the gazebo subject X nudged 0.594 -> -0.58 so the
+    // cardinal cameras re-frame around the corrected centerpiece.
+    storageKey: "splatgarden:viewpoints:v6:" + SPLAT_URL,
   });
   // Seed defaults silently — without this guard, each seeded add() would
   // write to localStorage and wipe any saved user-added viewpoints (e.g.

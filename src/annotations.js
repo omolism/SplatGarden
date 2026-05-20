@@ -305,7 +305,7 @@ export class AnnotationManager {
     // SUBJECT is the gazebo — the actual visual centre of the scene, not
     // the splat's geometric centroid (which gets pulled off by outlier
     // splats). The four cardinal cameras + Top all orbit around this.
-    const SUBJECT = new THREE.Vector3(0.594, -0.561, 3.774);
+    const SUBJECT = new THREE.Vector3(-0.58, -0.561, 3.774);
     // Fixed cardinal-orbit radius. Calibrated so the cardinal cameras
     // sit far enough back to see the gazebo + flower cluster *and* the
     // surrounding landscape patch in frame, without pulling outlier

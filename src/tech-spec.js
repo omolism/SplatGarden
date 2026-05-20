@@ -140,7 +140,7 @@ export const TECH_SPECS = [
       {
         name:      "Gazebo",
         location:  "Centerpiece",
-        worldPos:  [0.594, -0.561, 3.774],
+        worldPos:  [-0.58, -0.561, 3.774],
         toolchain: ["Houdini (3DGS SIM)", "Unreal Engine (set dress)"],
         output:    "3DGS centerpiece · Houdini-simulated splat dynamics",
         note:      "The garden's central architecture. Built in Houdini as a 3DGS simulation — splat positions are driven by a sim graph, then baked and dressed into the Unreal scene before capture.",
