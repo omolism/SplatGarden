@@ -9,9 +9,9 @@
 const TEAM = [
   { name: "Danci Shen",               role: "Team Member", url: "https://omolism.cargo.site/" },
   { name: "Itim Kongsakulvatanasook", role: "Team Member", url: "https://itimkongs.com" },
-  { name: "Yichen Shi",               role: "Team Member", url: "https://yichenshi.wixstudio.com/index" },
   { name: "Yiqi Zheng",               role: "Team Member", url: "https://yiqizheng.wixsite.com/yiqizheng" },
   { name: "Yiyi Long",                role: "Team Member", url: "https://yiyilongart.wixsite.com/portfolio" },
+  { name: "Yichen Shi",               role: "Team Member", url: "https://yichenshi.wixstudio.com/index" },
   { name: "Ben Jones",                role: "Team Member", url: "https://www.benjvisuals.com" },
   { name: "Xinyi Liang",              role: "Team Member", url: "#" },
 ];
