@@ -267,6 +267,15 @@ export class AnnotationManager {
     const camPos = this.camera.position;
 
     for (const vp of this.viewpoints) {
+      // Hide the marker for the viewpoint we're currently sitting at —
+      // an anchor at the camera's location is redundant and tends to
+      // overlap with whatever asset hotspot the viewpoint is framing
+      // (e.g. the Zoom viewpoint sits on top of the Grape Hyacinth dot).
+      if (vp.id === this.activeId) {
+        vp.el.style.display = "none";
+        continue;
+      }
+
       this._v.copy(vp.anchor);
       // Vector from camera to anchor
       const dx = this._v.x - camPos.x;
