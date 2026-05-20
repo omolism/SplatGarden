@@ -1311,12 +1311,20 @@ export function buildGUI(controller) {
   // tag; hovering opens a styled popover with a short OpenUSD primer and a
   // "Read more" link that jumps to openusd.org.
   const USD_DOCS_URL = "https://openusd.org/release/api/class_usd_geom_point_instancer.html";
+  // Eyebrow line spells out what each prim type is at a glance — "Plane" /
+  // "Cube" don't communicate to a non-USD audience that we mean a camera-
+  // facing billboard / spatial-bin cube, so we surface it explicitly.
+  const PROTO_TYPE = {
+    Plane: "Camera-facing billboard",
+    Cube:  "Spatial-bin cube",
+  };
   const attachUsdBadge = (ctrl, proto) => {
     const nameEl = ctrl.domElement.querySelector(".name");
     if (!nameEl) return;
 
     const wrap = document.createElement("span");
     wrap.className = "usd-spec-wrap";
+    wrap.dataset.proto = proto;
 
     const badge = document.createElement("span");
     badge.className = "usd-spec";
@@ -1326,6 +1334,7 @@ export function buildGUI(controller) {
     const tip = document.createElement("div");
     tip.className = "usd-tooltip";
     tip.innerHTML =
+      `<div class="k">TYPE</div><div class="v">${PROTO_TYPE[proto] ?? proto}</div>` +
       `<div class="k">SCHEMA</div><div class="v">UsdGeomPointInstancer</div>` +
       `<div class="k">PROTO</div><div class="v">UsdGeom${proto}</div>` +
       `<div class="k">ATTRS</div><div class="v">positions, orientations, scales</div>` +
@@ -1378,6 +1387,11 @@ export function buildGUI(controller) {
       tip.style.opacity    = "";
     };
     const hide = () => { tip.classList.remove("show"); };
+    // Expose programmatic handles so callers (e.g. the first-visit
+    // onboarding cinematic) can pop the tip without needing to dispatch
+    // synthetic mouse events.
+    wrap._show = show;
+    wrap._hide = hide;
     wrap.addEventListener("mouseenter", show);
     wrap.addEventListener("mouseleave", hide);
     tip .addEventListener("mouseleave", hide);

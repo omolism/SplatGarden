@@ -894,13 +894,21 @@ async function loadSplat() {
           statusEl.textContent = "Camera move complete";
           // Tear down the intro overlay and, if this was the first-visit
           // auto-play, prompt the user with the Quick Guide + animated
-          // pointers at T / K / Scene panel so they discover the deeper
-          // panels.
+          // pointers at T / K / Scene panel, then briefly pop the Quad
+          // USD-spec tooltip so the "billboard" concept gets introduced
+          // before the user is left to explore on their own.
           introOverlay?.hide();
           if (window.__autoPlayedIntro) {
             window.__autoPlayedIntro = false;
             setTimeout(() => keyHints?.showFor(6500), 250);
             setTimeout(() => onboardingPointers?.show(), 600);
+            setTimeout(() => {
+              const quadWrap = document.querySelector('.usd-spec-wrap[data-proto="Plane"]');
+              if (quadWrap?._show) {
+                quadWrap._show();
+                setTimeout(() => quadWrap._hide?.(), 5500);
+              }
+            }, 1200);
           }
         });
 
