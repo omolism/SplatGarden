@@ -14,64 +14,47 @@
 
 export const TECH_SPECS = [
   // ============== Three layered groups ==============
-  // Tools WITHIN each layer collaborate (interconnected, not sequential).
-  // Layers stack: Authoring -> Pipeline -> Runtime, with assets falling out
-  // at the bottom. The layer header shows the layer's tool stack at a
-  // glance via the toolchain chips, so even when sections are collapsed
-  // the tech stack reads itself.
+  // Tools WITHIN each layer collaborate; layers stack R&D -> Production
+  // -> Runtime. The layer header shows its tool stack as chips, so even
+  // collapsed sections read as a tech-stack summary.
   {
     section:   "R&D",
     group:     "layer",
     layerNum:  1,
-    desc:      "Research + development — modeling, animation, and AI-driven texture stylization.",
+    desc:      "Modeling, animation, and AI-driven texture work — everything that happened before the camera turned on.",
     toolchain: ["Houdini", "SpeedTree", "Unreal Engine", "VAT bake", "Python · OSC", "AI Stylization"],
     items: [
       {
-        name:      "Artist-Directed Style Transfer",
-        ref:       "Diffusion-based texture stylization with controllable color preservation",
-        toolchain: ["IP-Adapter (Ye 2023)", "ControlNet (Zhang 2023)", "AdaIN (Huang & Belongie 2017)", "Diffusion"],
-        output:    "Painterly textures with preserved palette",
-        note:      "Two artist-selectable modes — Full Style Transfer (color + texture + tone from a reference) and Texture-Only Transfer (auto-grayscale reference + AdaIN to apply painterly brushwork while keeping the original color palette intact). Per-channel histogram matching + patch-wise AdaIN run post-generation to deterministically correct residual color drift — output stays faithful to the pre-approved palette across runs.",
+        name:      "AI Texture Stylization",
+        ref:       "Diffusion-based painterly tool with controllable color preservation",
+        toolchain: ["IP-Adapter", "ControlNet (Tile / Canny)", "AdaIN", "Diffusion"],
+        output:    "Painterly textures · pre-approved palette preserved",
+        note:      "Custom tool driving the painterly look on Daffodil + Landscape. Two artist-selectable modes — Full Style Transfer (color + texture + tone from a reference) and Texture-Only Transfer (auto-grayscale + AdaIN, preserves the original color palette). Per-channel histogram matching + patch-wise AdaIN run post-generation to deterministically correct residual color drift. Artist knobs: ControlNet mode, ControlNet strength, IP-Adapter strength, inference steps, guidance scale. PyTorch 2.11 / CUDA 13.0 on an NVIDIA RTX PRO 6000 Blackwell (96 GB VRAM) — 4K in ≈ 20 s at 20 inference steps, driven from a Gradio interface.",
         compare: {
           before: null,
           after:  null,
           labelA: "Original",
           labelB: "Stylized",
         },
-        source: "off-repo",
-      },
-      {
-        name:   "Stylization parameters",
-        ref:    "Artist-controllable knobs",
-        note:   "ControlNet Mode — Tile (colored renders, preserves pixel structure) / Canny (sketches, preserves edges) · ControlNet Strength · IP-Adapter Strength · Inference Steps · Guidance Scale.",
-        source: "Gradio interface",
-      },
-      {
-        name:   "Stylization implementation",
-        ref:    "PyTorch 2.11 · CUDA 13.0 · Python",
-        note:   "Runs on NVIDIA RTX PRO 6000 Blackwell (96 GB VRAM); generates a 4K image in ≈ 20 s at 20 inference steps.",
-        source: "off-repo",
       },
     ],
   },
 
   {
-    section:   "Pipeline",
+    section:   "Production",
     group:     "layer",
     layerNum:  2,
-    desc:      "Photographing the dressed Unreal scene and reconstructing it as a 3DGS.",
-    toolchain: ["Unreal Engine (assembly)", "Perforce", "Litchfield Studio", "COLMAP", "Postshot"],
+    desc:      "From the dressed Unreal scene to a trained 3D Gaussian Splat.",
+    toolchain: ["Unreal Engine", "Perforce", "Litchfield Studio", "COLMAP", "Postshot"],
     items: [
       {
-        name:   "Scene assembly",
-        ref:    "Unreal Engine — every asset set-dressed into one scene",
-        note:   "Perforce-backed version control across artists",
-        source: "off-repo",
+        name: "Scene assembly",
+        ref:  "Unreal Engine — every asset set-dressed into one scene",
+        note: "Perforce-backed version control across artists.",
       },
       {
-        name:   "Capture",
-        ref:    "Litchfield Studio capture pipeline",
-        source: "off-repo",
+        name: "Capture",
+        ref:  "Litchfield Studio capture pipeline",
       },
       {
         name:   "Pose reconstruction",
@@ -79,9 +62,8 @@ export const TECH_SPECS = [
         source: "src/colmap-loader.js:50",
       },
       {
-        name:   "Splat training",
-        ref:    "Postshot — per-splat Gaussian fit + SH coefficients",
-        source: "off-repo",
+        name: "Splat training",
+        ref:  "Postshot — per-splat Gaussian fit + SH coefficients",
       },
     ],
   },
@@ -95,27 +77,8 @@ export const TECH_SPECS = [
     items: [
       {
         name:   "3D Gaussian Splatting",
-        ref:    "Kerbl et al., SIGGRAPH 2023",
-        note:   "Per-splat ellipsoidal Gaussians + SH view-dep color",
-        source: "via @sparkjsdev/spark",
-      },
-      {
-        name:   "Point subform",
-        ref:    "Gaussian centers collapsed to isotropic points",
-        note:   "Same data, drawn as bare points so the sky shows through gaps",
-        source: "Spark subform · Customize ▸ Splat ▸ Point",
-      },
-      {
-        name:   "Quad — camera-facing billboard",
-        ref:    "OpenUSD UsdGeomPointInstancer · proto = Plane",
-        note:   "Per-instance positions / orientations / scales + primvars:displayColor",
-        source: "src/quadizer.js:1",
-      },
-      {
-        name:   "Voxel — uniform-grid binning",
-        ref:    "OpenUSD UsdGeomPointInstancer · proto = Cube",
-        note:   "Averaged color per cell — same per-instance arrays as Quad",
-        source: "src/voxelizer.js:1",
+        ref:    "Kerbl et al., SIGGRAPH 2023 · via @sparkjsdev/spark",
+        note:   "Per-splat ellipsoidal Gaussians + SH view-dependent colour. The Customize ▸ Splat toggle switches subforms in place: Gaussian (default), Point (collapsed centres — sky shows through), Quad (OpenUSD UsdGeomPointInstancer ▸ Plane, camera-facing billboards), Voxel (UsdGeomPointInstancer ▸ Cube, uniform-grid binned with averaged colour per cell).",
       },
       {
         name:   "Cinematic flythrough",
@@ -125,13 +88,15 @@ export const TECH_SPECS = [
       {
         name:   "Hand tracking",
         ref:    "MediaPipe HandLandmarker (tasks-vision 0.10.35)",
-        note:   "Pinch = click, drag = orbit. Two-hand mode = pinch-to-zoom + parallel-drag pan.",
+        note:   "Pinch = click, drag = orbit. Two-hand mode: pinch-to-zoom + parallel-drag pan.",
         source: "src/handtracking.js:1",
       },
     ],
   },
 
   // ============== Per-asset inventory ==============
+  // Ordered by narrative weight: centerpiece -> animated assets with
+  // deeper toolchains -> simpler assets -> the whole composite.
   {
     section: "Assets",
     group:   "assets",
@@ -149,22 +114,19 @@ export const TECH_SPECS = [
           label: "Houdini 3DGS simulation",
           title: "Shot4B_GS-FX_V08",
         },
-        source: "in-scene",
       },
       {
-        name:      "Grape Hyacinth",
+        name:      "Vine",
         location:  "Near gazebo",
-        worldPos:  [-0.195, -0.730, 2.379],
-        toolchain: ["Houdini (procedural)", "Unreal Engine (set dress)"],
-        output:    "Mesh dressed into env scene",
-        note:      "Houdini-generated cluster scattered across the gazebo planters",
-        compare: {
-          before: null,
-          after:  null,
-          labelA: "Original",
-          labelB: "Stylized",
+        worldPos:  [-0.90, -0.78, -3.24],
+        toolchain: ["Unreal Engine — Motion Graphics", "Unreal Engine — WPO shader"],
+        output:    "Animated vine growth · flowers driven by Motion Graphics, stems by WPO",
+        note:      "Vine growth render. The bloom heads use Unreal's Motion Graphics system for keyframed flowering; the stems run a custom material whose World Position Offset (WPO) drives the procedural growth path along the gazebo's framework.",
+        embed: {
+          src:   "https://player.vimeo.com/video/1191203718?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
+          label: "Vine growth · Unreal MG + WPO shader",
+          title: "Shot4B_Interaction",
         },
-        source:    "in-scene",
       },
       {
         name:      "Daffodil",
@@ -172,10 +134,7 @@ export const TECH_SPECS = [
         worldPos:  [0.28, -0.773, 2.226],
         toolchain: ["Houdini", "VAT bake", "Unreal Engine (set dress)", "Python · OSC · MediaPipe", "AI texture stylization"],
         output:    "Mesh + VAT animation · interactively driven in Unreal",
-        note:      "Animated procedurally in Houdini and VAT-baked, then set-dressed in Unreal. Inside the Unreal session, Python · OSC · MediaPipe drives the rig live (hand gesture → OSC → blueprint). Diffuse texture passes through the custom AI stylization tool.",
-        // Vimeo embed shown right under the toolchain in the asset card.
-        // src already has autoplay / muted / loop query params baked in;
-        // swap to a different Vimeo ID by replacing the URL.
+        note:      "Animated procedurally in Houdini and VAT-baked, then set-dressed in Unreal. Inside the Unreal session, Python · OSC · MediaPipe drives the rig live (hand gesture → OSC → blueprint). Diffuse texture passes through the AI stylization tool above.",
         embed: {
           src:   "https://player.vimeo.com/video/1191203670?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
           label: "VAT + OSC interaction",
@@ -187,44 +146,39 @@ export const TECH_SPECS = [
           labelA: "Original",
           labelB: "Stylized",
         },
-        source:    "in-scene",
       },
       {
-        name:      "Vine",
+        name:      "Grape Hyacinth",
         location:  "Near gazebo",
-        worldPos:  [-0.90, -0.78, -3.24],
-        toolchain: ["Unreal Engine — Motion Graphics", "Unreal Engine — WPO shader"],
-        output:    "Animated vine growth · flowers driven by Motion Graphics, stems by WPO",
-        note:      "Vine growth render. The bloom heads use Unreal's Motion Graphics system for keyframed flowering. The vine stems run a custom material whose World Position Offset (WPO) drives the procedural growth path along the gazebo's framework.",
-        embed: {
-          src:   "https://player.vimeo.com/video/1191203718?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
-          label: "Vine growth · Unreal MG + WPO shader",
-          title: "Shot4B_Interaction",
+        worldPos:  [-0.195, -0.730, 2.379],
+        toolchain: ["Houdini (procedural)", "Unreal Engine (set dress)"],
+        note:      "Houdini-generated cluster scattered across the gazebo planters.",
+        compare: {
+          before: null,
+          after:  null,
+          labelA: "Original",
+          labelB: "Stylized",
         },
-        source:    "in-scene",
       },
       {
         name:      "Tree",
         location:  "Near gazebo",
         toolchain: ["SpeedTree", "Unreal Engine (set dress)"],
-        output:    "Mesh dressed into env scene",
-        note:      "Procedural tree authored in SpeedTree, dressed into the Unreal scene before the env capture",
-        source:    "in-scene",
+        note:      "Procedural tree authored in SpeedTree, dressed into the Unreal scene before the env capture.",
       },
       {
         name:      "Landscape",
         location:  "Whole scene base",
         toolchain: ["Unreal Engine (terrain authoring)", "AI texture stylization"],
         output:    "Landscape mesh + AI-stylized ground textures",
-        note:      "Terrain authored directly in Unreal; ground textures passed through the custom AI stylization tool to land the painterly look in the final 3DGS.",
-        source:    "in-scene",
+        note:      "Terrain authored directly in Unreal; ground textures passed through the AI stylization tool to land the painterly look in the final 3DGS.",
       },
       {
         name:      "Garden Environment",
         location:  "Whole scene",
         toolchain: ["Unreal Engine (assembly)", "Litchfield Studio (capture)", "Postshot (training)"],
         output:    "3DGS · 990 COLMAP poses",
-        note:      "All set-dressed assets composited in Unreal, then captured at Litchfield Studio and trained as a single 3D Gaussian Splat in Postshot. The only stage where Postshot enters the pipeline.",
+        note:      "All set-dressed assets composited in Unreal, then captured at Litchfield Studio and trained as a single 3D Gaussian Splat in Postshot — the only stage where Postshot enters the pipeline.",
         source:    "public/Whole_With_Statue.splat",
       },
     ],
