@@ -1199,26 +1199,40 @@ async function loadSplat() {
       introOverlay.update(dur > 0 ? t / dur : 0, camMoveState === "playing");
     }
     // Lens shape — peak-at-midpoint pulse confined to the FIRST HALF of
-    // the clip ([PULSE_START, PULSE_END]). The lens is back at the user's
-    // pre-play values by t = 0.50, leaving the second half clear for the
-    // Quad → Voxel-Sphere showcase to read uncluttered.
-    //   fisheye(t) = prev + (PEAK    - prev) * sinT
-    //   squeeze(t) = prev + (PEAK_SQ - prev) * sinT
-    // Outside the [start, end] window sinT = 0 → both params sit on the
-    // user's pre-play state, so revertLerps is a no-op for them visually.
+    // the clip ([PULSE_START, PULSE_END]), then a separate FADE window
+    // at the tail that lerps the baseline from the user's saved value
+    // toward neutral (fisheye 0, squeeze 1.0). The lens reads as "fully
+    // off" by the last frame, so when revertLerps fires the user's
+    // saved lensOn flag takes over cleanly with no snap.
+    //   pulse:    fisheye/squeeze = baseline + (PEAK - baseline) * sinT
+    //   baseline: lerp(prev, neutral, fadeT)
     if (camMoveState === "playing" && dur > 0) {
       const PULSE_START_AT    = 0.15;
       const PULSE_END_AT      = 0.50;
+      const FADE_START_AT     = 0.80;
       const LENS_FISHEYE_PEAK = 0.26;
       const LENS_SQUEEZE_PEAK = 1.20;
       const tNorm = Math.max(0, Math.min(1, t / dur));
+
+      // Pulse contribution
       let sinT = 0;
       if (tNorm >= PULSE_START_AT && tNorm <= PULSE_END_AT) {
         const tLocal = (tNorm - PULSE_START_AT) / (PULSE_END_AT - PULSE_START_AT);
         sinT = Math.sin(tLocal * Math.PI);
       }
-      postfx.params.lensFisheye = camMovePrevLensFisheye + (LENS_FISHEYE_PEAK - camMovePrevLensFisheye) * sinT;
-      postfx.params.lensSqueeze = camMovePrevLensSqueeze + (LENS_SQUEEZE_PEAK - camMovePrevLensSqueeze) * sinT;
+
+      // Tail fade-out: baseline drifts from user's pre-play value toward
+      // neutral so by t = 1.0 the lens has no visible effect at all.
+      let fadeT = 0;
+      if (tNorm > FADE_START_AT) {
+        const raw = Math.min(1, (tNorm - FADE_START_AT) / (1 - FADE_START_AT));
+        fadeT = raw * raw * (3 - 2 * raw);                  // smoothstep
+      }
+      const baselineFisheye = camMovePrevLensFisheye * (1 - fadeT) + 0.0 * fadeT;
+      const baselineSqueeze = camMovePrevLensSqueeze * (1 - fadeT) + 1.0 * fadeT;
+
+      postfx.params.lensFisheye = baselineFisheye + (LENS_FISHEYE_PEAK - baselineFisheye) * sinT;
+      postfx.params.lensSqueeze = baselineSqueeze + (LENS_SQUEEZE_PEAK - baselineSqueeze) * sinT;
     }
   };
 
