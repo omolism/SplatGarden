@@ -222,15 +222,13 @@ window.__keyHints = keyHints;
 // gizmos) live here so they bypass the post-FX composer pipeline. Rendered
 // AFTER postfx.render() with autoClear=false so they sit cleanly on top.
 const techOverlayScene = new THREE.Scene();
-// Touch defaults — kill the heavy post-process passes (Bloom is the biggest
-// GPU tax; Underwater is fill-rate-heavy), hide the Hand Tracking panel
-// (needs a webcam aimed at the user's hands, awkward on a held device).
-// Tablets keep post-fx on; only phones get the full quality cut.
-if (IS_TOUCH) {
+// Touch defaults. Hand Tracking panel only hidden on PHONES (laptops
+// with touchscreens + iPads can still try the feature — touch detection
+// alone fired too aggressively and was hiding the panel for users with
+// working webcams). Heavy post-fx passes only stripped on phones too.
+if (IS_PHONE) {
   const handPanel = document.getElementById("hand-panel");
   if (handPanel) handPanel.style.display = "none";
-}
-if (IS_PHONE) {
   postfx.params.postEnable    = false;
   postfx.params.bloomEnable   = false;
   postfx.params.underwaterOn  = false;
@@ -683,6 +681,18 @@ async function loadSplat() {
       creditsCtrl.updateDisplay();
     }
   };
+
+  // Replay Intro — clears the first-visit flag and reloads so the camera
+  // move auto-plays again, with the title-sequence overlay, onboarding
+  // pointers, and Quad-popup auto-pop running fresh as if it were the
+  // user's first time on the site. Exposed on window so the mobile-nav
+  // drawer can also trigger it.
+  window.__replayIntro = () => {
+    try { localStorage.removeItem("splatgarden:visited:v1"); } catch {}
+    window.location.reload();
+  };
+  const replayCtrl = fTechSpec.add({ replay: window.__replayIntro }, "replay").name("↻ Replay Intro");
+  replayCtrl.domElement.title = "Reset the first-visit flag and reload so the opening cinematic plays again.";
 
   // Pipeline drawer is intentionally decoupled from Tech Spec Enable now.
   // The asset hotspots are on by default and the drawer is pure asset
@@ -1460,6 +1470,11 @@ async function loadSplat() {
   }
   function autoEnableEchoForClick() {
     if (!postfx?.params) return;
+    // Skip the auto-engaged echo trails on touch devices — the trail
+    // pass is fill-rate-heavy and reads poorly under the larger touch
+    // tap area, and the user explicitly didn't want it firing on mobile
+    // or iPad. Users can still enable Echo Trails manually via lil-gui.
+    if (IS_TOUCH) return;
     postfx.params.echoOn = true;
     refreshEchoGui();
     if (_echoAutoTimer) clearTimeout(_echoAutoTimer);

@@ -3503,7 +3503,19 @@ body.touch #mobile-nav-btn { display: flex; }
   #credits {
     width: min(480px, calc(100vw - 32px));
   }
-  .lil-gui.root { max-height: 80vh !important; }
+  /* Right-rail squeeze: shrink the UsdLayers panel and push lil-gui up
+   * closer so both fit on iPad-class viewports without overflowing. */
+  #usd-layers-panel {
+    width: 260px !important;
+    max-height: 360px !important;
+  }
+  .lil-gui.root {
+    top: 400px !important;
+    width: 260px !important;
+    max-height: calc(100vh - 420px) !important;
+  }
+  /* Annotation card narrower so it doesn't sit on top of the right rail. */
+  #usd-annotations { width: min(320px, calc(100vw - 320px)); right: 296px; }
 }
 
 /* Touch — bigger tap targets everywhere */

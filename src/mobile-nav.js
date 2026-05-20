@@ -67,6 +67,8 @@ export class MobileNav {
           <span class="mn-icon">▤</span><span class="mn-label">Profiler</span><span class="mn-key">P</span></button></li>
         <li><button data-target="credits">
           <span class="mn-icon">★</span><span class="mn-label">Credits</span></button></li>
+        <li><button data-target="replay">
+          <span class="mn-icon">↻</span><span class="mn-label">Replay Intro</span></button></li>
       </ul>
     `;
     document.body.appendChild(this.menu);
@@ -75,6 +77,11 @@ export class MobileNav {
       const btn = e.target?.closest?.("button[data-target]");
       if (!btn) return;
       const key = btn.dataset.target;
+      // Replay isn't a panel — it's a one-shot action that reloads.
+      if (key === "replay") {
+        window.__replayIntro?.();
+        return;
+      }
       const panel = RESOLVE[key]?.();
       if (!panel) return;
       // Each panel has its own toggle method; some use showFor for auto-
