@@ -882,9 +882,17 @@ async function loadSplat() {
   let camMovePrevSubform   = 0;      // restore on stop / finish
   let camMovePrevQuadVis   = 0;
   let camMovePrevQuadShape = null;   // "quad" | "circle"
-  // Lens distortion intro animation was REMOVED — the user wasn't
-  // happy with any of the bell / attack-decay / fade-out shapes we
-  // tried. Clean slate; new approach TBD.
+  // Lens-stab state: a single short distortion sting at the very start
+  // of the intro auto-play. Quick smoothstep rise, ease-out decay,
+  // gone by tNorm = 0.05. Replaces the sustained-pulse attempts that
+  // all felt wrong.
+  let camMovePrevLensOn      = false;
+  let camMovePrevLensFisheye = 0;
+  let camMovePrevLensSqueeze = 1;
+  let camMovePrevLensAmt     = 0;
+  let camMovePrevPostEnable  = true;
+  let _introLensActive       = false;     // currently inside the stab window
+  let _introTouchedLens      = false;     // ever fired during this play
   let camMovePrevCamFrustumsVisible = false;  // Training Cameras restore
   let _introFrustumsOn      = false;          // intra-tick edge detect
   let _introTouchedFrustums = false;          // ever toggled during intro?
@@ -919,7 +927,16 @@ async function loadSplat() {
   //   1 — Point → Gaussian         (back to 3DGS as the clip ends)
   function camMoveStartLerps() {
     camTimeline.style.display = "flex";
-    // (Lens distortion intro animation was removed pending a new design.)
+    // Lens-stab: stash user's pre-play state. Stab itself fires per-
+    // frame in __camMoveTick only when window.__autoPlayedIntro is set,
+    // so manual Play Camera Move presses don't get the sting.
+    camMovePrevLensOn      = postfx.params.lensOn;
+    camMovePrevLensFisheye = postfx.params.lensFisheye;
+    camMovePrevLensSqueeze = postfx.params.lensSqueeze;
+    camMovePrevLensAmt     = postfx.params.lensAmt;
+    camMovePrevPostEnable  = postfx.params.postEnable;
+    _introLensActive       = false;
+    _introTouchedLens      = false;
     camMovePrevCamFrustumsVisible = cameraFrustums?.visible ?? false;
     _introFrustumsOn      = false;
     _introTouchedFrustums = false;
@@ -991,8 +1008,18 @@ async function loadSplat() {
     camPhaseTimers.forEach(t => clearTimeout(t));
     camPhaseTimers = [];
     camTimeline.style.display = "none";
-    // (Lens distortion restore lines removed alongside the intro
-    // animation block — nothing to revert until a new design lands.)
+    // Restore lens distortion + post master if the stab ever touched
+    // them. Skip when no stab fired (manual play) so we don't fight
+    // any post-fx changes the user made mid-play.
+    if (_introTouchedLens) {
+      postfx.params.lensOn      = camMovePrevLensOn;
+      postfx.params.lensFisheye = camMovePrevLensFisheye;
+      postfx.params.lensSqueeze = camMovePrevLensSqueeze;
+      postfx.params.lensAmt     = camMovePrevLensAmt;
+      postfx.params.postEnable  = camMovePrevPostEnable;
+      _introLensActive  = false;
+      _introTouchedLens = false;
+    }
     // Restore Training Cameras visibility to its pre-intro state and
     // resync the lil-gui Tech Spec checkbox so the UI matches reality.
     // Check the touched flag (not the on flag) so we still restore when
@@ -1218,8 +1245,50 @@ async function loadSplat() {
         if (camCtrl) camCtrl.updateDisplay();
       }
     }
-    // (Lens animation block REMOVED — keeping the slate clean while
-    // we redesign the intro post-fx treatment.)
+    // Lens-stab — single short sting at the very start of the intro
+    // auto-play. tNorm 0 → 0.015 ramps the lens in (smoothstep), then
+    // 0.015 → 0.05 eases it back out (squared decay). Effect is gone
+    // by ~830 ms; the rest of the clip plays clean. Only fires for
+    // the first-visit auto-play (window.__autoPlayedIntro) so manual
+    // Play Camera Move presses don't get the sting.
+    if (window.__autoPlayedIntro && camMoveState === "playing" && dur > 0) {
+      const STAB_PEAK_AT   = 0.015;
+      const STAB_END_AT    = 0.050;
+      const PEAK_FISHEYE   = 0.18;
+      const PEAK_AMT       = -0.30;
+      const PEAK_SQUEEZE_D = 0.08;     // delta on top of 1.0
+      const tNormForStab = dur > 0 ? Math.max(0, Math.min(1, t / dur)) : 0;
+      if (tNormForStab <= STAB_END_AT) {
+        if (!_introTouchedLens) {
+          _introTouchedLens = true;
+          // Engage lens pass on first stab frame — keeps cost zero
+          // when the stab isn't running.
+          postfx.params.lensOn     = true;
+          postfx.params.postEnable = true;
+        }
+        let strength;
+        if (tNormForStab < STAB_PEAK_AT) {
+          const u = tNormForStab / STAB_PEAK_AT;
+          strength = u * u * (3 - 2 * u);              // smoothstep up
+        } else {
+          const u = (tNormForStab - STAB_PEAK_AT) / (STAB_END_AT - STAB_PEAK_AT);
+          strength = (1 - u) * (1 - u);                // squared ease-out
+        }
+        postfx.params.lensFisheye = strength * PEAK_FISHEYE;
+        postfx.params.lensAmt     = strength * PEAK_AMT;
+        postfx.params.lensSqueeze = 1 + strength * PEAK_SQUEEZE_D;
+        _introLensActive = true;
+      } else if (_introLensActive) {
+        // Just exited the stab window — restore the user's pre-play
+        // lens values for the remainder of the clip.
+        postfx.params.lensFisheye = camMovePrevLensFisheye;
+        postfx.params.lensSqueeze = camMovePrevLensSqueeze;
+        postfx.params.lensAmt     = camMovePrevLensAmt;
+        postfx.params.lensOn      = camMovePrevLensOn;
+        postfx.params.postEnable  = camMovePrevPostEnable;
+        _introLensActive = false;
+      }
+    }
   };
 
 
