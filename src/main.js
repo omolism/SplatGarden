@@ -338,9 +338,10 @@ async function loadSplat() {
     statusEl,
     // localStorage key scoped to the splat URL so swapping splats doesn't
     // bring along the wrong viewpoints.
-    // v2 — bumped when 'Zoom' was introduced, to evict stale localStorage
-    // entries that pre-date the new preset list.
-    storageKey: "splatgarden:viewpoints:v2:" + SPLAT_URL,
+    // v3 — bumped when the cardinal viewpoints (Front/Right/Back/Left/Top)
+    // were re-pivoted from the splat bounds centre to the gazebo's world
+    // position. Evicts older caches so the new pivots take effect.
+    storageKey: "splatgarden:viewpoints:v3:" + SPLAT_URL,
   });
   // Seed defaults silently — without this guard, each seeded add() would
   // write to localStorage and wipe any saved user-added viewpoints (e.g.

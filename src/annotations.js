@@ -294,12 +294,16 @@ export class AnnotationManager {
   // Seed a handful of default viewpoints around the model
   seedDefaults(boundsCenter, boundsRadius) {
     const r = boundsRadius * 1.6;
+    // SUBJECT is the gazebo — the actual visual centre of the scene, not
+    // the splat's geometric centroid (which gets pulled off by outlier
+    // splats). The four cardinal cameras + Top all orbit around this.
+    const SUBJECT = new THREE.Vector3(0.594, -0.561, 3.774);
     const presets = [
-      { name: "Front",  pos: new THREE.Vector3( 0, boundsRadius * 0.3,  r) },
-      { name: "Right",  pos: new THREE.Vector3( r, boundsRadius * 0.3,  0) },
-      { name: "Back",   pos: new THREE.Vector3( 0, boundsRadius * 0.3, -r) },
-      { name: "Left",   pos: new THREE.Vector3(-r, boundsRadius * 0.3,  0) },
-      { name: "Top",    pos: new THREE.Vector3( 0,  r * 1.1,  0.001) },
+      { name: "Front",  subject: SUBJECT, pos: new THREE.Vector3( 0, boundsRadius * 0.3,  r) },
+      { name: "Right",  subject: SUBJECT, pos: new THREE.Vector3( r, boundsRadius * 0.3,  0) },
+      { name: "Back",   subject: SUBJECT, pos: new THREE.Vector3( 0, boundsRadius * 0.3, -r) },
+      { name: "Left",   subject: SUBJECT, pos: new THREE.Vector3(-r, boundsRadius * 0.3,  0) },
+      { name: "Top",    subject: SUBJECT, pos: new THREE.Vector3( 0,  r * 1.1,  0.001) },
       // Center = camera placed at the geometric center of the splat bounds,
       // looking forward into the scene. OrbitControls treats the offset
       // between pos and target as the orbit radius, so we keep target ahead
@@ -326,9 +330,14 @@ export class AnnotationManager {
           : target.clone().add(new THREE.Vector3(0, boundsRadius * 0.3, r));
         anchor   = target.clone();
       } else {
-        position = boundsCenter.clone().add(p.pos);
-        target   = boundsCenter.clone().add(p.targetOffset ?? new THREE.Vector3());
-        anchor   = boundsCenter.clone().add(p.pos.clone().normalize().multiplyScalar(boundsRadius * 0.6));
+        // Pivot around the per-preset subject if declared, otherwise fall
+        // back to the splat's bounds centre. Cardinal views (Front, Right,
+        // Back, Left, Top) use the gazebo as subject so they all face the
+        // visual centre of the scene rather than the bounding-box centre.
+        const pivot = p.subject || boundsCenter;
+        position = pivot.clone().add(p.pos);
+        target   = pivot.clone().add(p.targetOffset ?? new THREE.Vector3());
+        anchor   = pivot.clone().add(p.pos.clone().normalize().multiplyScalar(boundsRadius * 0.6));
       }
       const vp = this.addViewpoint({ name: p.name, anchor, position, target });
       if (p.name === "Center") centerVp = vp;
