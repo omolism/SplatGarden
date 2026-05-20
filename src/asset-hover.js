@@ -156,6 +156,7 @@ export class AssetHoverManager {
     this.items          = (items || []).filter(it => Array.isArray(it.worldPos));
     this._pinned        = null;   // item locked open by click — survives mouseleave
     this._visible       = true;   // whole layer toggle; user-uploaded splats hide it
+    this._hiddenNames   = new Set();   // per-asset toggle from the Pipeline drawer
     this.onAssetSelect  = null;   // called with the item on click (camera fly-to hook)
 
     this.dots = this.items.map(it => {
@@ -289,11 +290,29 @@ export class AssetHoverManager {
     }
   }
 
+  // Hide / show a single asset by name. Wired from the Pipeline drawer's
+  // per-item ON/OFF toggle so users can declutter the scene for screenshots.
+  // The dot itself stays hidden via the _hiddenNames check in update().
+  setItemVisible(name, on) {
+    if (on) this._hiddenNames.delete(name);
+    else    this._hiddenNames.add(name);
+    if (!on && this._pinned?.name === name) {
+      this._pinned = null;
+      this._hide();
+    }
+  }
+
   // Call once per frame after the camera matrices are current.
   update() {
     if (!this._visible || !this.camera || !this.canvas) return;
     const rect = this.canvas.getBoundingClientRect();
     for (const d of this.dots) {
+      // Per-asset toggle from the Pipeline drawer wins over the projection
+      // logic — if hidden, skip the math entirely.
+      if (this._hiddenNames.has(d.item.name)) {
+        d.el.style.display = "none";
+        continue;
+      }
       _v.copy(d.world).project(this.camera);
       const offscreen = _v.z > 1 || _v.x < -1.1 || _v.x > 1.1 || _v.y < -1.1 || _v.y > 1.1;
       if (offscreen) {

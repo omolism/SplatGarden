@@ -165,14 +165,29 @@ export const TECH_SPECS = [
   },
 ];
 
-function renderItem(it) {
+function renderItem(it, visMap) {
   const isAsset = Array.isArray(it.toolchain) && it.toolchain.length > 0;
+  // Only assets with a worldPos have a hotspot in the scene, so only those
+  // get the ON/OFF toggle. Default visibility is ON unless the user has
+  // toggled it OFF (state persisted in localStorage by the TechSpec class).
+  const hasHotspot = Array.isArray(it.worldPos);
+  const on = !visMap || visMap.get(it.name) !== false;
+  const toggle = hasHotspot
+    ? `<button class="ts-hotspot-toggle" data-act="toggle-hotspot"
+         data-asset-name="${it.name}" data-on="${on ? "1" : "0"}"
+         title="Show / hide ${it.name} hotspot in the scene"
+         aria-pressed="${on ? "true" : "false"}">
+         <span class="ts-toggle-dot"></span>
+         <span class="ts-toggle-label">${on ? "ON" : "OFF"}</span>
+       </button>`
+    : "";
 
-  // 1. Title row — big asset name + optional location chip
+  // 1. Title row — big asset name + optional location chip + hotspot toggle
   const head = `
     <header class="ts-item-head">
       <h3 class="ts-item-name">${it.name}</h3>
       ${it.location ? `<span class="ts-item-loc">${it.location}</span>` : ""}
+      ${toggle}
     </header>`;
 
   // 2. Sub-line — short technical tagline (ref). Sits right under the title.
@@ -288,9 +303,15 @@ export function wireCompareFrame(frame) {
   frame.addEventListener("pointerleave",  endDrag);
 }
 
+const HOTSPOT_VIS_STORAGE_KEY = "splatgarden:hotspot-visibility:v1";
+
 export class TechSpec {
   constructor({ mountEl = document.body } = {}) {
     this.open = false;
+    // Per-asset hotspot visibility. Map<name, boolean>. Missing key == ON.
+    // Persisted across reloads via localStorage.
+    this.assetVisible = this._loadVisibility();
+    this.onAssetToggle = null;   // (name, on) => void — wired by main.js
 
     this.el = document.createElement("div");
     this.el.id = "tech-spec";
@@ -331,7 +352,7 @@ export class TechSpec {
                 <div class="ts-sec-desc">${s.desc}</div>
                 ${layerTools}
                 <ul class="ts-list">
-                  ${s.items.map(renderItem).join("")}
+                  ${s.items.map(it => renderItem(it, this.assetVisible)).join("")}
                 </ul>
               </section>`;
           }).join("")}
@@ -353,6 +374,24 @@ export class TechSpec {
         const sec = h.closest(".ts-sec");
         sec.classList.toggle("collapsed");
       });
+    });
+
+    // Hotspot ON/OFF toggle on each asset item. Delegated so the listener
+    // survives any future re-render. stopPropagation keeps the section
+    // collapse handler above from firing.
+    this.el.addEventListener("click", (e) => {
+      const btn = e.target?.closest?.('[data-act="toggle-hotspot"]');
+      if (!btn || !this.el.contains(btn)) return;
+      e.stopPropagation();
+      const name = btn.dataset.assetName;
+      const next = !(this.assetVisible.get(name) !== false);
+      this.assetVisible.set(name, next);
+      btn.dataset.on = next ? "1" : "0";
+      btn.setAttribute("aria-pressed", next ? "true" : "false");
+      const lbl = btn.querySelector(".ts-toggle-label");
+      if (lbl) lbl.textContent = next ? "ON" : "OFF";
+      this._saveVisibility();
+      this.onAssetToggle?.(name, next);
     });
 
     // Wire drag handles on every inline before/after compare widget.
@@ -377,5 +416,20 @@ export class TechSpec {
     this.open = false;
     this.el.classList.remove("show");
     this.onOpenChange?.(false);
+  }
+
+  _loadVisibility() {
+    try {
+      const raw = localStorage.getItem(HOTSPOT_VIS_STORAGE_KEY);
+      if (!raw) return new Map();
+      const obj = JSON.parse(raw);
+      return new Map(Object.entries(obj));
+    } catch { return new Map(); }
+  }
+  _saveVisibility() {
+    try {
+      const obj = Object.fromEntries(this.assetVisible);
+      localStorage.setItem(HOTSPOT_VIS_STORAGE_KEY, JSON.stringify(obj));
+    } catch { /* quota / disabled — silent */ }
   }
 }

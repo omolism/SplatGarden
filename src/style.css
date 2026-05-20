@@ -1152,6 +1152,51 @@ kbd {
   white-space: nowrap;
 }
 
+/* Hotspot ON/OFF pill — sits at the right edge of an asset item header.
+ * Echoes ts-item-loc visually but is interactive: click toggles the
+ * asset's floating dot in the scene. ON = bright green LED + white label;
+ * OFF = dim red LED + muted label. */
+#tech-spec .ts-hotspot-toggle {
+  align-self: flex-start;
+  margin-top: 2px;
+  margin-left: auto;        /* push to the far right of the header row */
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--hair-strong);
+  padding: 3px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--text);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+#tech-spec .ts-hotspot-toggle:hover {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.30);
+}
+#tech-spec .ts-hotspot-toggle .ts-toggle-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #6bd779;
+  box-shadow: 0 0 6px rgba(107, 215, 121, 0.65);
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+#tech-spec .ts-hotspot-toggle[data-on="0"] {
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.02);
+}
+#tech-spec .ts-hotspot-toggle[data-on="0"] .ts-toggle-dot {
+  background: rgba(255, 120, 120, 0.55);
+  box-shadow: none;
+}
+
 /* 2. Subtitle — technical descriptor under the name (dimmer than the
  *    note paragraph so the body text doesn't compete with the title) */
 #tech-spec .ts-item-sub {

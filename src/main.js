@@ -185,6 +185,14 @@ const assetHover = new AssetHoverManager({
 });
 window.__assetHover = assetHover;
 
+// Bridge the Pipeline drawer's per-asset ON/OFF toggles to the hotspot
+// manager. Initial pass replays any visibility persisted from a previous
+// session (techSpec loaded it from localStorage on construction).
+for (const [name, on] of techSpec.assetVisible) {
+  if (on === false) assetHover.setItemVisible(name, false);
+}
+techSpec.onAssetToggle = (name, on) => assetHover.setItemVisible(name, on);
+
 // Quick Guide — bottom-centre card with mouse + key shortcuts. Auto-pops on
 // scene entry (showFor below in loadSplat's end), summon back with H.
 const keyHints = new KeyHints({
