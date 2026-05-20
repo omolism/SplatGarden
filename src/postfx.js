@@ -956,12 +956,13 @@ export function setupPostFX(renderer, scene, camera) {
   }
 
   function attachGUI(parentGui) {
-    // Post-Process lives under Customize > Play. Fall back through older
-    // buildGUI shapes if those refs aren't exposed.
-    const customizeParent = parentGui.fPlay || parentGui.fCustomize || parentGui;
+    // Post-Process now sits directly under Customize (sibling of Play),
+    // not nested inside Play — the colour-grading chain isn't a "toy" and
+    // burying it one extra fold hurt discoverability.
+    const customizeParent = parentGui.fCustomize || parentGui;
 
-    // Post-Process — Sketchfab-style finishing effects, all under one folder.
-    // The master "Enable" checkbox at the top kills every pass at once.
+    // Post-Process — colour-grading + polish chain. The master "Enable"
+    // checkbox at the top kills every pass at once.
     const fPost = customizeParent.addFolder("Post-Process").close();
     fPost.add(params, "postEnable").name("Enable");
 
