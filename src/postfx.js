@@ -976,31 +976,8 @@ export function setupPostFX(renderer, scene, camera) {
     fPost.add(params, "contrast",   0.5, 2.0, 0.01).name("Contrast");
     fPost.add(params, "saturation", 0.0, 2.0, 0.01).name("Saturation");
 
-    // Painterly is a NPR finishing pass. Style selector at the top; each
-    // style's tunables live inside their own sub-folder so the user only
-    // sees the knobs that matter for the current look. Folders auto-open
-    // when their style is selected (and the others auto-close).
-    // Painterly: Style picker AT THE TOP, per-style detail folders below.
-    // Switching style auto-opens only the relevant detail folder.
-    const fPaint = fPost.addFolder("Painterly").close();
-    let fMonet, fMatisse, fSeurat;
-    fPaint.add(params, "painterly", Object.keys(PAINTERLY_INDEX)).name("Style")
-      .onChange((v) => {
-        [fMonet, fMatisse, fSeurat].forEach(f => f?.close());
-        if (v === "Monet")   fMonet.open();
-        if (v === "Matisse") fMatisse.open();
-        if (v === "Seurat")  fSeurat.open();
-      });
-    fMonet   = fPaint.addFolder("Monet").close();
-    fMatisse = fPaint.addFolder("Matisse").close();
-    fSeurat  = fPaint.addFolder("Seurat").close();
-    fMonet.add(params, "monetRadius",         1,   8,  0.5 ).name("Radius");
-    fMatisse.add(params, "matissePosterize",  2,  12,  1   ).name("Posterize");
-    fMatisse.add(params, "matisseEdge",       0.0, 1.0, 0.01).name("Edge");
-    fMatisse.add(params, "matisseSaturation", 0.5, 3.0, 0.05).name("Saturation");
-    fSeurat.add(params, "seuratDotSize",      2,   40, 0.5 ).name("Dot Size");
-    fSeurat.add(params, "seuratSat",          0.5, 3.0, 0.05).name("Saturation");
-    fSeurat.add(params, "seuratPaper",        0.0, 1.0, 0.01).name("Paper Tint");
+    // Painterly was promoted into the top-level "Cinematic FX" folder by
+    // attachFeaturedFX(). Post-Process below covers colour-grading only.
 
     const fEcho = fPost.addFolder("Echo Trails").close();
     fEcho.add(params, "echoOn").name("Enable");
@@ -1074,7 +1051,32 @@ export function setupPostFX(renderer, scene, camera) {
     fKal.add(params, "mix", 0.0, 1.0, 0.02).name("Mix");
     fKal.add(params, "centerX", 0.0, 1.0, 0.01).name("Center X");
     fKal.add(params, "centerY", 0.0, 1.0, 0.01).name("Center Y");
-    return { fLens, fUw, fKal };
+
+    // Painterly — NPR finishing pass. Style picker at the top; each style's
+    // detail knobs live in their own sub-folder so the user only sees the
+    // knobs that matter for the current look. Switching style auto-opens
+    // the relevant detail folder and closes the other two.
+    const fPaint = parent.addFolder("Painterly").close();
+    let fMonet, fMatisse, fSeurat;
+    fPaint.add(params, "painterly", Object.keys(PAINTERLY_INDEX)).name("Style")
+      .onChange((v) => {
+        [fMonet, fMatisse, fSeurat].forEach(f => f?.close());
+        if (v === "Monet")   fMonet.open();
+        if (v === "Matisse") fMatisse.open();
+        if (v === "Seurat")  fSeurat.open();
+      });
+    fMonet   = fPaint.addFolder("Monet").close();
+    fMatisse = fPaint.addFolder("Matisse").close();
+    fSeurat  = fPaint.addFolder("Seurat").close();
+    fMonet.add(params, "monetRadius",         1,   8,  0.5 ).name("Radius");
+    fMatisse.add(params, "matissePosterize",  2,  12,  1   ).name("Posterize");
+    fMatisse.add(params, "matisseEdge",       0.0, 1.0, 0.01).name("Edge");
+    fMatisse.add(params, "matisseSaturation", 0.5, 3.0, 0.05).name("Saturation");
+    fSeurat.add(params, "seuratDotSize",      2,   40, 0.5 ).name("Dot Size");
+    fSeurat.add(params, "seuratSat",          0.5, 3.0, 0.05).name("Saturation");
+    fSeurat.add(params, "seuratPaper",        0.0, 1.0, 0.01).name("Paper Tint");
+
+    return { fLens, fUw, fKal, fPaint };
   }
 
   return { composer, params, render, setSize, attachGUI, attachFeaturedFX };

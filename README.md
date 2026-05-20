@@ -153,12 +153,10 @@ Top-level folder grouping the character-defining effects so they're separate fro
 
 | Effect | Knobs |
 |---|---|
-| Lens Distortion | Fisheye blend / FOV / Distortion / Zoom / Dispersion / Center / Anamorphic squeeze |
+| Lens Distortion | Fisheye blend / FOV / Distortion / Zoom / Dispersion / Center / Anamorphic squeeze. Pulses 0 → 1 → 0 during camera-move playback. |
 | Underwater | Caustic strength + scale, tint RGB + amount, wave shimmer, darken |
 | Kaleidoscope | Segments / rotation speed / zoom / mix / center |
-| Particles | Enable shortcut (knobs live in the `Particles` folder under Customize) |
-
-The Particles checkbox mirrors the main Particles folder — toggling either updates both.
+| Painterly | Style picker (Monet / Matisse / Seurat) with per-style detail folders that auto-open on selection |
 
 ## Customize
 
@@ -185,10 +183,9 @@ Master `Enable` kills every pass at once. Bloom defaults off. Colour-grading and
 | Bloom | Strength / Radius / Threshold |
 | Tonemap | None / Reinhard / Cineon / ACES |
 | Colour | Exposure / Contrast / Saturation |
-| Painterly | Monet (Kuwahara) / Matisse (posterize + Sobel) / Seurat (pointillism) — auto-disables when Quad or Voxel is visible |
 | Echo Trails | Bell-curve auto-ramp on click |
 | Warp FX | Domain-warped fractal overlay |
-| Vignette · Chromatic Aberration · Film Grain | Standard knobs |
+| Vignette / Chromatic Aberration / Film Grain | Standard knobs |
 
 Defaults: `exposure 1.10 · contrast 1.08 · saturation 1.15`.
 

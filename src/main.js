@@ -1132,8 +1132,11 @@ async function loadSplat() {
     damping:       0.94,
     gravityY:      -0.4,
     alpha:         1.0,
-    colorCool:     "#4cbfff",
-    colorHot:      "#ff8c33",
+    // Sakura palette — quiet pastel for the velocity-field baseline,
+    // warmer rose for the high-density peaks. Reads as cherry blossom
+    // under additive blending.
+    colorCool:     "#ffd1dc",
+    colorHot:      "#ff8fb1",
   };
   const fGpParticles = (gui.fCustomize || gui).addFolder("Particles").close();
   fGpParticles.add(gpParticleParams, "enable").name("Enable")
