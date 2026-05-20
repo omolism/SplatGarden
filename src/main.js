@@ -20,7 +20,7 @@ import { PipelineHUD } from "./pipeline-hud.js";
 import { SceneLayers } from "./scene-layers.js";
 import { KeyHints } from "./key-hints.js";
 import { uniforms as effectUniforms } from "./effects.js";
-import { loadColmapImages, buildColmapFrustums } from "./colmap-loader.js";
+import { loadColmapImages, buildColmapFrustums, colmapCameraPosition, colmapCameraRotation } from "./colmap-loader.js";
 
 // All public-folder assets resolve against BASE_URL so the same build
 // works at the root (`npm run dev`) and under a sub-path (GitHub Pages
@@ -501,6 +501,39 @@ async function loadSplat() {
       }
 
       console.info(`[COLMAP] ${images.length} poses → ${sampled.length} frustums`);
+
+      // ----- Center viewpoint = COLMAP capture cam #582 -----------------
+      // The artist picked frame #582 as the canonical "centered on subject"
+      // pose. Find it in the full (non-subsampled) image set, mirror the
+      // 180° X flip the splat mesh + frustums already use, and patch the
+      // Center viewpoint with that camera's position + forward look.
+      const TARGET_CAM_ID = 582;
+      const cam582 =
+        images.find(im => im.imageId === TARGET_CAM_ID) ||
+        images[TARGET_CAM_ID - 1] ||
+        images[TARGET_CAM_ID];
+      const centerVpRef = annotations?.viewpoints.find(v => v.name === "Center");
+      if (cam582 && centerVpRef) {
+        const camPos = colmapCameraPosition(cam582);
+        const camRot = colmapCameraRotation(cam582);
+        camPos.y = -camPos.y;            // same flipX180 as buildColmapFrustums
+        camPos.z = -camPos.z;
+        camRot.premultiply(new THREE.Quaternion(1, 0, 0, 0));
+        // COLMAP camera looks down +Z in camera space — push the target
+        // ahead by ~1.5 m so OrbitControls has a sane orbit radius.
+        const fwd = new THREE.Vector3(0, 0, 1).applyQuaternion(camRot);
+        const camTgt = camPos.clone().add(fwd.multiplyScalar(1.5));
+        centerVpRef.position.copy(camPos);
+        centerVpRef.target.copy(camTgt);
+        if (annotations.activeId === centerVpRef.id) {
+          camera.position.copy(camPos);
+          controls.target.copy(camTgt);
+          controls.update();
+        }
+        console.info(`[COLMAP] Center viewpoint patched to cam #${TARGET_CAM_ID}`);
+      } else {
+        console.warn(`[COLMAP] cam #${TARGET_CAM_ID} not found — Center keeps seed default`);
+      }
     })
     .catch(err => {
       console.warn("[COLMAP] failed to load:", err?.message ?? err);
@@ -808,37 +841,9 @@ async function loadSplat() {
           statusEl.textContent = "Camera move complete";
         });
 
-        // ----- Center viewpoint = camera-move frame CENTER_FRAME ------
-        // Sample the animation POSITION at frame 460, override the look
-        // direction to point at the scene bounds centre (the gazebo area).
-        // The FBX keyframe's forward vector isn't aimed at the subject —
-        // we want Center to literally face the gazebo regardless.
-        const CENTER_FRAME = 460;
-        const centerVpRef = annotations?.viewpoints.find(v => v.name === "Center");
-        if (centerVpRef) {
-          const dur = camAction.getClip().duration;
-          const t   = Math.min(Math.max(CENTER_FRAME / CAM_FPS, 0), dur);
-          camAction.enabled = true;
-          camAction.paused  = true;
-          camAction.time    = t;
-          camMixer.update(0);
-          camAnimNode.updateWorldMatrix(true, false);
-
-          const sampledPos = new THREE.Vector3();
-          camAnimNode.getWorldPosition(sampledPos);
-
-          // Reset the action so the Play button starts from the top.
-          camAction.stop();
-          camAction.time = 0;
-
-          centerVpRef.position.copy(sampledPos);
-          centerVpRef.target.copy(center);
-          if (annotations.activeId === centerVpRef.id) {
-            camera.position.copy(centerVpRef.position);
-            controls.target.copy(centerVpRef.target);
-            controls.update();
-          }
-        }
+        // Center viewpoint is patched by the COLMAP loader to capture
+        // cam #582 (see loadColmapImages .then above). FBX patching
+        // removed — the cinematic flythrough no longer owns Center.
       } catch (err) {
         console.warn("[CameraMove] failed:", err?.message ?? err);
         statusEl.textContent = "Camera move failed: " + (err?.message ?? err);

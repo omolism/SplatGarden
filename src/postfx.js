@@ -846,6 +846,10 @@ export function setupPostFX(renderer, scene, camera) {
     bloomPass.setSize(w, h);
     echoPass.setSize(w, h);
     painterlyPass.uniforms.uResolution.value.set(w, h);
+    // WarpFxShader uses uResolution for aspect-correct UVs + derivative
+    // lighting. Without this update the aspect was permanently (1, 1) so
+    // the fractal squashed to a slit and the embossed light went flat.
+    warpFxPass.uniforms.uResolution.value.set(w, h);
   }
 
   let polishTime = 0;
