@@ -302,17 +302,22 @@ export class AnnotationManager {
 
   // Seed a handful of default viewpoints around the model
   seedDefaults(boundsCenter, boundsRadius) {
-    const r = boundsRadius * 1.6;
     // SUBJECT is the gazebo — the actual visual centre of the scene, not
     // the splat's geometric centroid (which gets pulled off by outlier
     // splats). The four cardinal cameras + Top all orbit around this.
     const SUBJECT = new THREE.Vector3(0.594, -0.561, 3.774);
+    // Fixed cardinal-orbit radius. The whole authored content (gazebo +
+    // hyacinth + daffodil + landscape patch) sits inside a ~2 m sphere
+    // around SUBJECT, so 3.5 m from the subject frames it tightly without
+    // pulling outlier splats into shot. boundsRadius can be 10 m+ once
+    // the noisy far splats are counted in, hence we don't scale by it.
+    const r = 3.5;
     const presets = [
-      { name: "Front",  subject: SUBJECT, pos: new THREE.Vector3( 0, boundsRadius * 0.3,  r) },
-      { name: "Right",  subject: SUBJECT, pos: new THREE.Vector3( r, boundsRadius * 0.3,  0) },
-      { name: "Back",   subject: SUBJECT, pos: new THREE.Vector3( 0, boundsRadius * 0.3, -r) },
-      { name: "Left",   subject: SUBJECT, pos: new THREE.Vector3(-r, boundsRadius * 0.3,  0) },
-      { name: "Top",    subject: SUBJECT, pos: new THREE.Vector3( 0,  r * 1.1,  0.001) },
+      { name: "Front",  subject: SUBJECT, pos: new THREE.Vector3( 0, r * 0.30,  r) },
+      { name: "Right",  subject: SUBJECT, pos: new THREE.Vector3( r, r * 0.30,  0) },
+      { name: "Back",   subject: SUBJECT, pos: new THREE.Vector3( 0, r * 0.30, -r) },
+      { name: "Left",   subject: SUBJECT, pos: new THREE.Vector3(-r, r * 0.30,  0) },
+      { name: "Top",    subject: SUBJECT, pos: new THREE.Vector3( 0, r * 1.10,  0.001) },
       // Center = camera placed at the geometric center of the splat bounds,
       // looking forward into the scene. OrbitControls treats the offset
       // between pos and target as the orbit radius, so we keep target ahead
@@ -346,7 +351,11 @@ export class AnnotationManager {
         const pivot = p.subject || boundsCenter;
         position = pivot.clone().add(p.pos);
         target   = pivot.clone().add(p.targetOffset ?? new THREE.Vector3());
-        anchor   = pivot.clone().add(p.pos.clone().normalize().multiplyScalar(boundsRadius * 0.6));
+        // Anchor scale matches the camera distance so the numbered dot
+        // sits just outside the subject, not on the bounding-sphere of
+        // outlier splats (which would push markers off-screen).
+        const camDist = p.pos.length() || 1;
+        anchor   = pivot.clone().add(p.pos.clone().normalize().multiplyScalar(camDist * 0.6));
       }
       const vp = this.addViewpoint({ name: p.name, anchor, position, target });
       if (p.name === "Center") centerVp = vp;
