@@ -114,10 +114,17 @@ export class SceneLayers {
   _buildPanel(mountEl) {
     this.el = document.createElement("aside");
     this.el.id = "scene-panel";
+    // Chevron-left button on the LEFT of the header collapses the panel
+    // off-screen (same shape as the Viewpoints sidebar collapse — JS in
+    // main.js wires the slide + floating expand handle).
     this.el.innerHTML = `
       <header>
+        <button id="scene-toggle" class="sidebar-toggle" title="Collapse panel" aria-label="Collapse panel" aria-expanded="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="14 6 8 12 14 18"/>
+          </svg>
+        </button>
         <div class="title">Scene</div>
-        <button class="scene-min" title="Minimize">&minus;</button>
         <button class="add-splat" title="Add a splat layer (or drag a file onto the scene)">+ Add</button>
       </header>
       <ul class="layer-list"></ul>
@@ -135,24 +142,9 @@ export class SceneLayers {
     if (this.addBtn) {
       this.addBtn.addEventListener("click", () => this.onAddRequest?.());
     }
-    // Minimize toggle — same Blender-style behaviour as the Viewport
-    // Tuner: − / + button + clicking the header itself.
-    this.minimized = false;
-    const minBtn = this.el.querySelector(".scene-min");
-    const header = this.el.querySelector("header");
-    if (minBtn && header) {
-      const toggle = () => {
-        this.minimized = !this.minimized;
-        this.el.classList.toggle("minimized", this.minimized);
-        minBtn.innerHTML = this.minimized ? "&plus;" : "&minus;";
-        minBtn.title     = this.minimized ? "Expand"  : "Minimize";
-      };
-      minBtn.addEventListener("click", (e) => { e.stopPropagation(); toggle(); });
-      header.addEventListener("click", (e) => {
-        if (e.target.closest("button")) return;
-        toggle();
-      });
-    }
+    // (Collapse wiring is centralised in main.js — see setupCollapsiblePanel.
+    // The chevron above is the click target; main.js attaches the slide
+    // + floating expand handle + localStorage persistence.)
   }
 
   _render() {

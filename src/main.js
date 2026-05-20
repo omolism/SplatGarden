@@ -116,8 +116,6 @@ const loadingText  = document.getElementById("loading-text");
 const annoLayer    = document.getElementById("annotation-layer");
 const viewList     = document.getElementById("viewpoint-list");
 const addBtn       = document.getElementById("add-viewpoint");
-const sidebarEl    = document.getElementById("sidebar");
-const sidebarToggleBtn = document.getElementById("sidebar-toggle");
 const statusEl     = document.getElementById("status");
 const handToggle   = document.getElementById("hand-toggle");
 const handVideo    = document.getElementById("hand-video");
@@ -157,46 +155,84 @@ document.body.classList.toggle("tablet", IS_TABLET);
 document.body.classList.toggle("mobile", IS_MOBILE);   // legacy alias
 
 // ---------------------------------------------------------------------------
-// Sidebar collapse / expand. Desktop + iPad — phone hides the sidebar
-// entirely so the collapse affordance is irrelevant there. State is
-// persisted in localStorage so the user's "I don't need this right now"
-// choice survives reloads.
+// Collapsible panels — Viewpoints (#sidebar), Scene (#scene-panel), and
+// Hand Tracking (#hand-panel). Each one gets:
+//   • a chevron-left button in / on the panel that slides it off-screen
+//   • a chevron-right floating handle at the viewport edge that brings
+//     it back, with a per-panel vertical position
+//   • localStorage persistence so the choice survives reloads
+// Skipped on phone — the phone layout hides these panels via CSS and
+// has its own bottom-bar navigation instead.
 // ---------------------------------------------------------------------------
-const SIDEBAR_COLLAPSED_KEY = "splatgarden:sidebar-collapsed";
-const sidebarExpandBtn = (() => {
-  // Build the floating expand handle once at startup. CSS hides it
-  // unless body has .has-collapsed-sidebar, so creating it here is
-  // free for users who never collapse.
-  const btn = document.createElement("button");
-  btn.id = "sidebar-expand";
-  btn.title = "Expand panel";
-  btn.setAttribute("aria-label", "Expand panel");
-  btn.innerHTML = `
+function setupCollapsiblePanel({
+  panelSelector,      // CSS selector for the panel element
+  toggleSelector,     // CSS selector for the in-panel collapse trigger
+  storageKey,         // localStorage key for persisting the collapsed flag
+  expandId,           // id for the floating expand handle to be created
+  expandClass,        // shared class on every expand handle for common styling
+  expandLabel,        // aria-label / title for the expand handle
+  minimizedClass,     // class added to the panel + body when collapsed
+  bodyClass,          // class added to body when collapsed (drives CSS)
+}) {
+  const panel = document.querySelector(panelSelector);
+  if (!panel) return null;
+  const toggleBtn = panel.querySelector(toggleSelector);
+
+  const expandBtn = document.createElement("button");
+  expandBtn.id = expandId;
+  expandBtn.className = expandClass;
+  expandBtn.title = expandLabel;
+  expandBtn.setAttribute("aria-label", expandLabel);
+  expandBtn.innerHTML = `
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
       <polyline points="10 6 16 12 10 18"/>
     </svg>`;
-  document.body.appendChild(btn);
-  return btn;
-})();
-function setSidebarCollapsed(on, persist = true) {
-  if (!sidebarEl) return;
-  sidebarEl.classList.toggle("sidebar-minimized", on);
-  document.body.classList.toggle("has-collapsed-sidebar", on);
-  sidebarToggleBtn?.setAttribute("aria-expanded", String(!on));
-  if (persist) {
-    try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, on ? "1" : "0"); } catch {}
+  document.body.appendChild(expandBtn);
+
+  const setCollapsed = (on, persist = true) => {
+    panel.classList.toggle(minimizedClass, on);
+    document.body.classList.toggle(bodyClass, on);
+    toggleBtn?.setAttribute("aria-expanded", String(!on));
+    if (persist) {
+      try { localStorage.setItem(storageKey, on ? "1" : "0"); } catch {}
+    }
+  };
+
+  toggleBtn?.addEventListener("click", () => setCollapsed(true));
+  expandBtn .addEventListener("click", () => setCollapsed(false));
+  if (!IS_PHONE) {
+    try {
+      if (localStorage.getItem(storageKey) === "1") setCollapsed(true, false);
+    } catch {}
   }
+  return { setCollapsed };
 }
-sidebarToggleBtn?.addEventListener("click", () => setSidebarCollapsed(true));
-sidebarExpandBtn .addEventListener("click", () => setSidebarCollapsed(false));
-// Restore previous state on load. Skipped on phone (sidebar is hidden
-// via CSS there anyway, and we don't want a stray floating expand
-// handle showing up next to the bottom-bar).
-if (!IS_PHONE) {
-  try {
-    if (localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1") setSidebarCollapsed(true, false);
-  } catch {}
-}
+
+setupCollapsiblePanel({
+  panelSelector:  "#sidebar",
+  toggleSelector: "#sidebar-toggle",
+  storageKey:     "splatgarden:sidebar-collapsed",
+  expandId:       "sidebar-expand",
+  expandClass:    "panel-expand-handle",
+  expandLabel:    "Expand Viewpoints",
+  minimizedClass: "sidebar-minimized",
+  bodyClass:      "has-collapsed-sidebar",
+});
+// Hand Tracking lives at the bottom-left so its expand handle sits
+// near the bottom of the rail; its minimize chevron is the absolute-
+// positioned corner button added in index.html.
+setupCollapsiblePanel({
+  panelSelector:  "#hand-panel",
+  toggleSelector: "#hand-min-toggle",
+  storageKey:     "splatgarden:hand-collapsed",
+  expandId:       "hand-expand",
+  expandClass:    "panel-expand-handle",
+  expandLabel:    "Expand Hand Tracking",
+  minimizedClass: "hand-minimized",
+  bodyClass:      "has-collapsed-hand",
+});
+// (Scene panel collapse is set up below, after SceneLayers is built —
+// scene-layers.js attaches the chevron button as part of its DOM.)
 
 // ---------------------------------------------------------------------------
 // Renderer / scene / camera
@@ -300,6 +336,18 @@ const sceneLayers = new SceneLayers({
 });
 window.__sceneLayers = sceneLayers;
 _hudRefs.sceneLayers = sceneLayers;   // RENDER HUD sums splats across visible layers
+// Scene panel collapse — wired here (not earlier) because SceneLayers
+// constructs its own DOM and the chevron button only exists after.
+setupCollapsiblePanel({
+  panelSelector:  "#scene-panel",
+  toggleSelector: "#scene-toggle",
+  storageKey:     "splatgarden:scene-collapsed",
+  expandId:       "scene-expand",
+  expandClass:    "panel-expand-handle",
+  expandLabel:    "Expand Scene",
+  minimizedClass: "sidebar-minimized",   // reuse the same slide-off-left class
+  bodyClass:      "has-collapsed-scene",
+});
 
 // Asset hover hotspots — project each TECH_SPECS asset's worldPos onto the
 // viewport. Hover a dot for the poster-style info card. worldPos values
