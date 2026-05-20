@@ -137,8 +137,8 @@ export const TECH_SPECS = [
     section:   "3DGS",
     group:     "layer",
     layerNum:  3,
-    desc:      "Capturing the dressed Unreal scene at Litchfield Studio and training it as a 3D Gaussian Splat in Postshot.",
-    toolchain: ["Litchfield Studio", "COLMAP", "Postshot", "Spark"],
+    desc:      "Capturing the dressed Unreal scene at Lichtfeld Studio and training it as a 3D Gaussian Splat in Postshot.",
+    toolchain: ["Lichtfeld Studio", "COLMAP", "Postshot", "Spark"],
     items: [
       {
         name: "3D Gaussian Splatting",
@@ -147,8 +147,8 @@ export const TECH_SPECS = [
       },
       {
         name:   "Capture",
-        ref:    "Litchfield Studio capture pipeline",
-        note:   "The whole Unreal scene is photographed at the Litchfield Studio rig — multi-camera array sweeping the subject for downstream reconstruction.",
+        ref:    "Lichtfeld Studio capture pipeline",
+        note:   "The whole Unreal scene is photographed at the Lichtfeld Studio rig — multi-camera array sweeping the subject for downstream reconstruction.",
       },
       {
         name:   "Pose reconstruction",

@@ -3,7 +3,7 @@
 An asset-pipeline showcase built around a 3D Gaussian Splat web viewer. The scene is a Houdini / SpeedTree / Unreal garden, trained as 3DGS, served back as an inspectable, hot-swappable, USD-aware artifact. Built on **Spark** + **Three.js** + **Vite**.
 
 ```
-SpeedTree · Houdini · Unreal Engine  →  Postshot / Litchfield Studio  →  .splat
+SpeedTree · Houdini · Unreal Engine  →  Postshot / Lichtfeld Studio  →  .splat
                                                                             │
                                                                             ▼
                             ┌─────────────── SplatGarden Studio ──────────────┐
@@ -34,10 +34,10 @@ Right-side slide-in. The information-design centerpiece of the showcase — orga
 
 | Section | Contents |
 |---|---|
-| **3DGS** | The render primitive (Kerbl 2023) + Point subform + the full production chain: Unreal scene assembly (Perforce) → Litchfield Studio capture → COLMAP SfM → Postshot training → Houdini camera flythrough. |
+| **3DGS** | The render primitive (Kerbl 2023) + Point subform + the full production chain: Unreal scene assembly (Perforce) → Lichtfeld Studio capture → COLMAP SfM → Postshot training → Houdini camera flythrough. |
 | **USD** | OpenUSD interop — Quad and Voxel subforms expressed as `UsdGeomPointInstancer` prims (proto = Plane / Cube + `primvars:displayColor`). |
 | **AI** | Custom diffusion-based texture tool — IP-Adapter + ControlNet (Tile / Canny) + AdaIN. Drives the painterly look on Daffodil + Landscape textures. Full vs Texture-Only modes. PyTorch 2.11 / CUDA 13.0 / RTX PRO 6000 Blackwell. |
-| **Assets** | Per-asset cards with tool-chain chip rows. Each asset ends at Unreal set dress; only the final Garden Environment touches Litchfield + Postshot. Covers Grape Hyacinth, Daffodil, Tree, Landscape, Garden Environment. |
+| **Assets** | Per-asset cards with tool-chain chip rows. Each asset ends at Unreal set dress; only the final Garden Environment touches Lichtfeld + Postshot. Covers Grape Hyacinth, Daffodil, Tree, Landscape, Garden Environment. |
 | **Input & Sensing** | MediaPipe hand tracking |
 
 ### Pipeline HUD — RENDER (`top-left`)
