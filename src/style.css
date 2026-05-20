@@ -3997,6 +3997,21 @@ body.touch #key-hints {
    the full panel when they ask for it. */
 body.touch .lil-gui.root           { display: none !important; }
 body.touch #mobile-sheet .lil-gui.root { display: block !important; }
+/* Camera-move timeline + intro overlay phase text both default to
+   bottom-anchored coordinates that pre-date the bottom-bar. Without
+   these overrides they stack on top of the bar AND each other during
+   intro playback (CAPTURE eyebrow / "Captured in Unreal Engine" / the
+   timeline F-43/397 strip all collide in ~50 px of vertical space).
+   Lift each one above the previous so the stack reads cleanly:
+     [phase text]                ← bottom: 150 + safe-area
+     [timeline strip]            ← bottom: 72  + safe-area
+     [bottom bar (54px + safe)]  ← bottom: 0 */
+body.touch .cam-timeline {
+  bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+}
+body.touch #intro-overlay .io-phase {
+  bottom: calc(150px + env(safe-area-inset-bottom, 0px));
+}
 
 /* ============================================================
  * Responsive — phone (<768px) and tablet (768-1024px) tuning
