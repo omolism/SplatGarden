@@ -2363,13 +2363,15 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 #asset-hover-card {
   /* No default centering — _anchorCardToDot() in asset-hover.js sets
    * left/top so the card sits next to the dot the user is hovering
-   * (right or left), eliminating the centre-jump flicker. */
+   * (right or left), eliminating the centre-jump flicker. z-index sits
+   * above lil-gui (1001) so an asset card pinned via click reads on
+   * top of the side panel; Credits modal (1100) still wins above it. */
   position: fixed;
   top: 36px;
   left: 36px;
   width: min(600px, 72vw);
   max-height: calc(100vh - 160px);
-  z-index: 25;
+  z-index: 1050;
   background: var(--panel-strong);
   backdrop-filter: blur(28px) saturate(140%);
   -webkit-backdrop-filter: blur(28px) saturate(140%);
@@ -2984,18 +2986,16 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   50%      { transform: translateX(-6px); }
 }
 
-/* Pointer placement — pinned to viewport edges. data-i drives the
- * stacking so callouts don't overlap. Pipeline (T) high-right,
- * Tuner (K) mid-right, Scene panel high-left, 3DGS/USD mid-left
- * (points at the new top-rail panel that moved into the Render HUD
- * slot). */
-#onboarding-pointers .op-tip[data-i="0"] { top: 22%; right: 5vw; }
-#onboarding-pointers .op-tip[data-i="1"] { top: 42%; right: 5vw; }
-#onboarding-pointers .op-tip[data-i="2"] { top: 22%; left: 5vw; flex-direction: row-reverse; }
-#onboarding-pointers .op-tip[data-i="3"] { top: 50%; left: 20vw; flex-direction: row-reverse; }
-#onboarding-pointers .op-tip[data-i="2"] .op-arrow,
-#onboarding-pointers .op-tip[data-i="3"] .op-arrow {
-  /* Mirror the arrow so it points back at the left-side panels.
+/* Pointer placement — pinned to viewport edges. Three right-side
+ * pointers stack vertically (3DGS/USD at top of lil-gui, Pipeline T
+ * mid-right, Viewport Tuner K lower-right). Scene panel sits on the
+ * left rail. */
+#onboarding-pointers .op-tip[data-i="0"] { top: 30%; right: 5vw; }
+#onboarding-pointers .op-tip[data-i="1"] { top: 50%; right: 5vw; }
+#onboarding-pointers .op-tip[data-i="2"] { top: 30%; left:  5vw; flex-direction: row-reverse; }
+#onboarding-pointers .op-tip[data-i="3"] { top: 10%; right: 5vw; }
+#onboarding-pointers .op-tip[data-i="2"] .op-arrow {
+  /* Mirror the arrow so it points back at the left-side Scene panel.
    * Compose with the bob animation by using a separate keyframe set. */
   transform: scaleX(-1);
   animation: op-arrow-bob-left 1.6s ease-in-out infinite;
@@ -3055,8 +3055,21 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   padding: 4px 6px 8px;
 }
 #usd-layers-panel.usd-embedded header {
-  padding: 10px 12px 8px;
-  background: rgba(255, 255, 255, 0.02);
+  padding: 6px 12px 6px;
+  background: transparent;
+  border-bottom: 1px solid var(--hair);
+}
+#usd-layers-panel.usd-embedded header .title {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-mid);
+}
+#usd-layers-panel.usd-embedded .usd-upload {
+  font-size: 9.5px;
+  padding: 3px 8px;
+  border-radius: 4px;
 }
 #usd-layers-panel header {
   display: flex;
@@ -3097,45 +3110,39 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   overflow-y: auto;
   flex: 1;
 }
-/* Section header — separates "3DGS" from "USD". Outranks the row
- * labels visually: bigger title, accent rule below, dim blurb. */
+/* Section header — quiet label matching lil-gui's folder title weight.
+ * No blurb line, no bold display type; the section is just a marker
+ * between groups of rows so the panel reads like a tighter Post-Process
+ * folder rather than its own visual world. */
 #usd-layers-panel .usd-section-head {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1px;
-  padding: 14px 8px 10px;
-  margin-top: 6px;
-  border-top: 1px solid var(--hair);
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 8px 2px;
+  margin-top: 2px;
 }
 #usd-layers-panel .usd-section-head:first-child {
-  border-top: 0;
   margin-top: 0;
-  padding-top: 6px;
+  padding-top: 2px;
 }
 #usd-layers-panel .usd-section-name {
   font-family: var(--font-ui);
-  font-size: 14px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--text);
-  line-height: 1.1;
-}
-#usd-layers-panel .usd-section-blurb {
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.16em;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-dim);
+  color: var(--text-mid);
+  line-height: 1;
 }
+#usd-layers-panel .usd-section-blurb { display: none; }
 
 #usd-layers-panel .usd-row {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 8px 8px;
+  gap: 4px;
+  padding: 5px 8px;
   border-radius: var(--radius-sm);
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--text);
   transition: background 0.12s;
 }
@@ -3174,18 +3181,19 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 #usd-layers-panel .usd-name {
   font-weight: 500;
   letter-spacing: 0.01em;
+  font-size: 11.5px;
 }
 #usd-layers-panel .usd-badge {
   margin-left: auto;
   font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.08em;
+  font-size: 8.5px;
+  letter-spacing: 0.05em;
   color: var(--text-dim);
   text-transform: none;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--hair);
-  border-radius: 3px;
-  padding: 2px 6px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
   white-space: nowrap;
 }
 

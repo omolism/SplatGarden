@@ -332,9 +332,12 @@ async function loadSplat() {
   splat.updateGenerator();
   const gui = buildGUI(effects);
   postfx.attachGUI(gui);
-  // No inline top / width overrides — UsdLayers now nests INSIDE lil-gui
-  // (see below) so the two read as one panel. lil-gui's own default
-  // top: 0 / right: 0 anchor is fine.
+  // Push lil-gui inward from the viewport edges so the panel doesn't
+  // hug the right border (a little bleed reads more polished). Also
+  // cap its height so it doesn't run all the way to the bottom edge.
+  gui.domElement.style.top         = "18px";
+  gui.domElement.style.right       = "18px";
+  gui.domElement.style.maxHeight   = "calc(100vh - 36px)";
   // Top-level "Cinematic FX" — promotes the character-defining post-FX
   // (Lens Distortion / Underwater / Kaleidoscope) out of the colour-grading
   // Post-Process folder so they're immediately discoverable. The Particles
@@ -881,6 +884,7 @@ async function loadSplat() {
   let camMovePrevLensOn      = false;     // lens-pulse state restore
   let camMovePrevLensFisheye = 0;
   let camMovePrevLensSqueeze = 1;
+  let camMovePrevLensAmt     = 0;
   let camMovePrevPostEnable  = true;
   // No more tail-ease — the previous 0.10x dt slowdown was perceived as a
   // stutter ("顿了一下") rather than a smooth deceleration. Let the FBX
@@ -922,6 +926,7 @@ async function loadSplat() {
     camMovePrevLensOn      = postfx.params.lensOn;
     camMovePrevLensFisheye = postfx.params.lensFisheye;
     camMovePrevLensSqueeze = postfx.params.lensSqueeze;
+    camMovePrevLensAmt     = postfx.params.lensAmt;
     camMovePrevPostEnable  = postfx.params.postEnable;
     postfx.params.lensOn     = true;
     postfx.params.postEnable = true;
@@ -1002,6 +1007,7 @@ async function loadSplat() {
     postfx.params.lensOn      = camMovePrevLensOn;
     postfx.params.lensFisheye = camMovePrevLensFisheye;
     postfx.params.lensSqueeze = camMovePrevLensSqueeze;
+    postfx.params.lensAmt     = camMovePrevLensAmt;
     postfx.params.postEnable  = camMovePrevPostEnable;
 
     if (!effects) return;
@@ -1229,6 +1235,11 @@ async function loadSplat() {
       }
       postfx.params.lensFisheye = camMovePrevLensFisheye + (LENS_FISHEYE_PEAK - camMovePrevLensFisheye) * strength;
       postfx.params.lensSqueeze = camMovePrevLensSqueeze + (LENS_SQUEEZE_PEAK - camMovePrevLensSqueeze) * strength;
+      // Lens "Distortion" (lensAmt) — defaults to -1.0 (full barrel)
+      // which is too strong for the intro. Animate 0 → -0.5 → 0 so the
+      // peak distortion stays inside the cap the user asked for.
+      const LENS_AMT_PEAK = -0.5;
+      postfx.params.lensAmt = LENS_AMT_PEAK * strength;
     }
   };
 
