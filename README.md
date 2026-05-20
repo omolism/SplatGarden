@@ -57,7 +57,7 @@ The Pipeline drawer does not toggle the 3D overlays — it is purely documentati
 ### Viewpoints (sidebar, top-left)
 Numbered hotspots in 3D plus a sidebar list. Smooth eased camera tween between poses.
 
-- `1` Front · `2` Right · `3` Back · `4` Left · `5` Top · `6` Center · `7` Zoom
+- `1` Front · `2` Center · `3` Zoom
 - `V` — arm "add viewpoint" (next click on the splat anchors it)
 - `C` — overwrite the Center viewpoint with the current camera pose
 - `R` — reset framing

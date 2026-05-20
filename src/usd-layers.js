@@ -167,16 +167,11 @@ export class UsdLayers {
   _render() {
     if (!this.listEl) return;
     let html = "";
-    let prevSection = null;
+    // Inner "3DGS" / "USD" section sub-headers were intentionally
+    // dropped to match the lil-gui folder visual style (Post-Process,
+    // HDR Sky, etc.). The panel reads as one flat list of rows under
+    // the single folder-style header "3DGS / USD".
     for (const row of ROWS) {
-      if (row.section !== prevSection) {
-        html += `
-          <li class="usd-section-head">
-            <span class="usd-section-name">${row.section}</span>
-            <span class="usd-section-blurb">${SECTION_BLURBS[row.section] || ""}</span>
-          </li>`;
-        prevSection = row.section;
-      }
       const on  = this.params[row.visKey] !== false;
       const cur = this.params[row.shapeKey];
       const pills = row.shapes.map(s => `

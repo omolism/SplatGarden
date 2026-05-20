@@ -318,25 +318,12 @@ export class AnnotationManager {
     // — clear of the dense ground layer, still close enough to be a
     // sane viewer's eye level rather than a top-down.
     const presets = [
-      // Front / Right / Back / Left — hand-tuned absolute poses captured
-      // live via the K viewport tuner and baked here so fresh installs
-      // open with the same framing. Each one is an off-axis composition
-      // that no generic SUBJECT-orbit math would land on.
+      // Front — hand-tuned absolute pose. The Right / Back / Left / Top
+      // cardinal viewpoints used to live here but were removed at the
+      // user's request to keep the numbered shortcut list tight.
       { name: "Front",
         absolutePos:    new THREE.Vector3(-1.687,  0.284,  2.195),
         absoluteTarget: new THREE.Vector3(-1.133, -0.278, -0.997) },
-      { name: "Right",
-        absolutePos:    new THREE.Vector3( 6.224,  0.903, -0.275),
-        absoluteTarget: new THREE.Vector3(-0.586, -0.226, -1.593) },
-      { name: "Back",
-        absolutePos:    new THREE.Vector3(-0.622, -0.441, -7.911),
-        absoluteTarget: new THREE.Vector3(-0.438, -0.462,  3.765) },
-      { name: "Left",
-        absolutePos:    new THREE.Vector3(-7.839,  0.824,  2.751),
-        absoluteTarget: new THREE.Vector3(-3.394,  0.125, -0.548) },
-      { name: "Top",
-        absolutePos:    new THREE.Vector3(-1.017, 21.344, -1.562),
-        absoluteTarget: new THREE.Vector3(-1.017, -0.575, -1.562) },
       // Center = camera placed at the geometric center of the splat bounds,
       // looking forward into the scene. OrbitControls treats the offset
       // between pos and target as the orbit radius, so we keep target ahead

@@ -373,9 +373,25 @@ html, body {
   background: var(--hover-strong);
   border-color: rgba(255, 255, 255, 0.22);
 }
-/* Minimized state — header stays, layer list + hint collapse. */
+/* Animated minimize — list + hint collapse via max-height + opacity. */
+#scene-panel .layer-list,
+#scene-panel .hint {
+  overflow: hidden;
+  max-height: 800px;
+  opacity: 1;
+  transition: max-height 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity    0.18s ease,
+              padding    0.28s cubic-bezier(0.22, 1, 0.36, 1),
+              margin     0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
 #scene-panel.minimized .layer-list,
-#scene-panel.minimized .hint { display: none; }
+#scene-panel.minimized .hint {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin: 0;
+}
 #scene-panel.minimized header { cursor: pointer; }
 #scene-panel .layer-list {
   list-style: none;
@@ -2026,9 +2042,22 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   border-color: rgba(255, 255, 255, 0.22);
   color: var(--text);
 }
-/* Minimized state — header stays visible, body collapses. Clicking
- * the header itself toggles back to expanded. */
-#viewpoint-tuner.minimized .vt-body { display: none; }
+/* Animated minimize — body collapses via max-height + opacity so the
+ * header stays put while the contents slide out cleanly. */
+#viewpoint-tuner .vt-body {
+  overflow: hidden;
+  max-height: 1200px;
+  opacity: 1;
+  transition: max-height 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity    0.18s ease,
+              padding    0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+#viewpoint-tuner.minimized .vt-body {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
 #viewpoint-tuner.minimized .vt-head { cursor: pointer; }
 
 #viewpoint-tuner .vt-body { padding: 12px 14px 14px; }

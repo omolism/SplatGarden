@@ -435,9 +435,10 @@ async function loadSplat() {
     statusEl,
     // localStorage key scoped to the splat URL so swapping splats doesn't
     // bring along the wrong viewpoints.
-    // v9 — Front switched from generic SUBJECT-orbit math to a hand-tuned
-    // absolute pose (see annotations.js seedDefaults).
-    storageKey: "splatgarden:viewpoints:v9:" + SPLAT_URL,
+    // v10 — Right / Back / Left / Top removed from seedDefaults so only
+    // Front / Center / Zoom remain. Bump evicts any cached user copies
+    // that still had the 7-viewpoint set.
+    storageKey: "splatgarden:viewpoints:v10:" + SPLAT_URL,
   });
   // Seed defaults silently — without this guard, each seeded add() would
   // write to localStorage and wipe any saved user-added viewpoints (e.g.

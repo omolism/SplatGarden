@@ -18,7 +18,7 @@ const SECTIONS = [
   {
     title: "Jump to a view",
     rows: [
-      [`<kbd>1</kbd>&ndash;<kbd>7</kbd>`, "Numbered viewpoints"],
+      [`<kbd>1</kbd>&ndash;<kbd>3</kbd>`, "Numbered viewpoints"],
     ],
   },
   {
