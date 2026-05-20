@@ -44,10 +44,13 @@ function renderSimVideo(v) {
 
 function renderEmbed(e) {
   if (!e || !e.src) return "";
+  // Default 16:9; per-asset embeds can override with e.aspectRatio
+  // (any valid CSS aspect-ratio value, e.g. "3 / 2" or "1000 / 667").
+  const aspectStyle = e.aspectRatio ? ` style="aspect-ratio: ${escapeHtml(e.aspectRatio)};"` : "";
   return `
     <section class="ah-section ah-embed">
       <div class="ah-sec-title">${escapeHtml(e.label || "Video")}</div>
-      <div class="ah-embed-frame">
+      <div class="ah-embed-frame"${aspectStyle}>
         <iframe
           src="${escapeHtml(e.src)}"
           title="${escapeHtml(e.title || e.label || "embedded video")}"

@@ -1122,8 +1122,9 @@ async function loadSplat() {
       introOverlay.update(dur > 0 ? t / dur : 0, camMoveState === "playing");
     }
     // Lens shape — two pulses driven by the same tNorm:
-    //   * Fisheye blend: starts / ends at 0.26 (subtle bend), dips to 0
-    //     at midpoint via 0.26 * (1 - sin(πt)).
+    //   * Fisheye blend: 0.26 at boundaries, dips to 0.15 (not 0) at
+    //     midpoint so the bend doesn't disappear entirely. Formula:
+    //     0.26 - 0.11 * sin(πt).
     //   * Anamorphic squeeze: starts / ends at 1.0 (neutral, "no squeeze"
     //     since 0.5..2.0 is the slider range), peaks at 1.0 + 0.2 = 1.2
     //     at midpoint via 1 + 0.2 * sin(πt). Inverted shape from fisheye
@@ -1131,11 +1132,12 @@ async function loadSplat() {
     // Fires every play (manual + first-visit auto-play). camMoveRevertLerps
     // snaps both params back to whatever the user had pre-play.
     if (camMoveState === "playing" && dur > 0) {
-      const LENS_PULSE_LEVEL    = 0.26;
+      const LENS_FISHEYE_BOUND  = 0.26;
+      const LENS_FISHEYE_MID    = 0.15;
       const SQUEEZE_PEAK_OFFSET = 0.20;
       const tNorm = Math.max(0, Math.min(1, t / dur));
       const sinT  = Math.sin(tNorm * Math.PI);
-      postfx.params.lensFisheye = LENS_PULSE_LEVEL * (1 - sinT);
+      postfx.params.lensFisheye = LENS_FISHEYE_BOUND - (LENS_FISHEYE_BOUND - LENS_FISHEYE_MID) * sinT;
       postfx.params.lensSqueeze = 1.0 + SQUEEZE_PEAK_OFFSET * sinT;
     }
   };

@@ -83,6 +83,9 @@ export const TECH_SPECS = [
           src:   "https://player.vimeo.com/video/1191203718?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
           label: "Vine growth · Unreal MG + WPO shader",
           title: "Shot4B_Interaction",
+          // Source clip is taller than 16:9 — match Vimeo's reported
+          // 66.73% padding-top (height/width ≈ 0.6673, roughly 3:2).
+          aspectRatio: "1000 / 667",
         },
       },
       {
