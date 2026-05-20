@@ -881,11 +881,9 @@ async function loadSplat() {
   let camMovePrevSubform   = 0;      // restore on stop / finish
   let camMovePrevQuadVis   = 0;
   let camMovePrevQuadShape = null;   // "quad" | "circle"
-  let camMovePrevLensOn      = false;     // lens-pulse state restore
-  let camMovePrevLensFisheye = 0;
-  let camMovePrevLensSqueeze = 1;
-  let camMovePrevLensAmt     = 0;
-  let camMovePrevPostEnable  = true;
+  // Lens distortion intro animation was REMOVED — the user wasn't
+  // happy with any of the bell / attack-decay / fade-out shapes we
+  // tried. Clean slate; new approach TBD.
   let camMovePrevCamFrustumsVisible = false;  // Training Cameras restore
   let _introFrustumsOn      = false;          // intra-tick edge detect
   let _introTouchedFrustums = false;          // ever toggled during intro?
@@ -920,26 +918,10 @@ async function loadSplat() {
   //   1 — Point → Gaussian         (back to 3DGS as the clip ends)
   function camMoveStartLerps() {
     camTimeline.style.display = "flex";
-    // Stash + arm the lens-distortion pulse — animated 0 → 1 → 0 across
-    // the clip in __camMoveTick. Done before the effects-null bail so the
-    // pulse fires regardless of whether the FX dyno controller exists.
-    // postEnable also gets force-on so the pulse renders on phones (where
-    // post-fx defaults off) without enabling Bloom / Underwater (those
-    // stayed off because their individual *On flags weren't touched).
-    camMovePrevLensOn      = postfx.params.lensOn;
-    camMovePrevLensFisheye = postfx.params.lensFisheye;
-    camMovePrevLensSqueeze = postfx.params.lensSqueeze;
-    camMovePrevLensAmt     = postfx.params.lensAmt;
-    camMovePrevPostEnable  = postfx.params.postEnable;
+    // (Lens distortion intro animation was removed pending a new design.)
     camMovePrevCamFrustumsVisible = cameraFrustums?.visible ?? false;
     _introFrustumsOn      = false;
     _introTouchedFrustums = false;
-    postfx.params.lensOn     = true;
-    postfx.params.postEnable = true;
-    // No snap on fisheye / squeeze — the per-frame pulse formula evaluates
-    // to the saved pre-play values at sinT=0 (start and end of the pulse
-    // window), so frame 0 and the final frame both naturally land on the
-    // user's pre-move state.
 
     if (!effects) return;
     camMovePrevSubform   = effects.targetSubform ?? 0;
@@ -1008,13 +990,8 @@ async function loadSplat() {
     camPhaseTimers.forEach(t => clearTimeout(t));
     camPhaseTimers = [];
     camTimeline.style.display = "none";
-    // Restore the lens distortion (and the post-process master toggle) to
-    // whatever the user had set before the camera move took it over.
-    postfx.params.lensOn      = camMovePrevLensOn;
-    postfx.params.lensFisheye = camMovePrevLensFisheye;
-    postfx.params.lensSqueeze = camMovePrevLensSqueeze;
-    postfx.params.lensAmt     = camMovePrevLensAmt;
-    postfx.params.postEnable  = camMovePrevPostEnable;
+    // (Lens distortion restore lines removed alongside the intro
+    // animation block — nothing to revert until a new design lands.)
     // Restore Training Cameras visibility to its pre-intro state and
     // resync the lil-gui Tech Spec checkbox so the UI matches reality.
     // Check the touched flag (not the on flag) so we still restore when
@@ -1240,39 +1217,8 @@ async function loadSplat() {
         if (camCtrl) camCtrl.updateDisplay();
       }
     }
-    // Lens shape — active across t = [0.15, 0.625] with a quick attack
-    // then a slow decay (cosine ease-out) so the lens reads as a single
-    // sustained effect that fades away naturally, not a bell-curve
-    // pulse. Outside the window the lens lands on user's pre-play
-    // baseline; revertLerps takes it from there with no snap.
-    //   strength(t) = ramp-in (0.15 → 0.20) ; cos ease-out (0.20 → 0.625)
-    //   fisheye = prev + (PEAK_FISHEYE - prev) * strength
-    //   squeeze = prev + (PEAK_SQUEEZE - prev) * strength
-    if (camMoveState === "playing" && dur > 0) {
-      const LENS_START_AT     = 0.15;
-      const LENS_ATTACK_END   = 0.20;
-      const LENS_DECAY_END    = 0.625;
-      const LENS_FISHEYE_PEAK = 0.26;
-      const LENS_SQUEEZE_PEAK = 1.20;
-      const tNorm = Math.max(0, Math.min(1, t / dur));
-      let strength = 0;
-      if (tNorm >= LENS_START_AT && tNorm <= LENS_DECAY_END) {
-        if (tNorm < LENS_ATTACK_END) {
-          const attack = (tNorm - LENS_START_AT) / (LENS_ATTACK_END - LENS_START_AT);
-          strength = attack * attack * (3 - 2 * attack);          // smoothstep
-        } else {
-          const decay = (tNorm - LENS_ATTACK_END) / (LENS_DECAY_END - LENS_ATTACK_END);
-          strength = Math.cos(decay * Math.PI / 2);               // quarter cos
-        }
-      }
-      postfx.params.lensFisheye = camMovePrevLensFisheye + (LENS_FISHEYE_PEAK - camMovePrevLensFisheye) * strength;
-      postfx.params.lensSqueeze = camMovePrevLensSqueeze + (LENS_SQUEEZE_PEAK - camMovePrevLensSqueeze) * strength;
-      // Lens "Distortion" (lensAmt) — defaults to -1.0 (full barrel)
-      // which is too strong for the intro. Animate 0 → -0.5 → 0 so the
-      // peak distortion stays inside the cap the user asked for.
-      const LENS_AMT_PEAK = -0.5;
-      postfx.params.lensAmt = LENS_AMT_PEAK * strength;
-    }
+    // (Lens animation block REMOVED — keeping the slate clean while
+    // we redesign the intro post-fx treatment.)
   };
 
 
