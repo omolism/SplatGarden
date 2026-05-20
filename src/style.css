@@ -4593,6 +4593,21 @@ body.mobile #mobile-studio-btn { display: flex; }
   background: transparent !important;
 }
 
+/* Phone-landscape asset card: viewport is wide but only ~430 px
+   tall, while the floating card's natural size is tuned for desktop
+   / iPad height — the card ate 70 % of the viewport. Proportionally
+   scale it down using `zoom` (NOT `transform: scale`) because zoom
+   updates the layout coordinate system, so the JS anchor logic in
+   asset-hover.js (which reads `offsetWidth` / `getBoundingClientRect`
+   to position the card next to its dot) still works correctly.
+   Targets only short landscape viewports — iPad in landscape (height
+   ≥ 700 px) keeps the full-size card. */
+@media (orientation: landscape) and (max-height: 520px) {
+  #asset-hover-card {
+    zoom: 0.72;
+  }
+}
+
 /* ============================================================
  * Phone LANDSCAPE adaptation — narrow phones (<768) in landscape
  * still trigger body.mobile, but the viewport is wide + short. The
