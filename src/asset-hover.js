@@ -85,7 +85,7 @@ function renderCard(it) {
 
     ${it.embed ? renderEmbed(it.embed) : ""}
 
-    <section class="ah-section ah-media-row">
+    ${(media.style || media.original || media.result) ? `<section class="ah-section ah-media-row">
       <div class="ah-sec-title">Texture Stylization</div>
       <div class="ah-triptych">
         <figure>
@@ -101,7 +101,7 @@ function renderCard(it) {
           <figcaption>Result</figcaption>
         </figure>
       </div>
-    </section>
+    </section>` : ""}
 
     ${features.length > 0 ? `<section class="ah-section">
       <div class="ah-sec-title">Key Features</div>

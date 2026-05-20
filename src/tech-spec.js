@@ -118,7 +118,7 @@ export const TECH_SPECS = [
       {
         name:      "Vine",
         location:  "Near gazebo",
-        worldPos:  [-0.90, -0.78, -3.24],
+        worldPos:  [0.5, -0.926, 3.258],
         toolchain: ["Unreal Engine — Motion Graphics", "Unreal Engine — WPO shader"],
         output:    "Animated vine growth · flowers driven by Motion Graphics, stems by WPO",
         note:      "Vine growth render. The bloom heads use Unreal's Motion Graphics system for keyframed flowering; the stems run a custom material whose World Position Offset (WPO) drives the procedural growth path along the gazebo's framework.",

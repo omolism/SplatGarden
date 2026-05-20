@@ -35,6 +35,7 @@ const SECTIONS = [
     rows: [
       [`<kbd>T</kbd>`,   "Pipeline doc"],
       [`<kbd>P</kbd>`,   "Profiler"],
+      [`<kbd>K</kbd>`,   "Viewport tuner"],
       [`<kbd>H</kbd>`,   "Toggle this guide"],
       [`<kbd>Esc</kbd>`, "Close panels"],
     ],

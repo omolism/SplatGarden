@@ -19,6 +19,7 @@ import { Quadizer }  from "./quadizer.js";
 import { PipelineHUD } from "./pipeline-hud.js";
 import { SceneLayers } from "./scene-layers.js";
 import { KeyHints } from "./key-hints.js";
+import { ViewpointTuner } from "./viewpoint-tuner.js";
 import { uniforms as effectUniforms } from "./effects.js";
 import { loadColmapImages, buildColmapFrustums, colmapCameraPosition, colmapCameraRotation } from "./colmap-loader.js";
 
@@ -227,6 +228,7 @@ function hideLoading() {
 let splat = null;
 let effects = null;
 let annotations = null;
+let viewpointTuner = null;
 let dataLabels = null;
 let voxelizer = null;
 let quadizer = null;
@@ -378,6 +380,16 @@ async function loadSplat() {
     controls.target.copy(activeVp.target);
     controls.update();
   }
+
+  // Viewport Tuner — press K to open; shows live pose + lets you commit
+  // the current camera state into any seeded viewpoint slot.
+  viewpointTuner = new ViewpointTuner({
+    mountEl: document.getElementById("app") || document.body,
+    camera,
+    controls,
+    annotations,
+  });
+  window.__viewpointTuner = viewpointTuner;
 
   // ---- Data-label surveillance overlay (sits over the canvas) ----
   dataLabels = new DataLabelLayer({
@@ -1823,6 +1835,8 @@ renderer.setAnimationLoop(() => {
   pipelineHUD.tick(performance.now(), dt * 1000);
   // Asset hover hotspots — project worldPos to screen each frame.
   assetHover?.update();
+  // Viewport Tuner — refresh live pose readout (cheap, bails when closed).
+  viewpointTuner?.update();
 
   // FPS readout — uses raw performance.now() (NOT the clamped dt, which
   // pegs at 20 fps because dt is capped at 50 ms). One decimal place so
