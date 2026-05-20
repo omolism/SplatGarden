@@ -1806,20 +1806,17 @@ body.mobile #hand-panel { display: none !important; }
    panels that are awkward on phone/tablet (no K/keyboard shortcuts,
    narrow viewport, keyboard-hint footer is pointless on touch).
    The numbered hotspot dots in 3D remain tappable for viewpoint navigation. */
+/* PHONE-only hiding (iPad keeps these — wider screen accommodates them).
+   Was `body.touch` originally; narrowed so tablets get the full desktop
+   UI per project direction. */
 body.mobile #viewpoint-tuner,
 body.mobile #scene-panel,
-body.mobile #sidebar,
-body.touch  #viewpoint-tuner,
-body.touch  #scene-panel,
-body.touch  #sidebar { display: none !important; }
-/* Museum-style hover cards — both the asset-hotspot card (#asset-hover-card)
-   and the USD layer-toggle annotation (#usd-annotations) take up roughly
-   half the phone viewport and obstruct the splat. The clicks that trigger
-   them still fly the camera / toggle the layer; we just suppress the card. */
+body.mobile #sidebar { display: none !important; }
+/* Museum-style hover cards — phone screens are too narrow to host the
+   full asset card / USD annotation overlay without obstructing the
+   splat. Tablets show them as desktop does. */
 body.mobile #asset-hover-card,
-body.mobile #usd-annotations,
-body.touch  #asset-hover-card,
-body.touch  #usd-annotations { display: none !important; }
+body.mobile #usd-annotations { display: none !important; }
 body.mobile .lil-gui.root {
   font-size: 12px;
   width: min(280px, 92vw);
@@ -2453,7 +2450,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   border-radius: 3px;
 }
 
-#asset-hover-card .ah-close {
+.ah-card .ah-close {
   position: absolute;
   top: 10px;
   right: 10px;
@@ -2471,13 +2468,13 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 #asset-hover-card.pinned .ah-close { display: block; }
-#asset-hover-card .ah-close:hover {
+.ah-card .ah-close:hover {
   background: var(--hover-strong);
   border-color: rgba(255, 255, 255, 0.22);
   color: var(--text);
 }
 
-#asset-hover-card .ah-head {
+.ah-card .ah-head {
   padding: 16px 18px 12px;
   border-bottom: 1px solid var(--hair);
   display: flex;
@@ -2492,7 +2489,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   transition: none;
 }
 #asset-hover-card.dragging .ah-head { cursor: grabbing; }
-#asset-hover-card .ah-name {
+.ah-card .ah-name {
   flex: 1;
   font-family: var(--font-ui);
   font-size: 22px;
@@ -2501,7 +2498,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   text-transform: uppercase;
   color: var(--text);
 }
-#asset-hover-card .ah-loc {
+.ah-card .ah-loc {
   font-family: var(--font-mono);
   font-size: 9.5px;
   letter-spacing: 0.10em;
@@ -2514,12 +2511,12 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   white-space: nowrap;
 }
 
-#asset-hover-card .ah-section {
+.ah-card .ah-section {
   padding: 14px 18px;
   border-bottom: 1px solid var(--hair);
 }
-#asset-hover-card .ah-section:last-of-type { border-bottom: none; }
-#asset-hover-card .ah-sec-title {
+.ah-card .ah-section:last-of-type { border-bottom: none; }
+.ah-card .ah-sec-title {
   font-family: var(--font-ui);
   font-size: 9px;
   font-weight: 500;
@@ -2530,13 +2527,13 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 }
 
 /* Toolchain chip row */
-#asset-hover-card .ah-chain {
+.ah-card .ah-chain {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 5px;
 }
-#asset-hover-card .ah-chip {
+.ah-card .ah-chip {
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.04em;
@@ -2547,25 +2544,25 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   border-radius: 4px;
   white-space: nowrap;
 }
-#asset-hover-card .ah-arrow {
+.ah-card .ah-arrow {
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-faint);
 }
 
 /* Triptych — Style Reference / Original Texture / Result */
-#asset-hover-card .ah-triptych {
+.ah-card .ah-triptych {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
-#asset-hover-card .ah-triptych figure {
+.ah-card .ah-triptych figure {
   margin: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-#asset-hover-card .ah-frame {
+.ah-card .ah-frame {
   aspect-ratio: 1 / 1;
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.04);
@@ -2575,20 +2572,20 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   align-items: center;
   justify-content: center;
 }
-#asset-hover-card .ah-frame img {
+.ah-card .ah-frame img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   display: block;
 }
-#asset-hover-card .ah-ph {
+.ah-card .ah-ph {
   font-family: var(--font-mono);
   font-size: 9px;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--text-faint);
 }
-#asset-hover-card figcaption {
+.ah-card figcaption {
   font-family: var(--font-ui);
   font-size: 10px;
   color: var(--text-mid);
@@ -2597,7 +2594,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 }
 
 /* Houdini SIM video — autoplay loop hero embed (Gazebo + future sim items) */
-#asset-hover-card .ah-sim-frame {
+.ah-card .ah-sim-frame {
   position: relative;
   aspect-ratio: 16 / 9;
   border-radius: var(--radius-sm);
@@ -2605,7 +2602,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   border: 1px solid var(--hair);
   overflow: hidden;
 }
-#asset-hover-card .ah-sim-video {
+.ah-card .ah-sim-video {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -2614,7 +2611,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   display: block;
   background: #000;
 }
-#asset-hover-card .ah-sim-ph {
+.ah-card .ah-sim-ph {
   position: absolute;
   inset: 0;
   display: flex;
@@ -2628,20 +2625,20 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   text-align: center;
   padding: 14px;
 }
-#asset-hover-card .ah-sim-ph-eyebrow {
+.ah-card .ah-sim-ph-eyebrow {
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.20em;
   text-transform: uppercase;
   color: var(--text);
 }
-#asset-hover-card .ah-sim-ph-body {
+.ah-card .ah-sim-ph-body {
   font-family: var(--font-ui);
   font-size: 10.5px;
   color: var(--text-mid);
   letter-spacing: 0.02em;
 }
-#asset-hover-card .ah-sim-ph-body code {
+.ah-card .ah-sim-ph-body code {
   font-family: var(--font-mono);
   font-size: 9.5px;
   padding: 1px 5px;
@@ -2652,7 +2649,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 }
 
 /* Embedded video (Vimeo / YouTube / generic iframe) — 16:9 wrapper */
-#asset-hover-card .ah-embed-frame {
+.ah-card .ah-embed-frame {
   position: relative;
   aspect-ratio: 16 / 9;
   border-radius: var(--radius-sm);
@@ -2660,7 +2657,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   overflow: hidden;
   background: #000;
 }
-#asset-hover-card .ah-embed-frame iframe {
+.ah-card .ah-embed-frame iframe {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -2670,45 +2667,45 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 }
 
 /* Pipeline strip — n-wide image row */
-#asset-hover-card .ah-strip {
+.ah-card .ah-strip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
   gap: 8px;
 }
-#asset-hover-card .ah-strip figure {
+.ah-card .ah-strip figure {
   margin: 0;
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
-#asset-hover-card .ah-strip .ah-frame {
+.ah-card .ah-strip .ah-frame {
   aspect-ratio: 1 / 1;
 }
-#asset-hover-card .ah-strip figcaption {
+.ah-card .ah-strip figcaption {
   font-size: 9px;
   line-height: 1.35;
 }
 
 /* Bullet features */
-#asset-hover-card .ah-bullets {
+.ah-card .ah-bullets {
   margin: 0;
   padding-left: 16px;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-#asset-hover-card .ah-bullets li {
+.ah-card .ah-bullets li {
   font-family: var(--font-ui);
   font-size: 11.5px;
   line-height: 1.5;
   color: var(--text-mid);
   letter-spacing: 0.01em;
 }
-#asset-hover-card .ah-bullets li strong,
-#asset-hover-card .ah-bullets li b { color: var(--text); font-weight: 500; }
+.ah-card .ah-bullets li strong,
+.ah-card .ah-bullets li b { color: var(--text); font-weight: 500; }
 
 /* Notes */
-#asset-hover-card .ah-note {
+.ah-card .ah-note {
   font-family: var(--font-ui);
   font-size: 11px;
   line-height: 1.55;
@@ -2717,7 +2714,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 }
 
 /* Footer — Output / Source / Pos */
-#asset-hover-card .ah-foot {
+.ah-card .ah-foot {
   padding: 12px 18px 14px;
   border-top: 1px solid var(--hair);
   display: flex;
@@ -2725,21 +2722,21 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   gap: 4px;
   background: rgba(255, 255, 255, 0.02);
 }
-#asset-hover-card .ah-foot-row {
+.ah-card .ah-foot-row {
   display: flex;
   gap: 12px;
   font-family: var(--font-mono);
   font-size: 9.5px;
   letter-spacing: 0.02em;
 }
-#asset-hover-card .ah-foot-row .ah-k {
+.ah-card .ah-foot-row .ah-k {
   color: var(--text-dim);
   text-transform: uppercase;
   letter-spacing: 0.10em;
   width: 60px;
   flex-shrink: 0;
 }
-#asset-hover-card .ah-foot-row .ah-v {
+.ah-card .ah-foot-row .ah-v {
   color: var(--text-mid);
   flex: 1;
   word-break: break-word;
@@ -3526,11 +3523,11 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   background: rgba(28, 30, 34, 0.92);
   border-color: rgba(255, 255, 255, 0.18);
 }
-/* Touch hamburger is dormant — every menu item moved into the bottom-bar
-   sheets (Info / Camera) so the trigger button has nothing to surface.
-   Hidden rather than removed so a future Pipeline-only menu can be
-   re-enabled by toggling this rule. */
-body.touch #mobile-nav-btn { display: none !important; }
+/* Hamburger is dormant on phone — every menu item moved into the bottom-
+   bar sheets (Info / Camera). On tablet the hamburger isn't shown either
+   (its display: none default applies — body.touch was the only thing
+   that would have shown it, and tablets now skip that path). */
+body.mobile #mobile-nav-btn { display: none !important; }
 
 #mobile-nav-menu {
   position: fixed;
@@ -3610,7 +3607,9 @@ body.touch #mobile-nav-btn { display: none !important; }
 
 /* ============================================================
  * MobileUI — bottom toolbar + slide-up sheet + asset toast.
- * All scoped to body.touch so desktop never sees this surface.
+ * Scoped to body.mobile (phone only). Tablets get the desktop UI
+ * because iPad's screen is wide enough for the lil-gui + sidebar
+ * pattern and the user wants iPad === PC.
  * ============================================================ */
 #mobile-bottombar {
   position: fixed;
@@ -3619,7 +3618,7 @@ body.touch #mobile-nav-btn { display: none !important; }
   bottom: 0;
   height: calc(54px + env(safe-area-inset-bottom, 0px));
   padding: 6px 6px env(safe-area-inset-bottom, 0px);
-  display: none;             /* shown on body.touch only */
+  display: none;             /* shown on body.mobile only */
   align-items: stretch;
   gap: 0;                    /* continuous surface, no inter-tab cracks */
   /* Sits ABOVE the sheet (1496) and backdrop (1495) so the user never
@@ -3636,7 +3635,7 @@ body.touch #mobile-nav-btn { display: none !important; }
   -webkit-backdrop-filter: blur(22px) saturate(150%);
   font-family: var(--font-ui);
 }
-body.touch #mobile-bottombar { display: flex; }
+body.mobile #mobile-bottombar { display: flex; }
 #mobile-bottombar button {
   flex: 1;
   position: relative;
@@ -3958,24 +3957,16 @@ body.touch #mobile-bottombar { display: flex; }
   font-size: 13px;
 }
 
-/* ---- Asset detail card inside the sheet (long-press) ---- */
-#mobile-sheet .ms-asset-card {
-  /* Reuse all the existing #asset-hover-card styles by piggy-backing on
-     the .ah-* class names that renderCard emits. Wrap in our own root
-     so we override absolute positioning / z-index from #asset-hover-card. */
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--text);
-}
-#mobile-sheet .ms-asset-card .ah-close { display: none; }   /* sheet has its own × */
-#mobile-sheet .ms-asset-card .ah-head { margin-bottom: 10px; }
-#mobile-sheet .ms-asset-card .ah-name { font-size: 18px; }
-#mobile-sheet .ms-asset-card .ah-loc { font-size: 11px; color: var(--text-dim); }
-#mobile-sheet .ms-asset-card .ah-section {
-  padding: 10px 0;
-  border-bottom: 1px solid var(--hair);
-}
-#mobile-sheet .ms-asset-card .ah-section:last-of-type { border-bottom: none; }
+/* ---- Asset detail card inside the sheet ----
+   The renderCard() output is the SAME on phone (here) and desktop
+   (the floating #asset-hover-card). The .ah-card class is on both
+   wrappers, so all the rich content styling — chips, triptych, sim
+   video, before/after compare, etc. — applies identically. Below we
+   only override the sheet-specific bits: hide the redundant ×
+   (sheet has its own close), drop the in-card chrome that would
+   double up with the sheet header. */
+#mobile-sheet .ms-asset-card .ah-close { display: none; }
+#mobile-sheet .ms-asset-card .ah-head { margin-bottom: 8px; }
 
 /* ---- Toast ---- */
 #mobile-toast {
@@ -4007,22 +3998,23 @@ body.touch #mobile-bottombar { display: flex; }
   transform: translateX(-50%) translateY(0);
 }
 
-/* ---- Touch-only layout shifts (push existing things out of the way) ---- */
+/* ---- Phone-only layout shifts (push existing things out of the way) ---- */
 /* Hide the desktop bottom-right brand/status bar — the new bottom-bar
-   replaces it, and they fight for the same corner. */
-body.touch #toolbar { display: none !important; }
+   replaces it, and they fight for the same corner. (Tablet keeps the
+   desktop toolbar since the bottom-bar isn't shown there.) */
+body.mobile #toolbar { display: none !important; }
 /* Lift the Quick Guide above the new bottom-bar so it stops being
    covered by it. 54 (bar) + 18 (gap) + safe-area. */
-body.touch #key-hints {
+body.mobile #key-hints {
   bottom: calc(72px + env(safe-area-inset-bottom, 0px)) !important;
 }
-/* Hide the floating lil-gui at top-right on touch — it would sit
-   behind the hamburger anyway, and the bottom-bar's Effects sheet now
-   owns "Open Advanced" as the canonical entry point. We undo the hide
-   when the gui has been re-parented INTO the sheet so power users get
-   the full panel when they ask for it. */
-body.touch .lil-gui.root           { display: none !important; }
-body.touch #mobile-sheet .lil-gui.root { display: block !important; }
+/* Hide the floating lil-gui at top-right on PHONE — bottom-bar's
+   Effects sheet now owns "Open Advanced" as the canonical entry point.
+   Undo the hide when the gui has been re-parented INTO the sheet so
+   power users get the full panel when they ask for it. Tablets keep
+   the standalone lil-gui (matches desktop UX). */
+body.mobile .lil-gui.root           { display: none !important; }
+body.mobile #mobile-sheet .lil-gui.root { display: block !important; }
 /* Camera-move timeline + intro overlay phase text both default to
    bottom-anchored coordinates that pre-date the bottom-bar. Without
    these overrides they stack on top of the bar AND each other during
@@ -4032,10 +4024,10 @@ body.touch #mobile-sheet .lil-gui.root { display: block !important; }
      [phase text]                ← bottom: 150 + safe-area
      [timeline strip]            ← bottom: 72  + safe-area
      [bottom bar (54px + safe)]  ← bottom: 0 */
-body.touch .cam-timeline {
+body.mobile .cam-timeline {
   bottom: calc(72px + env(safe-area-inset-bottom, 0px));
 }
-body.touch #intro-overlay .io-phase {
+body.mobile #intro-overlay .io-phase {
   bottom: calc(150px + env(safe-area-inset-bottom, 0px));
 }
 
@@ -4057,7 +4049,7 @@ body.touch #intro-overlay .io-phase {
   background: rgba(13, 14, 17, 0.84);
   color: rgba(255, 255, 255, 0.84);
   cursor: pointer;
-  display: none;            /* shown on body.touch only */
+  display: none;            /* shown on body.mobile only */
   align-items: center;
   justify-content: center;
   z-index: 1502;
@@ -4067,7 +4059,7 @@ body.touch #intro-overlay .io-phase {
               inset 0 1px 0 rgba(255, 255, 255, 0.05);
   transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
 }
-body.touch #mobile-studio-btn { display: flex; }
+body.mobile #mobile-studio-btn { display: flex; }
 #mobile-studio-btn svg { width: 22px; height: 22px; display: block; }
 #mobile-studio-btn:active { transform: scale(0.96); background: rgba(28, 30, 34, 0.92); }
 #mobile-studio-btn[aria-expanded="true"] {

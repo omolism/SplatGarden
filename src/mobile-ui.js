@@ -24,10 +24,15 @@ import { renderCard as renderAssetCard } from "./asset-hover.js";
 
 // Lucide-style line icons. Stroke 1.7 reads crisp at the rendered ~22 px.
 const ICONS = {
-  studio:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2.5L3 7l9 4.5L21 7l-9-4.5z"/>
-            <path d="M3 12l9 4.5L21 12"/>
-            <path d="M3 17l9 4.5L21 17"/>
+  // Splat-cloud — five overlapping translucent discs, visually echoing
+  // a Gaussian splat point cloud. More on-brand for the 3DGS / USD
+  // showcase than the generic "layers" stack we had before.
+  studio:`<svg viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="8"  cy="9"  r="2.7" opacity="0.88"/>
+            <circle cx="14" cy="11" r="3.1" opacity="0.55"/>
+            <circle cx="9"  cy="15" r="2.3" opacity="0.42"/>
+            <circle cx="16" cy="16" r="1.9" opacity="0.72"/>
+            <circle cx="6"  cy="13" r="1.5" opacity="0.32"/>
           </svg>`,
   close: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
             <line x1="6"  y1="6" x2="18" y2="18"/>
@@ -562,7 +567,14 @@ export class MobileUI {
     if (!ah) return;
     const openAssetSheet = (it) => {
       const node = document.createElement("div");
-      node.className = "ms-asset-card";
+      // .ah-card is the shared "content styling" class — see
+      // asset-hover.js for the matching className on the floating
+      // desktop card. With both wrappers carrying it, the rich
+      // card content (toolchain chips, embed video, before/after,
+      // triptych, etc.) renders identically on phone and desktop.
+      // .ms-asset-card is kept for the few sheet-specific overrides
+      // (hide the redundant × button, tighten the header margin).
+      node.className = "ah-card ms-asset-card";
       node.innerHTML = renderAssetCard(it);
       // The card's own × button uses data-act="close"; route it to the
       // sheet's close so users get one consistent dismiss path.

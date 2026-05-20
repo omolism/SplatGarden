@@ -578,7 +578,10 @@ async function loadSplat() {
   // back to the splat" — like an iOS sheet. We whitelist the other UI
   // panels so their own outside-click handlers can run; everything else
   // (the canvas, the splash, the annotation layer) closes the GUI.
-  if (IS_TOUCH) {
+  // PHONE-only: on tablet the lil-gui is the canonical entry point
+  // (same as desktop) so we keep its standard click-to-collapse-title
+  // behavior intact.
+  if (IS_PHONE) {
     document.addEventListener("pointerdown", (e) => {
       if (gui._closed) return;
       const t = e.target;
@@ -716,10 +719,10 @@ async function loadSplat() {
 
   // Viewport Tuner — press K to open; shows live pose + lets you commit
   // the current camera state into any seeded viewpoint slot. Skipped on
-  // touch devices: no physical K key, narrow viewport, and the panel is
-  // hidden via CSS anyway — construct nothing so the K listener + DOM
-  // + per-frame update() loop don't waste cycles.
-  if (!IS_TOUCH) {
+  // PHONE only (no physical K key, narrow viewport, panel hidden via
+  // CSS); iPad gets the full desktop tuner since it has the screen for
+  // it and can pair a Bluetooth keyboard.
+  if (!IS_PHONE) {
     viewpointTuner = new ViewpointTuner({
       mountEl: document.getElementById("app") || document.body,
       camera,
@@ -731,13 +734,14 @@ async function loadSplat() {
 
   // Mobile bottom-bar + slide-up sheet. Replaces the scattered corner
   // panels with a one-thumb-friendly bottom-up layout. Built only on
-  // touch — desktop keeps its lil-gui + sidebar untouched. Constructed
-  // after annotations so the Views sheet has its viewpoint list, and
-  // after assetHover so the short-tap / long-press hooks attach. The
-  // camera-move handles (window.__camMovePlayPause / __camMoveStop) are
-  // resolved lazily at click time, so it's fine that they don't exist yet.
+  // PHONE (not tablet — iPad gets the desktop UI per project direction).
+  // Constructed after annotations so the Views sheet has its viewpoint
+  // list, and after assetHover so the short-tap / long-press hooks
+  // attach. The camera-move handles (window.__camMovePlayPause /
+  // __camMoveStop) are resolved lazily at click time, so it's fine that
+  // they don't exist yet.
   let mobileUI = null;
-  if (IS_TOUCH) {
+  if (IS_PHONE) {
     mobileUI = new MobileUI({
       annotations,
       gui,
@@ -1105,7 +1109,43 @@ async function loadSplat() {
   document.getElementById("app").appendChild(splatDrop);
   const splatStatusEl = splatDrop.querySelector(".hdri-status");
 
-  const showSplatDrop = () => { splatDrop.style.display = "flex"; splatStatusEl.textContent = ""; };
+  // Native file picker for touch — drag-and-drop is a no-op on iPhone
+  // and awkward on iPad. Triggers a hidden <input type="file">; the
+  // user picks from Photos / Files / iCloud and we ingest the bytes
+  // through the same replaceSplatMesh() path the drop handler uses.
+  // The button tap propagates as a user gesture, which is what iOS
+  // Safari requires to actually open the file picker.
+  const pickSplatFile = () => {
+    const input = document.createElement("input");
+    input.type   = "file";
+    input.accept = ".splat,.ply,.spz,.ksplat";
+    input.style.display = "none";
+    document.body.appendChild(input);
+    input.addEventListener("change", async () => {
+      const file = input.files?.[0];
+      input.remove();
+      if (!file) return;
+      if (!/\.(splat|ply|spz|ksplat)$/i.test(file.name)) {
+        console.warn("[Splat] Unsupported file:", file.name);
+        return;
+      }
+      try {
+        const buf = await file.arrayBuffer();
+        await replaceSplatMesh({ fileBytes: new Uint8Array(buf), fileName: file.name });
+      } catch (err) {
+        console.warn("[Splat] Failed to load picked file:", err);
+      }
+    });
+    input.click();
+  };
+
+  const showSplatDrop = () => {
+    // Phone has no drag — go straight to the native file picker.
+    // iPad keeps the drop overlay since drag-and-drop works there.
+    if (IS_PHONE) { pickSplatFile(); return; }
+    splatDrop.style.display = "flex";
+    splatStatusEl.textContent = "";
+  };
   // Expose so the UsdLayers panel's "⤓ Use My Own" button (mounted
   // earlier) can call back into this drop-overlay flow.
   window.__showSplatDrop = showSplatDrop;
@@ -1180,6 +1220,20 @@ async function loadSplat() {
     lensDispersion: 0.0,
     lensSqueeze:   1.0,
   };
+  // Cinematic preset — what the lens params should snap back to after
+  // the intro outro completes, so that if the user later re-enables
+  // Lens Distortion in the GUI it produces the *intended* look (not the
+  // identity / zeroed state the outro fades to visually). The fade
+  // itself still goes to NEUTRAL_LENS visually; we only restore these
+  // values once lensOn flips off (the effect is no longer rendering,
+  // so the snap is invisible).
+  const LENS_DEFAULTS = {
+    lensFisheye:   0.04,
+    lensAmt:       -1.0,
+    lensZoom:      0.95,
+    lensDispersion: 0.01,
+    lensSqueeze:   0.97,
+  };
   let camMovePrevCamFrustumsVisible = false;  // Training Cameras restore
   let camMovePrevCamFrustumsOpacity = 0.85;
   let _introFrustumsOn      = false;          // intra-tick edge detect
@@ -1219,11 +1273,13 @@ async function loadSplat() {
     // it before re-stashing — snap to the neutral lens state so the new
     // intro starts from a clean baseline.
     if (_introLensFadeStart > 0) {
-      postfx.params.lensFisheye    = NEUTRAL_LENS.lensFisheye;
-      postfx.params.lensAmt        = NEUTRAL_LENS.lensAmt;
-      postfx.params.lensZoom       = NEUTRAL_LENS.lensZoom;
-      postfx.params.lensDispersion = NEUTRAL_LENS.lensDispersion;
-      postfx.params.lensSqueeze    = NEUTRAL_LENS.lensSqueeze;
+      // Effect off + params snap to LENS_DEFAULTS so a later re-enable
+      // shows the cinematic preset instead of the zeroed-out fade end.
+      postfx.params.lensFisheye    = LENS_DEFAULTS.lensFisheye;
+      postfx.params.lensAmt        = LENS_DEFAULTS.lensAmt;
+      postfx.params.lensZoom       = LENS_DEFAULTS.lensZoom;
+      postfx.params.lensDispersion = LENS_DEFAULTS.lensDispersion;
+      postfx.params.lensSqueeze    = LENS_DEFAULTS.lensSqueeze;
       postfx.params.lensOn         = false;
       postfx.params.postEnable     = camMovePrevPostEnable;
       _introLensFadeStart = 0;
@@ -1536,11 +1592,15 @@ async function loadSplat() {
     if (_introLensFadeStart > 0) {
       const tFade = (performance.now() - _introLensFadeStart) / INTRO_LENS_FADE_MS;
       if (tFade >= 1) {
-        postfx.params.lensFisheye    = NEUTRAL_LENS.lensFisheye;
-        postfx.params.lensAmt        = NEUTRAL_LENS.lensAmt;
-        postfx.params.lensZoom       = NEUTRAL_LENS.lensZoom;
-        postfx.params.lensDispersion = NEUTRAL_LENS.lensDispersion;
-        postfx.params.lensSqueeze    = NEUTRAL_LENS.lensSqueeze;
+        // Fade complete: turn the effect off + snap params to the
+        // cinematic LENS_DEFAULTS so a later re-enable shows the
+        // intended look (Fisheye 0.04 / Distortion -1 / Zoom 0.95 /
+        // Dispersion 0.01 / Squeeze 0.97) instead of pure identity.
+        postfx.params.lensFisheye    = LENS_DEFAULTS.lensFisheye;
+        postfx.params.lensAmt        = LENS_DEFAULTS.lensAmt;
+        postfx.params.lensZoom       = LENS_DEFAULTS.lensZoom;
+        postfx.params.lensDispersion = LENS_DEFAULTS.lensDispersion;
+        postfx.params.lensSqueeze    = LENS_DEFAULTS.lensSqueeze;
         postfx.params.lensOn         = false;
         postfx.params.postEnable     = camMovePrevPostEnable;
         _introLensFadeStart = 0;

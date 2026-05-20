@@ -169,11 +169,14 @@ export class AssetHoverManager {
     this.onAssetLongPress = null; // touch: long-press (detail-sheet hook)
     this._longPressFired = false; // swallows the trailing click after a long-press
 
-    // Touch-mode flag — when true, dot clicks fire `onAssetShortTap` and
-    // skip showing the hover-card (which is hidden via CSS anyway on
-    // touch). A separate pointer-based long-press gesture fires
-    // `onAssetLongPress` so the mobile UI can open a bottom-sheet detail.
+    // Touch-mode flag drives the pointer-based tap detection (more
+    // reliable than `click` when the dot is being transformed each
+    // frame). On phone we ALSO fire `onAssetShortTap` so the mobile
+    // bottom-sheet UI can open the asset card. On tablet (iPad) we
+    // mirror desktop click behavior — toggle the floating hover card
+    // — because the user wants iPad === PC visually.
     const IS_TOUCH = document.body.classList.contains("touch");
+    const IS_PHONE_MODE = IS_TOUCH && document.body.classList.contains("mobile");
 
     this.dots = this.items.map(it => {
       const dot = document.createElement("div");
@@ -251,8 +254,25 @@ export class AssetHoverManager {
           try { dot.releasePointerCapture?.(e.pointerId); } catch {}
           if (cancelled || moved) return;
           e.stopPropagation();
-          this.onAssetSelect?.(it);     // camera fly-to (main.js)
-          this.onAssetShortTap?.(it);   // open asset sheet (mobile-ui.js)
+          if (IS_PHONE_MODE) {
+            // Phone: every tap = fly + open bottom sheet. The floating
+            // hover card is CSS-hidden on .mobile so we don't try to
+            // show it; the sheet is the canonical card surface.
+            this.onAssetSelect?.(it);
+            this.onAssetShortTap?.(it);
+          } else {
+            // Tablet (or other touch surface without MobileUI): mirror
+            // the desktop click — toggle the floating hover card and
+            // fly to the asset on first tap. Same UX as PC.
+            const same = this._pinned === it;
+            this._pinned = same ? null : it;
+            if (this._pinned) {
+              this._show(it);
+              this.onAssetSelect?.(it);
+            } else {
+              this._hide();
+            }
+          }
         };
 
         dot.addEventListener("pointerup",     (e) => endPress(e, false));
@@ -270,6 +290,13 @@ export class AssetHoverManager {
 
     this.card = document.createElement("aside");
     this.card.id = "asset-hover-card";
+    // .ah-card is the shared "content styling" class — both this
+    // floating element and the mobile bottom-sheet wrapper carry it,
+    // so the rich card markup (chips, triptych, before/after compare,
+    // sim videos, etc.) styles identically on phone and desktop. The
+    // #asset-hover-card ID stays for the floating positioning rules
+    // (which the sheet wrapper doesn't want).
+    this.card.classList.add("ah-card");
     this.card.setAttribute("hidden", "");
     this.card.addEventListener("click", (e) => {
       if (e.target?.dataset?.act === "close") {
