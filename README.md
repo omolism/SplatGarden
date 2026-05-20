@@ -1,140 +1,13 @@
-# SplatGarden Studio
+# SplatGarden
 
-An asset-pipeline showcase built around a 3D Gaussian Splat web viewer. The scene is a Houdini / SpeedTree / Unreal garden, trained as 3DGS, served back as an inspectable, hot-swappable, USD-aware artifact. Built on **Spark** + **Three.js** + **Vite**.
-
-```
-SpeedTree · Houdini · Unreal Engine  →  Postshot / Lichtfeld Studio  →  .splat
-                                                                            │
-                                                                            ▼
-                            ┌─────────────── SplatGarden Studio ──────────────┐
-                            │  Scene  ·  Viewpoints  ·  Pipeline (asset doc)  │
-                            │            Customize  ·  Camera Movement        │
-                            └──────────────────────────────────────────────────┘
-```
-
----
-
-## Features
-
-### Renderer & data
-| | |
-|---|---|
-| **Splat engine** | [Spark](https://sparkjs.dev) `@sparkjsdev/spark` with the **Dyno** shader-graph API for per-splat GPU effects |
-| **Default assets** | Listed in `public/manifest.json` — every splat there auto-loads as a Scene layer; first one renders, the rest sit hidden until you toggle them on |
-| **Shipped scene** | `public/Whole_With_Statue.splat` + `Whole_With_Statue_Cleanup.splat` — gazebo / garden trained from an Unreal capture |
-| **COLMAP poses** | `public/colmap/images.bin` — 990 training-camera poses reconstructed during the Postshot pass |
-| **Camera move** | `public/Shot4B_GS-FX_Camera_V01.fbx` — 25 s authored camera trajectory (24 fps, 600 frames) |
-| **HDR environment** | `public/Skybox.hdr` (4.4 MB equirectangular) |
-
-### Scene panel (`top-left, below Viewpoints`)
-SuperSplat-style multi-splat layer list. Every `.splat` listed in `public/manifest.json` shows up as a row with a Lucide **eye icon** toggle, splat count, and (for secondaries) a delete button. The first loaded splat is the **primary** — effects / voxel / quad / annotations bind to it and it can't be removed. Drag any `.splat / .ply / .spz / .ksplat` onto the viewport (or hit **+ Add**) to append a new secondary layer without disturbing the primary.
-
-### Pipeline panel (press <kbd>T</kbd>)
-Right-side slide-in. The information-design centerpiece of the showcase — organized by **asset authoring pipeline first**, system specs second. Sections:
-
-| Section | Contents |
-|---|---|
-| **3DGS** | The render primitive (Kerbl 2023) + Point subform + the full production chain: Unreal scene assembly (Perforce) → Lichtfeld Studio capture → COLMAP SfM → Postshot training → Houdini camera flythrough. |
-| **USD** | OpenUSD interop — Quad and Voxel subforms expressed as `UsdGeomPointInstancer` prims (proto = Plane / Cube + `primvars:displayColor`). |
-| **AI** | Custom diffusion-based texture tool — IP-Adapter + ControlNet (Tile / Canny) + AdaIN. Drives the painterly look on Daffodil + Landscape textures. Full vs Texture-Only modes. PyTorch 2.11 / CUDA 13.0 / RTX PRO 6000 Blackwell. |
-| **Assets** | Per-asset cards with tool-chain chip rows. Each asset ends at Unreal set dress; only the final Garden Environment touches Lichtfeld + Postshot. Covers Grape Hyacinth, Daffodil, Tree, Landscape, Garden Environment. |
-| **Input & Sensing** | MediaPipe hand tracking |
-
-### Pipeline HUD — RENDER (`top-left`)
-Always-on live render readout, slimmed to what isn't covered elsewhere:
-- **Hero number** — current splat count (mono tabular-nums, 24 px)
-- **Subform composition bars** — 3DGS / Quad / Voxel, each with an opacity-driven fill + percent
-- **Draw / Tris** small footer
-- **GPU identity** strap (renderer string + WebGL ctx)
-
-### Viewpoints (sidebar, top-left)
-Numbered hotspots in 3D + sidebar list. Smooth eased camera tween between poses.
-
-- <kbd>1</kbd> Front · <kbd>2</kbd> Right · <kbd>3</kbd> Back · <kbd>4</kbd> Left · <kbd>5</kbd> Top · <kbd>6</kbd> Center · <kbd>7</kbd> Gazebo
-- <kbd>V</kbd> — arm "add viewpoint" (next click on the splat anchors it)
-- <kbd>C</kbd> — overwrite the **Center** viewpoint with the current camera pose
-- <kbd>R</kbd> — reset framing
-- <kbd>W A S D</kbd> + <kbd>Q E</kbd> — flythrough; <kbd>Shift</kbd> = 3× boost
-
-The Gazebo viewpoint anchors at a world-absolute target on the asset itself. Tree / Grape Hyacinth / Daffodil have known world positions too (see `tech-spec.js` `worldPos`) but live as **asset hotspots** for the upcoming hover info card rather than as camera viewpoints.
-
-### 3DGS / USD
-Each render representation is hover-documented as the USD primitive it would round-trip to:
-
-| Layer | USD analogue (hover the badge) |
-|---|---|
-| **Splat** sub-form `Gaussian` | UE capture → Postshot training → anisotropic 3D Gaussian (RGB · scales · quaternion · alpha) |
-| **Splat** sub-form `Point` | Gaussian centres collapsed → isotropic point — size set by `Point Size` slider (default `0.0025`) |
-| **Quad** | `UsdGeomPointInstancer › UsdGeomPlane` — per-instance positions / orientations / scales + `primvars:displayColor` |
-| **Voxel** | `UsdGeomPointInstancer › UsdGeomCube` — same per-instance arrays |
-
-### Camera Movement
-A preauthored Houdini FBX camera flythrough drives the scene camera off the animated node. Play / Pause / Stop with a live timeline label (`12.50s / 25.00s · F 300 / 600`).
-
-While the move plays, four equally-spaced phase transitions are scheduled over the clip duration:
+A 3D Gaussian Splatting web viewer for an asset-pipeline showcase. The scene is a Houdini / SpeedTree / Unreal Engine garden captured at Lichtfeld Studio, reconstructed with COLMAP, trained in Postshot, and rendered in the browser via Spark on Three.js + WebGL 2.
 
 ```
-   t = 0     ¼         ½         ¾         1
-   │─────────│─────────│─────────│─────────│
-   Gaussian  +Quad     -Quad     +Gaussian   (back to 3DGS)
-   →Point    fade-in   fade-out  ←Point
+SpeedTree · Houdini · Unreal Engine → Lichtfeld Studio → COLMAP → Postshot → .splat
+                                                                                │
+                                                                                ▼
+                                                               Spark + Three.js viewer
 ```
-
-Lerps for sub-form (Gaussian↔Point) and layer visibility use exp-decay at rate 1.2/s so each transition breathes across its ~6.25 s phase. The **Center** viewpoint is sampled at frame 460 of the FBX (≈ 19.17 s in) and re-patched whenever the FBX preload completes.
-
-### Customize ▸ Play ▸ FX (the "toy" section)
-Eight GPU shader effects in a single `dyno.Dyno` branched on a uniform `int` — switching never recompiles. Default preset on launch: **Slime Molds**.
-
-1. **Wave & Tint** — radial ripple from the click point; colour-uniform dyes the wave crests
-2. **Dissolve & Reform** — splats inside the impact radius explode outward, hold briefly, then snap back
-3. **Scan Line** — Tron-style expanding shell sweep
-4. **Spiral Smear** — band mask + wind-side bias + curl-noise; splats stretch into oriented ribbons
-5. **Vortex Drift** — 3D curl-noise potential flow (divergence-free swirl)
-6. **Chaotic Particles** — 3D Voronoi cell tracking with coarse cells (~3 m world) for coherent group motion
-7. **Slime Molds** — domain-warped ridge-noise vein field; Physarum visual approximation
-8. **Feather Roots** — outward streaming particles along noise-perturbed radial directions
-
-**Effector Mode** — TouchDesigner-style sphere effector for the Dissolve shader. Press+drag drives a spatial-mask centre.
-
-**Brush Mode** — Press+drag continuously paints the active effect. OrbitControls is locked while on.
-
-### Customize ▸ Play ▸ Post-Process
-Sketchfab-style finishing chain. Master **Enable** kills every pass at once. Bloom defaults **off** on launch.
-
-| Pass | Notes |
-|---|---|
-| Bloom | Strength / Radius / Threshold |
-| Tonemap | None / Reinhard / Cineon / ACES |
-| Colour | Exposure / Contrast / Saturation |
-| Painterly | Monet (Kuwahara) / Matisse (posterize + Sobel) / Seurat (pointillism) — auto-disables when Quad or Voxel overlay is visible |
-| Echo Trails | Bell-curve auto-ramp on click |
-| Underwater | Dave_Hoskins caustic + tint + UV shimmer |
-| Lens Distortion | Fisheye + dispersion (default ON, user-tuned preset) |
-| Vignette · Chromatic Aberration · Film Grain | Standard knobs |
-| Kaleidoscope (under FX) | Kusama-style mirrored repetition |
-
-3DGS-tuned defaults: `exposure 1.10 · contrast 1.08 · saturation 1.15`.
-
-### Particle system
-Two-layer GPGPU pipeline driving interaction reactivity. Renders in a separate scene **after** the composer, so it bypasses post-FX. Disabled by default; toggle under `Customize ▸ Particles`.
-
-| Subsystem | Role |
-|---|---|
-| **Velocity Field** | 256² half-float RGBA ping-pong. Diffuse + advect + decay; mouse drag / hand pinch inject mass at the input UV |
-| **GPGPU Particles** | 64² = 4096 additive point sprites with state in float RT pairs (pos + vel ping-pong) |
-
-Knobs: Point Size · Field Strength · Damping · Gravity Y · Alpha · Color Cool / Hot. Plus a **Seed from USD Voxels** button that respawns every particle at a voxel-cell centre and expands the spawn AABB to the scene bounds.
-
-### Hand tracking (panel, bottom-left)
-MediaPipe HandLandmarker (tasks-vision 0.10.35) drives an alternate control scheme:
-- **Single hand** — pinch = drag-orbit, quick pinch-tap = click-FX
-- **Two hands** — spread / contract = zoom; parallel drag = pan
-
-### Profiler (press <kbd>P</kbd>)
-Per-phase frame-time breakdown — splat update, velocity step, particles, compose, overlay, HUD. Each phase has its own bar.
-
-### Before / After compare (in the Pipeline drawer, AI section)
-Each AI Stylization item can declare a `compare: { before, after, labelA, labelB }` pair. The Pipeline drawer renders an inline split-screen widget — drag the handle to wipe between the original texture and the stylized result.
 
 ---
 
@@ -143,56 +16,183 @@ Each AI Stylization item can declare a `compare: { before, after, labelA, labelB
 ```bash
 npm install
 npm run dev          # http://127.0.0.1:5173
-# or
 npm run build && npm run preview
 ```
 
-First load decompresses every splat listed in `public/manifest.json` and pre-warms the camera-move FBX so the **Center** viewpoint can be patched to frame 460 immediately on page open.
-
-### Drop in your own splat
-Drag any `.splat / .ply / .spz / .ksplat` onto the viewport, or hit **+ Add** in the Scene panel. The new file becomes a **secondary** Scene layer — toggle visibility with the eye icon. To make a different file the default primary, edit `public/manifest.json` (first entry wins).
+On first load the viewer auto-plays the camera move and overlays a title sequence + onboarding pointers. Subsequent visits skip the cinematic; the flag is stored at `localStorage["splatgarden:visited:v1"]`.
 
 ---
 
-## GUI hierarchy
+## Assets shipped
+
+| Path | Purpose |
+|---|---|
+| `public/manifest.json` | List of splats to auto-load on startup. The first entry is the primary layer. |
+| `public/Whole_With_Statue.splat` | Default scene — gazebo / garden trained from the Unreal capture. |
+| `public/Whole_With_Statue_Cleanup.splat` | Secondary scene variant. |
+| `public/Shot4B_GS-FX_Camera_V01.fbx` | Authored camera trajectory (24 fps, 600 frames). The viewer plays frames 100–500 (≈ 16.67 s) as the intro. |
+| `public/colmap/images.bin` | 990 training-camera poses reconstructed by COLMAP. |
+| `public/Skybox.hdr` | Equirectangular HDR environment (4.4 MB). |
+
+Splats are tracked through Git LFS (see `.gitattributes`).
+
+---
+
+## Panels
+
+### Scene panel (top-left)
+Multi-splat layer list. Every `.splat` in `public/manifest.json` shows up as a row with an eye-icon toggle and splat count. The first loaded splat is the primary — effects, voxel, quad, and annotation bindings stay attached to it. Drag any `.splat / .ply / .spz / .ksplat` onto the viewport, or use `+ Add`, to append a secondary layer.
+
+### Pipeline drawer (T)
+Right-side slide-in documenting how the scene was made. Organized into three layers:
+
+| Layer | Contents |
+|---|---|
+| **L1 R&D** | AI Texture Stylization (IP-Adapter + ControlNet + AdaIN + Diffusion) and OpenUSD subforms (`UsdGeomPointInstancer` with Plane / Cube / Sphere prototypes). |
+| **L2 Production** | Per-asset cards with toolchain chip rows: Scene assembly (Unreal + Perforce), Gazebo, Vine, Daffodil, Grape Hyacinth, Tree, Landscape. Each card carries a Hotspot ON/OFF pill that gates the in-scene marker. |
+| **L3 3DGS** | The render primitive (Kerbl et al., SIGGRAPH 2023), Lichtfeld Studio capture, COLMAP SfM, Postshot training. |
+
+The Pipeline drawer does not toggle the 3D overlays — it is purely documentation.
+
+### Viewpoints (sidebar, top-left)
+Numbered hotspots in 3D plus a sidebar list. Smooth eased camera tween between poses.
+
+- `1` Front · `2` Right · `3` Back · `4` Left · `5` Top · `6` Center · `7` Zoom
+- `V` — arm "add viewpoint" (next click on the splat anchors it)
+- `C` — overwrite the Center viewpoint with the current camera pose
+- `R` — reset framing
+- `W A S D` + `Q E` — flythrough; `Shift` = 3× boost
+
+Front / Right / Back / Left / Top are baked absolute poses in `src/annotations.js`. Center is patched to COLMAP cam #582 once the COLMAP loader resolves. Storage key is `splatgarden:viewpoints:v9:<splat-url>`.
+
+### Viewport Tuner (K)
+Floating panel that shows the live camera position + target and lets you commit the current pose into any seeded viewpoint slot. Includes a "Copy snippet" button that emits a `THREE.Vector3` fragment ready to paste into `seedDefaults`.
+
+### Quick Guide (H)
+Bottom-center card listing mouse + key shortcuts. Auto-pops after the intro and dismisses after a few seconds; press `H` to summon back, `Esc` to close.
+
+### Credits panel
+Toggled by the `Credits` checkbox under the lil-gui Tech Spec folder. Sections: Team, Software, Special Thanks, Tech Stack. Closes when clicked outside the panel.
+
+### Pipeline HUD — RENDER (top-left)
+Live render readout:
+
+- Current splat count (24 px tabular-nums)
+- Subform composition bars — 3DGS / Quad / Voxel
+- Draw / Tris footer
+- GPU identity strap
+
+### Profiler (P)
+Per-phase frame-time breakdown: splat update, velocity step, particles, compose, overlay, HUD.
+
+---
+
+## 3DGS / USD
+
+The lil-gui `3DGS/USD` folder selects which render representation is active. Multiple representations can be visible at once.
 
 ```
-SplatGarden Studio
-├── 3DGS/USD                    ← data-source + USD instancer choice
-│   ├── Splat (Gaussian / Point sub-form)
-│   ├── Point Size
-│   ├── Quad      (UsdGeomPointInstancer › Plane — hover for spec)
-│   ├── Quad Size
-│   ├── Voxel     (UsdGeomPointInstancer › Cube — hover for spec)
-│   └── Voxel Size
-│
-├── Customize
-│   ├── Play                    ← toy section (default collapsed)
-│   │   ├── FX                  ← 8 click-effect shaders
-│   │   │   ├── Preset
-│   │   │   ├── Core (Effect · Color · Radius · Duration · Intensity)
-│   │   │   ├── Brush Mode
-│   │   │   ├── Effector Mode
-│   │   │   └── Kaleidoscope
-│   │   └── Post-Process [Enable]
-│   │       └── Bloom · Tonemap · Painterly · Echo Trails · Underwater ·
-│   │         Lens Distortion · Vignette · Chromatic · Film Grain
-│   ├── Interaction
-│   ├── Particles               (off by default)
-│   │   └── Seed from USD Voxels
-│   └── HDR Sky
-│
-├── Tech Spec                   (3D overlays — frustums, data labels)
-│   ├── Training Cameras
-│   └── Data Labels
-│
-└── Camera Movement
-    ├── ▶ Play Camera Move
-    ├── ■ Stop Camera Move
-    └── Camera Move Tuning  (Offset X/Y/Z · Scale)
+Splat          [Gaussian | Point]
+Point Size
+Quad           [Quad | Circle]
+Quad Size
+Voxel          [Cube | Sphere]
+Voxel Size
 ```
 
-The **Pipeline** drawer (T) is a separate slide-in panel — it documents the asset-authoring pipeline and is not part of the lil-gui tree.
+| Layer | Subform | USD analogue |
+|---|---|---|
+| **Splat** | Gaussian | Anisotropic 3D Gaussian (RGB · scales · quaternion · alpha) |
+| **Splat** | Point | Gaussian centres collapsed to isotropic points (size = `Point Size` slider) |
+| **Quad** | Quad | `UsdGeomPointInstancer › UsdGeomPlane` — camera-facing billboard |
+| **Quad** | Circle | Same plane, fragment discard outside the unit disc with edge AA |
+| **Voxel** | Cube | `UsdGeomPointInstancer › UsdGeomCube` — averaged colour per cell |
+| **Voxel** | Sphere | `UsdGeomPointInstancer › UsdGeomSphere` — same per-instance arrays, icosphere proto |
+
+Hovering the badges or the segmented buttons reveals a popover with the USD schema, proto, attribute list, and a link to openusd.org.
+
+---
+
+## Camera Movement
+
+The FBX flythrough drives the scene camera off the animated node when active. Play / Pause / Stop with a live timeline label (`12.50s / 16.67s · F 300 / 400`).
+
+Four equally-spaced phase transitions run over the active subclip:
+
+```
+   t = 0     ¼         ½         ¾         1
+   │─────────│─────────│─────────│─────────│
+   Gaussian  +Quad     -Quad     +Gaussian
+   →Point    fade-in   fade-out  ←Point
+```
+
+Sub-form (Gaussian↔Point) and layer visibility use exp-decay at rate 1.2/s.
+
+---
+
+## Asset hotspots
+
+Per-asset floating markers projected from world coordinates in `src/tech-spec.js`. Hovering a dot opens a poster-style info card; clicking pins it and tweens the camera to a close-up. Each card can carry:
+
+- Toolchain chip row
+- Vimeo embed (used by Gazebo, Vine, Daffodil)
+- Before / after compare widget (drag the handle to wipe)
+- Pipeline image strip
+- Notes, key features, output, source
+
+Visibility is gated by the Tech Spec `Enable` master toggle plus the per-asset ON/OFF pill in the Pipeline drawer.
+
+---
+
+## Customize
+
+### FX
+Eight GPU shader effects in a single `dyno.Dyno` branched on a uniform `int` — switching never recompiles.
+
+1. Wave & Tint
+2. Dissolve & Reform
+3. Scan Line
+4. Spiral Smear
+5. Vortex Drift
+6. Chaotic Particles
+7. Slime Molds
+8. Feather Roots
+
+**Effector Mode** — sphere effector for the Dissolve shader. Press + drag drives a spatial-mask centre.
+**Brush Mode** — press + drag continuously paints the active effect. OrbitControls is locked while on.
+
+### Post-Process
+Master `Enable` kills every pass at once. Bloom defaults off.
+
+| Pass | Knobs |
+|---|---|
+| Bloom | Strength / Radius / Threshold |
+| Tonemap | None / Reinhard / Cineon / ACES |
+| Colour | Exposure / Contrast / Saturation |
+| Painterly | Monet (Kuwahara) / Matisse (posterize + Sobel) / Seurat (pointillism) — auto-disables when Quad or Voxel is visible |
+| Echo Trails | Bell-curve auto-ramp on click |
+| Underwater | Caustic + tint + UV shimmer |
+| Lens Distortion | Fisheye + dispersion |
+| Vignette · Chromatic Aberration · Film Grain | Standard knobs |
+| Kaleidoscope (under FX) | Mirrored repetition |
+
+Defaults: `exposure 1.10 · contrast 1.08 · saturation 1.15`.
+
+### Particles
+Two-layer GPGPU pipeline. Renders in a separate scene after the composer, bypassing post-FX. Off by default.
+
+| Subsystem | Role |
+|---|---|
+| Velocity Field | 256² half-float RGBA ping-pong — diffuse + advect + decay |
+| GPGPU Particles | 64² (4096) additive point sprites, pos + vel ping-pong RTs |
+
+Knobs: Point Size · Field Strength · Damping · Gravity Y · Alpha · Color Cool / Hot. The `Seed from USD Voxels` button respawns every particle at a voxel-cell centre and expands the spawn AABB to the scene bounds.
+
+### Hand tracking (panel, bottom-left)
+MediaPipe HandLandmarker (`tasks-vision 0.10.35`).
+
+- Single hand — pinch = drag-orbit, quick pinch-tap = click-FX
+- Two hands — spread / contract = zoom; parallel drag = pan
 
 ---
 
@@ -203,36 +203,35 @@ public/
   manifest.json                       # list of splats to auto-load on startup
   Whole_With_Statue.splat             # default 3DGS scene
   Whole_With_Statue_Cleanup.splat
-  Shot4B_GS-FX_Camera_V01.fbx         # 25 s preauthored camera move
-  Skybox.hdr                          # HDR environment
-  colmap/                             # Postshot's COLMAP reconstruction
+  Shot4B_GS-FX_Camera_V01.fbx         # camera move (frames 100-500 played)
+  Skybox.hdr
+  colmap/
     images.bin                        # 990 training-camera poses
-    cameras.bin, points3D.bin, ...
+    cameras.bin, points3D.bin
+
 src/
-  main.js                             # scene, renderer, raycast, animation loop,
-                                      #   camera-move state machine, hover tooltips,
-                                      #   Center=frame460 sampling, brush/effector hooks
-  scene-layers.js                     # multi-splat layer panel (eye toggle, delete,
-                                      #   primary lock, drag-drop + Add)
-  pipeline-hud.js                     # RENDER HUD — splat count, subform bars,
-                                      #   draw/tris, GPU strap
-  tech-spec.js                        # Pipeline drawer data + renderer (asset cards
-                                      #   with toolchain chips, etc.)
-  effects.js                          # 8 click effects in one Dyno shader + lil-gui
-                                      #   panel structure + USD/Subform hover popovers
-  postfx.js                           # EffectComposer pipeline:
-                                      #   RenderPass → Bloom → Polish → Painterly →
-                                      #   Underwater → Echo → Kaleidoscope
-  velocity-field.js                   # 256² ping-pong velocity field (lomateron port)
-  gpgpu-particles.js                  # 64² additive point-sprite particle system
-  annotations.js                      # Sketchfab hotspots + smooth camera tween +
-                                      #   asset-anchored viewpoint defaults
-  colmap-loader.js                    # images.bin parser + frustum geometry builder
+  main.js                             # scene, renderer, animation loop, hooks
+  scene-layers.js                     # multi-splat layer panel
+  pipeline-hud.js                     # RENDER HUD
+  tech-spec.js                        # Pipeline drawer data + renderer
+  asset-hover.js                      # hotspots + poster-style info card
+  annotations.js                      # viewpoints + camera tween
+  viewpoint-tuner.js                  # K-key live pose tuner
+  key-hints.js                        # H-key Quick Guide
+  credits.js                          # team + software + tech stack panel
+  intro-overlay.js                    # first-visit title sequence
+  onboarding-pointers.js              # first-visit T/K/Scene callouts
+  effects.js                          # 8 click effects + lil-gui structure
+  postfx.js                           # EffectComposer pipeline
+  velocity-field.js                   # velocity-field ping-pong
+  gpgpu-particles.js                  # additive point-sprite particles
+  colmap-loader.js                    # images.bin parser + frustum builder
   datalabels.js                       # surveillance-card overlay
-  handtracking.js                     # MediaPipe-driven hand-control state machine
-  quadizer.js, voxelizer.js           # UsdGeomPointInstancer-style overlays
-  profiler.js                         # per-phase frame-time bars (P)
-  style.css                           # Luma-glass UI tokens + panel styles
+  handtracking.js                     # MediaPipe-driven control scheme
+  quadizer.js, voxelizer.js           # USD-PointInstancer-style overlays
+  profiler.js                         # frame-time bars (P)
+  style.css                           # UI tokens + panel styles
+
 index.html
 vite.config.js
 package.json
@@ -240,52 +239,22 @@ package.json
 
 ---
 
-## How the click FX works
+## Deployment
 
-Spark's `dyno` system lets you compose a per-splat shader from JS:
+GitHub Pages via `.github/workflows/deploy-pages.yml`. The workflow builds with `VITE_BASE: /SplatGarden-WebViewer/` so `import.meta.env.BASE_URL` resolves correctly under the sub-path. Splat files travel through Git LFS.
 
-```js
-const uHit = dyno.dynoVec3(new THREE.Vector3());
-splat.objectModifier = dyno.dynoBlock(
-  { gsplat: dyno.Gsplat }, { gsplat: dyno.Gsplat },
-  ({ gsplat }) => {
-    const d = new dyno.Dyno({
-      inTypes:  { gsplat: dyno.Gsplat, uHit: "vec3", /* + many others */ },
-      outTypes: { gsplat: dyno.Gsplat },
-      statements: ({inputs, outputs}) => `
-        ${outputs.gsplat} = ${inputs.gsplat};
-        // branch on uEffect (0..7) and modify center / scales / rgba based
-        // on distance from uHit, time, per-splat seed, curl noise, etc.
-      `,
-    });
-    return { gsplat: d.apply({ gsplat, uHit, /* ... */ }).gsplat };
-  },
-);
-splat.updateGenerator();
-```
-
-Each frame, JS bumps `uTime.value` / `uHit.value` / per-effect uniforms and calls `splat.updateVersion()` — no shader recompile, just uniform updates. Clicking the canvas raycasts against the SplatMesh (Spark's WASM-accelerated point-in-gaussian intersection), transforms the world hit-point into the splat's local frame, and writes it into `uHit`.
-
----
-
-## Tips
-
-- **Center viewpoint** is re-patched whenever the FBX preload completes; if you tweak `Camera Move Tuning → Offset X/Y/Z / Scale`, Center stays anchored to frame 460 of the *transformed* path.
-- **Tech Spec → Enable** kills all 3D-overlay surveillance gizmos (frustums, data labels) for clean screenshots.
-- **Post-Process → Enable** off → zero post-fx cost (both Bloom and Polish passes are disabled).
-- Shader assumes Y-up. Postshot / Inria splats need `splat.quaternion.set(1, 0, 0, 0)` (180° X flip) to align — already applied.
-- Effects / voxel / quad / annotations stay bound to the **primary** Scene layer (first one loaded). Toggling its eye hides the render but FX still fire — switch primary by editing the manifest order.
+`vite.config.js` reads `VITE_BASE` from the environment and throws if `CF_PAGES` is detected (Cloudflare Pages is intentionally disabled — the splat exceeds the 25 MB per-file limit).
 
 ---
 
 ## Roadmap
 
-- **Asset hover info card** — Phase 4. On hovering Daffodil / Grape Hyacinth / Tree's 3D world position, pop a poster-style overlay with lookdev video, texture before/after, AI stylization comparison. Markup-first, visuals tuned once user-supplied media lands.
-- **Clipping plane / cross-section** — sphere + plane clipper that exposes the alternative subform (point cloud / Voxel / Quad) on the cut surface. Direct visual for the "peel back the layers" beat of the pipeline story.
-- **Pipeline Scrubber** — bottom timeline that morphs the scene `COLMAP points → Gaussians → Quad → Voxel → final 3DGS`. The four existing subforms become a single dragable continuum.
-- **Per-cluster stylization** — click a region of splats, apply post-FX only to that selection. Turns the demoted toy section into an authoring tool.
-- **MP4 export from camera path** — record the Houdini flythrough straight from the viewer.
-- **WebXR (Quest / Vision Pro)** — Spark supports it upstream; mostly plumbing.
-- **URL-state deep links** — `?viewpoint=7&overlay=cameras` so slides / tweets / PRs can point at a specific scene state.
-- **Tonemapping panel** — Filmic / ACES / ACES2 selector to pair with the existing exposure / contrast / saturation knobs.
-- **glTF / mesh + splat composite** — render a USD prop alongside the splat with shared depth, riding the upcoming `KHR_gaussian_splatting` extension.
+- Asset hover card media — populate `media:` fields with real lookdev video, before/after textures, and AI-stylization comparisons per asset.
+- Tree / Landscape worldPos — currently the only two asset items without floating dots.
+- Clipping plane / cross-section — expose alternative subforms (point cloud / Voxel / Quad) on the cut surface.
+- Pipeline scrubber — bottom timeline morphing `COLMAP points → Gaussians → Quad → Voxel → final 3DGS`.
+- Per-cluster stylization — apply post-FX only to a selected region of splats.
+- MP4 export from camera path.
+- WebXR (Quest / Vision Pro).
+- URL-state deep links — `?vp=4&panel=pipeline` for direct linking.
+- glTF / mesh composite — render a USD prop alongside the splat with shared depth (`KHR_gaussian_splatting`).
