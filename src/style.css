@@ -3367,25 +3367,17 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   overflow: visible;
   padding: 4px 6px 8px;
 }
-#usd-layers-panel.usd-embedded header {
-  padding: 6px 12px 6px;
-  background: transparent;
-  border-bottom: 1px solid var(--hair);
-}
-#usd-layers-panel.usd-embedded header .title {
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.12em;
+/* (UsdLayers no longer renders its own header — the surrounding
+   lil-gui folder "3DGS / USD" provides the title, caret, and fold
+   behaviour. The .usd-embedded class strips the panel's standalone
+   chrome so only the folder's treatment shows.) */
+#usd-layers-panel .usd-hint {
+  font-family: var(--font-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--text-mid);
-}
-/* lil-gui auto-attaches a ▾ caret to anything with `.title` inside it
-   (a hangover from its folder treatment). Our header already has its
-   own .usd-fold-caret SVG, so the lil-gui pseudo-element renders as a
-   redundant second arrow — kill it on our title only. */
-#usd-layers-panel.usd-embedded header .title::before {
-  display: none !important;
-  content: none !important;
+  color: rgba(255, 255, 255, 0.38);
+  padding: 4px 10px 6px;
 }
 #usd-layers-panel.usd-embedded .usd-upload {
   /* Slightly tighter padding inside lil-gui to match the embed density. */
@@ -3394,61 +3386,11 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   margin: 6px 10px 10px;
   width: calc(100% - 20px);
 }
-#usd-layers-panel header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 14px 10px;
-  border-bottom: 1px solid var(--hair);
-  cursor: pointer;
-  user-select: none;
-}
-#usd-layers-panel header .usd-title-wrap {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-#usd-layers-panel header .title { /* sits at top of title-wrap */ }
-#usd-layers-panel header .usd-hint {
-  font-family: var(--font-mono);
-  font-size: 8.5px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.38);
-  margin-top: 2px;
-}
-/* Folded view: the hint is meta-info that's only useful when the
-   section is open and the user can see the toggles below. Hide it
-   when folded for a tighter collapsed header. */
-#usd-layers-panel.folded .usd-hint { display: none; }
-/* Fold caret — sits on the LEFT of the title, rotates -90° when the
-   section is folded (lil-gui idiom: down = open, right = closed).
-   Click anywhere on the header (except the Use My Own button) folds
-   / unfolds the section. */
-#usd-layers-panel .usd-fold-caret {
-  background: transparent;
-  border: 0;
-  color: var(--text-mid);
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-#usd-layers-panel .usd-fold-caret svg {
-  width: 14px;
-  height: 14px;
-  display: block;
-  transition: transform 0.18s ease;
-}
-#usd-layers-panel.folded .usd-fold-caret svg { transform: rotate(-90deg); }
-#usd-layers-panel.folded { border-bottom: none; }
-#usd-layers-panel.folded header { border-bottom: none; }
-#usd-layers-panel.folded .usd-row-list { display: none; }
+/* (Header / fold-caret / folded-state rules removed — UsdLayers no
+   longer manages its own folding. The wrapping lil-gui folder owns
+   that now. See the .usd-hint rule above for the only piece of
+   header-y chrome we still render: a small uppercase cue line above
+   the toggle rows that explains "stack freely".) */
 #usd-layers-panel header .title {
   font-family: var(--font-ui);
   font-size: 10px;

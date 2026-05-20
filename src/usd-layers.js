@@ -116,25 +116,15 @@ export class UsdLayers {
 
     this.el = document.createElement("aside");
     this.el.id = "usd-layers-panel";
-    // Header is JUST the fold caret + title — keeps the row tight so
-    // "3DGS / USD" never wraps when the panel is in a narrow column
-    // (mobile-sheet Advanced view, embedded lil-gui inside a phone-
-    // wide bottom sheet, etc.). The secondary "Use My Own" action
-    // lives below the rows instead, where it makes more hierarchical
-    // sense — primary content (layer toggles) on top, advanced asset-
-    // swap action at the bottom of the section.
+    // NO inner header — the panel is mounted INSIDE a real lil-gui
+    // folder ("3DGS / USD"), and lil-gui's own folder title + caret
+    // + fold animation give us perfect visual parity with the
+    // sibling folders (Customize / Cinematic FX / Tech Spec / Camera
+    // Movement). Our content is just the rows + the secondary
+    // "Use My Own" action below them; a tiny multi-select cue sits
+    // above the rows so the toggle-switch behaviour reads explicitly.
     this.el.innerHTML = `
-      <header>
-        <button class="usd-fold-caret" type="button" aria-label="Fold section" title="Fold / unfold">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <polyline points="6 9 12 15 18 9"/>
-          </svg>
-        </button>
-        <div class="usd-title-wrap">
-          <div class="title">3DGS / USD</div>
-          <div class="usd-hint">Toggle layers · stack freely</div>
-        </div>
-      </header>
+      <div class="usd-hint">Toggle layers · stack freely</div>
       <ul class="usd-row-list"></ul>
       <button class="usd-upload" title="Replace the primary splat — drop a .splat / .ply / .spz / .ksplat">⤓ Use My Own</button>
     `;
@@ -142,25 +132,8 @@ export class UsdLayers {
 
     this.listEl = this.el.querySelector(".usd-row-list");
     this.el.querySelector(".usd-upload")?.addEventListener("click", (e) => {
-      // Don't let the click bubble up to the header / panel fold handler.
       e.stopPropagation();
       this.onUploadRequest?.();
-    });
-
-    // Fold the section when the header (or its caret) is clicked, like
-    // a lil-gui folder. Same idiom as Customize / Cinematic FX / Tech
-    // Spec / Camera Movement — clicking anywhere on the title row
-    // (except the upload button) toggles the .folded class which hides
-    // the list. The caret rotates via CSS to reflect state.
-    const header = this.el.querySelector("header");
-    const setFolded = (on) => {
-      this.el.classList.toggle("folded", on);
-      header.setAttribute("aria-expanded", String(!on));
-    };
-    header?.addEventListener("click", () => {
-      // "Use My Own" lives outside the header now, so no special-case
-      // bail-out needed — every click on the header strip folds.
-      setFolded(!this.el.classList.contains("folded"));
     });
 
     this._render();

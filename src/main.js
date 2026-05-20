@@ -733,13 +733,25 @@ async function loadSplat() {
   const usdAnnotations = new UsdAnnotations({ mountEl: document.body });
   window.__usdAnnotations = usdAnnotations;
 
-  // Mount UsdLayers as the FIRST slot inside lil-gui's children container
-  // so the eye-icon layer panel reads as the top section of the same
-  // panel that contains Customize / Cinematic FX / Tech Spec / etc.
-  // Falls back to <body> if the lil-gui internal layout changes shape.
+  // Mount UsdLayers as the content of a REAL lil-gui folder named
+  // "3DGS / USD". This is the structural fix for the hierarchy issue:
+  // a custom panel sibling-of-folders never quite matched lil-gui's
+  // own folder visuals (caret style, title weight, indentation, fold
+  // animation). Putting our content inside a real folder means the
+  // sibling row IS a real lil-gui folder, identical to Customize /
+  // Cinematic FX / Tech Spec / Camera Movement. The .usd-embedded
+  // class strips our panel's own chrome (background / border) so
+  // only the folder's own treatment shows.
   const guiChildren = gui.domElement.querySelector(".children");
+  const fUsd = gui.addFolder("3DGS / USD");
+  // Move the new folder to be the FIRST child of the root so it sits
+  // at the top of SplatGarden Studio (its showcase position).
+  if (guiChildren && fUsd?.domElement) {
+    guiChildren.insertBefore(fUsd.domElement, guiChildren.firstChild);
+  }
+  const fUsdChildren = fUsd.domElement.querySelector(".children");
   const usdLayers = new UsdLayers({
-    mountEl:      guiChildren || document.body,
+    mountEl:      fUsdChildren || document.body,
     params:       effectParams,
     controller:   effects,
     onQuadShape:  (v) => quadizer?.setShape(v),
@@ -752,13 +764,7 @@ async function loadSplat() {
     onUploadRequest: () => window.__showSplatDrop?.(),
     onLayerActivate: (key) => usdAnnotations.show(key),
   });
-  if (guiChildren && guiChildren.firstChild !== usdLayers.el) {
-    guiChildren.insertBefore(usdLayers.el, guiChildren.firstChild);
-  }
-  // .usd-embedded class triggers a styling pass in style.css that
-  // strips the panel's own background / border / shadow so it reads
-  // as a section of lil-gui rather than a floating popover.
-  if (guiChildren) usdLayers.el.classList.add("usd-embedded");
+  if (fUsdChildren) usdLayers.el.classList.add("usd-embedded");
   window.__usdLayers = usdLayers;
   if (gui.fLayers?.hide) gui.fLayers.hide();
 
