@@ -1278,11 +1278,11 @@ async function loadSplat() {
         if (camCtrl) camCtrl.updateDisplay();
       }
     }
-    // Lens pulse — restored from commit a1bbbeb:
+    // Lens pulse — locked in after iteration:
     //   lensFisheye = 0.26 * sin(π * t / duration)
-    // Same full-bell shape but scaled to peak 0.26 at midpoint —
-    // gentler than the unclamped 1.0 version, still reads as a
-    // single sustained pulse across the clip.
+    // Full-bell sin curve across the clip, peak 0.26 at midpoint.
+    // Fires on every play; lensOn + postEnable force-on in
+    // camMoveStartLerps, restored in camMoveRevertLerps.
     if (camMoveState === "playing" && dur > 0) {
       _introTouchedLens = true;
       const LENS_PULSE_PEAK = 0.26;
