@@ -297,6 +297,44 @@ scene.add(camera);
 
 window.__cam = { camera };
 const controls = new OrbitControls(camera, canvas);
+
+// ----- Idle ambient orbit drift ---------------------------------------------
+// After 6 s of no user input, the camera begins a very slow auto-rotation
+// around its current target (≈ 0.3 °/s — barely perceptible per frame,
+// but enough to keep the scene from reading as a frozen screenshot when
+// the user pauses to read a card or panel). Any input resets the timer
+// AND immediately stops the rotation, so the moment the user touches
+// the scene they're back in full control. Suppressed during the
+// cinematic camera-move so the auto-rotate doesn't fight the FBX clip.
+//
+// OrbitControls has built-in autoRotate; we just gate it on a debounced
+// idle flag. Numerically, autoRotateSpeed = 0.05 → ≈ 0.3 °/s at 60 fps
+// (default 2.0 → 12 °/s; our value is 1/40th of the default).
+const _IDLE_AFTER_MS    = 6000;
+const _IDLE_ROTATE_SPD  = 0.05;
+let   _lastInputTime    = performance.now();
+controls.autoRotateSpeed = _IDLE_ROTATE_SPD;
+const _wakeFromIdle = () => {
+  _lastInputTime = performance.now();
+  if (controls.autoRotate) controls.autoRotate = false;
+};
+// Only listen for INTENTIONAL input — pointermove on desktop fires
+// constantly with mouse movement and would keep the scene awake forever
+// even when the user is just reading a card without touching anything.
+canvas.addEventListener("pointerdown", _wakeFromIdle);
+canvas.addEventListener("wheel",       _wakeFromIdle, { passive: true });
+window.addEventListener("keydown",     _wakeFromIdle);
+// Per-frame idle check is wired in the animation loop further down —
+// `_maybeEnterIdle()` (defined alongside camMoveState) flips
+// autoRotate on once the idle window has elapsed AND the cinematic
+// isn't playing AND no scrub is active.
+window.__idleSleepCheck = function _maybeEnterIdle(camMoveState, scrubActive) {
+  if (controls.autoRotate) return;
+  if (camMoveState !== "idle") return;     // cinematic running
+  if (scrubActive) return;                 // user holding the timeline
+  if ((performance.now() - _lastInputTime) < _IDLE_AFTER_MS) return;
+  controls.autoRotate = true;
+};
 window.__cam.controls = controls;
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
@@ -2933,6 +2971,12 @@ renderer.setAnimationLoop(() => {
 
   // Pre-authored FBX camera move (drives camera while playing / paused)
   if (window.__camMoveTick) window.__camMoveTick(dt);
+
+  // Idle ambient drift — flip OrbitControls.autoRotate on once the
+  // user has been inactive for 6 s (and the cinematic isn't running
+  // and they're not mid-scrub). The drift speed is set on the
+  // controls at construction time; this just gates the trigger.
+  window.__idleSleepCheck?.(camMoveState, _scrubActive);
 
   controls.update();
   // Tick the Echo-Trails bell-curve ramp (no-op when idle).
