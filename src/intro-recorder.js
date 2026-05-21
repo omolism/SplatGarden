@@ -40,10 +40,17 @@ const PHASES = [
 const FADE = 0.025;
 const smooth = (x) => { x = Math.max(0, Math.min(1, x)); return x * x * (3 - 2 * x); };
 
-// First mime type the browser actually supports, in descending quality.
+// First mime type the browser actually supports. MP4 (H.264) is tried
+// first because the resulting file plays natively in QuickTime / Premiere
+// / iOS Photos / Final Cut without a re-encode step; WebM is the
+// fallback for browsers that still lack MediaRecorder MP4 support
+// (Firefox as of late 2025, older Chromium).
 function pickMime() {
   if (typeof MediaRecorder === "undefined") return null;
   const candidates = [
+    "video/mp4;codecs=avc1.42E01E",   // H.264 baseline profile
+    "video/mp4;codecs=avc1",
+    "video/mp4",
     "video/webm;codecs=vp9",
     "video/webm;codecs=vp8",
     "video/webm",
@@ -51,7 +58,16 @@ function pickMime() {
   for (const m of candidates) {
     try { if (MediaRecorder.isTypeSupported(m)) return m; } catch { /* */ }
   }
-  return "video/webm";
+  return null;
+}
+
+// File extension implied by a chosen mime type. Mapping is exact — we
+// only call this with strings pickMime() returned, so unknown values
+// fall back conservatively to .webm.
+function extForMime(mime) {
+  if (!mime) return "webm";
+  if (mime.startsWith("video/mp4")) return "mp4";
+  return "webm";
 }
 
 // Fixed export resolutions. Phone gets 9:16 portrait, everything else
@@ -119,6 +135,9 @@ export class IntroRecorder {
     this.stream = this.dst.captureStream(this.fps);
 
     const mimeType = pickMime();
+    // Remember the mime so stop() builds the Blob with the matching type
+    // and download() picks the right file extension.
+    this.mimeType = mimeType;
     this.recorder = new MediaRecorder(this.stream, {
       mimeType,
       videoBitsPerSecond: this.bitrate,
@@ -320,7 +339,9 @@ export class IntroRecorder {
     return new Promise((resolve) => {
       const rec = this.recorder;
       rec.onstop = () => {
-        const blob = new Blob(this.chunks, { type: "video/webm" });
+        // Use the recorder's actual chosen mime (Blob container should
+        // match the MP4 / WebM payload bytes the chunks contain).
+        const blob = new Blob(this.chunks, { type: this.mimeType || "video/webm" });
         this.recorder = null;
         this.stream?.getTracks().forEach((tr) => tr.stop());
         this.stream = null;
@@ -335,8 +356,11 @@ export class IntroRecorder {
     const url = URL.createObjectURL(blob);
     const a   = document.createElement("a");
     const ts  = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    // Extension follows the actual container the encoder produced — .mp4
+    // when MediaRecorder picked an MP4 mime, .webm otherwise.
+    const ext = extForMime(blob.type || this.mimeType);
     a.href     = url;
-    a.download = `${baseName}-${ts}.webm`;
+    a.download = `${baseName}-${ts}.${ext}`;
     document.body.appendChild(a);
     a.click();
     a.remove();
