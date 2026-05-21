@@ -23,7 +23,6 @@ import { ViewpointTuner } from "./viewpoint-tuner.js";
 import { Credits } from "./credits.js";
 import { IntroOverlay } from "./intro-overlay.js";
 import { IntroRecorder } from "./intro-recorder.js";
-import { OnboardingPointers } from "./onboarding-pointers.js";
 import { MobileNav } from "./mobile-nav.js";
 import { HandLandmarksOverlay } from "./hand-landmarks-overlay.js";
 // CinematicFlourish import dropped — the end-card was retired per user
@@ -605,8 +604,6 @@ const introOverlay = new IntroOverlay({ mountEl: document.body });
 const introRecorder = new IntroRecorder({ canvas });
 window.__introRecorder = introRecorder;
 window.__introOverlay = introOverlay;
-const onboardingPointers = new OnboardingPointers({ mountEl: document.body });
-window.__onboardingPointers = onboardingPointers;
 
 // Quick Guide — bottom-centre card with mouse + key shortcuts. Auto-pops on
 // scene entry (showFor below in loadSplat's end), summon back with H.
@@ -1084,6 +1081,27 @@ async function loadSplat() {
     shape:    effectParams.quadShape,
     fxUniforms: effectUniforms,
   });
+  // Pre-warm the Quadizer so the ¼-beat of the auto-played intro (when
+  // setLayerVis("quad", true) lands) doesn't trigger the synchronous
+  // ~3M-splat rebuild + first-frame shader compile + GPU buffer upload
+  // all on one frame — that combo produced a visible ~150 ms stutter at
+  // the 4.21 s mark. Done after a short delay so the splat-load critical
+  // path finishes first; the work overlaps the splash-fade choreography.
+  // Uses renderer.compile(scene, camera) to force the shader+buffer
+  // upload WITHOUT actually drawing a frame, so there's no visible flash
+  // of the quad layer at near-zero opacity.
+  setTimeout(() => {
+    if (!quadizer) return;
+    quadizer.rebuild();
+    if (quadizer.mesh && renderer?.compile) {
+      quadizer.mesh.visible = true;       // include the mesh in compile() walk
+      try { renderer.compile(scene, camera); } catch (e) { console.warn("[Quadizer pre-warm compile]", e); }
+      // Hard-reset to invisible: the per-frame quadizer.setOpacity(quadVis)
+      // call will continue to drive this from the lerped uniform, so the
+      // ¼-beat opacity ramp still kicks in normally.
+      quadizer.mesh.visible = false;
+    }
+  }, 400);
   _hudRefs.voxelizer = voxelizer;
   _hudRefs.quadizer  = quadizer;
   gui.controllersRecursive().forEach(ctrl => {
@@ -2184,7 +2202,10 @@ async function loadSplat() {
             // next one slides in. Less barrage, same coverage.
             flourishDone.then(() => {
               setTimeout(() => keyHints?.showFor(6500), 120);
-              setTimeout(() => onboardingPointers?.show(), 1020);
+              // OnboardingPointers (animated arrows) removed — the
+              // anchors drifted on smaller / narrower viewports so the
+              // arrows kept pointing at empty space. Quick Guide alone
+              // covers the same content reliably.
             });
           }
         });

@@ -388,15 +388,28 @@ export class AssetHoverManager {
     this.card.addEventListener("pointercancel", endDrag);
   }
 
+  // Reserved gutter on the right edge for the rotated mobile bottombar
+  // pill (column mode, landscape short viewport). Matches the
+  // `margin-right` carved out in style.css. Returns 0 in any other layout.
+  _rightGutter() {
+    try {
+      const landscape = matchMedia("(orientation: landscape) and (max-height: 520px)").matches;
+      return landscape ? 88 : 0;
+    } catch { return 0; }
+  }
+
   // Pin the card to an explicit (x, y) screen coordinate. Once dragged,
   // the position is remembered so subsequent _show() calls don't snap
   // back to the centered default.
   _setCardPos(x, y) {
-    // Clamp into the viewport so the card never escapes off-screen.
+    // Clamp into the viewport so the card never escapes off-screen, with
+    // an extra gutter on the right in landscape-phone layouts where the
+    // bottombar pill is anchored to the right edge.
     const margin = 8;
+    const gutter = this._rightGutter();
     const w  = this.card.offsetWidth;
     const h  = this.card.offsetHeight;
-    const cx = Math.max(margin, Math.min(window.innerWidth  - w - margin, x));
+    const cx = Math.max(margin, Math.min(window.innerWidth  - w - margin - gutter, x));
     const cy = Math.max(margin, Math.min(window.innerHeight - h - margin, y));
     this._cardPos = { x: cx, y: cy };
     this.card.style.left      = cx + "px";
@@ -448,15 +461,16 @@ export class AssetHoverManager {
     const h = this.card.offsetHeight || 400;
     const gap    = 28;
     const margin = 12;
+    const gutter = this._rightGutter();
     // Prefer right of the dot; fall back to left, then a fixed
     // top-right slot if the dot is centered horizontally.
     let x = dotRect.right + gap;
     let y = dotRect.top - 20;
-    if (x + w > window.innerWidth - margin) {
+    if (x + w > window.innerWidth - margin - gutter) {
       x = dotRect.left - w - gap;
     }
     if (x < margin) {
-      x = Math.max(margin, window.innerWidth - w - margin);
+      x = Math.max(margin, window.innerWidth - w - margin - gutter);
     }
     y = Math.max(margin, Math.min(window.innerHeight - h - margin, y));
     this.card.style.left = x + "px";

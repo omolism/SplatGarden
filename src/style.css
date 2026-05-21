@@ -6097,10 +6097,21 @@ body.mobile #mobile-studio-btn { display: none; }
    asset-hover.js (which reads `offsetWidth` / `getBoundingClientRect`
    to position the card next to its dot) still works correctly.
    Targets only short landscape viewports — iPad in landscape (height
-   ≥ 700 px) keeps the full-size card. */
+   ≥ 700 px) keeps the full-size card.
+
+   Replaces an earlier `zoom: 0.72` hack: zoom in Chrome doesn't update
+   offsetWidth/offsetHeight consistently across versions, so the JS
+   clamping in asset-hover.js read the pre-zoom size and let the card
+   overshoot the viewport. Explicit smaller dimensions keep the clamp
+   math honest, and the right-side gutter accounts for the rotated
+   mobile bottombar pill anchored to the right edge. */
 @media (orientation: landscape) and (max-height: 520px) {
   #asset-hover-card {
-    zoom: 0.72;
+    width: min(420px, 58vw);
+    max-height: calc(100vh - 24px);
+    /* Right margin reserves room for the column-mode bottombar pill
+       (≈ 76 px wide) + a small breathing gap. */
+    margin-right: 88px;
   }
 }
 
@@ -6123,6 +6134,36 @@ body.mobile #mobile-studio-btn { display: none; }
   /* JS drag handler always composes translateX(-50%) now (every
      orientation centres horizontally), so no landscape-specific
      transform override is needed. */
+}
+
+/* ---- Phone landscape: anchor #mobile-bottombar to the right edge ----
+ * The bottom-edge pill eats vertical real estate that's already scarce
+ * in landscape (most phones are ~400 px tall), and reaching back to the
+ * bottom is awkward when the device is held horizontally. Anchor the
+ * pill to the right edge as a vertical strip — same buttons, just laid
+ * out as a column. Targets short landscape viewports only; tablets and
+ * wider phones (Plus / Pro Max landscape) drop body.mobile via JS. */
+@media (orientation: landscape) and (max-height: 520px) {
+  body.mobile #mobile-bottombar {
+    flex-direction: column;
+    height: auto;
+    max-height: 84vh;
+    padding: 8px 6px;
+    left: auto;
+    right: calc(10px + env(safe-area-inset-right, 0px));
+    bottom: auto;
+    top: 50%;
+    transform: translateY(-50%);
+    border-radius: 36px;
+    /* The pill widens slightly in column mode so labels still fit. */
+    min-width: 64px;
+  }
+  body.mobile #mobile-bottombar button {
+    /* Tighter vertical padding so the column fits five buttons
+       comfortably on a ~360 px landscape viewport. */
+    padding: 6px 8px;
+    min-width: 0;
+  }
 }
 
 /* ============================================================
