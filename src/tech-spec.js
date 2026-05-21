@@ -21,6 +21,8 @@ import { fitVimeoFrames } from "./vimeo-fit.js";
 // values would point at the domain root on production and 404 — the
 // "images still aren't showing" symptom the user just flagged.
 const BASE = import.meta.env.BASE_URL;
+
+export const TECH_SPECS = [
   // ============== Observer-first ordering ==============
   // Overview — one-screen anchor: what is this, in one sentence.
   // L3 3DGS  — what the viewer is actually LOOKING AT (rendering primitive
