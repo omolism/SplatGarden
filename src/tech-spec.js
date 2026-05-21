@@ -213,13 +213,30 @@ export const TECH_SPECS = [
         name:      "Grape Hyacinth",
         location:  "Near gazebo",
         worldPos:  [-0.195, -0.730, 2.379],
-        toolchain: ["Houdini (procedural)", "Unreal Engine (set dress)"],
-        note:      "Houdini-generated cluster scattered across the gazebo planters. The previs reel below steps through the closeup and the Houdini custom-tool breakdown that drives the bloom layout.",
-        embed: {
-          src:   "https://player.vimeo.com/video/1193813472?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
-          label: "Closeup + Houdini tool breakdown",
-          title: "Grape Hyacinth Tool Previs",
-        },
+        toolchain: [
+          "Houdini (procedural tool + GUI)",
+          "VAT (vertex animation texture bake)",
+          "Unreal Engine (PCG scatter)",
+          "Sequencer + Movie Render Queue",
+          "SubsurfaceTwoSidedFoliage shader",
+        ],
+        note:      "Stylised grape-hyacinth cluster authored end-to-end in Houdini — a procedural tool with a per-part GUI (artist-tunable stalk count, bloom density, petal twist, etc.). The animation is baked to a Vertex Animation Texture for GPU-cheap playback in Unreal. Layout in-engine is driven by PCG so density follows the planter splines, and the hero render is captured through Sequencer + Movie Render Queue at film quality. Foliage shading uses Unreal's SubsurfaceTwoSidedFoliage model so backlit petals translucently glow without doubling the geometry. The two reels below show, in order: the Houdini tool with the GUI exposed, then the final stylised render that ships in-engine.",
+        // Two embeds — the Houdini tool breakdown (artist-facing GUI for
+        // every parameter) and the final Unreal-rendered hero shot. These
+        // are intentionally separate: one shows the AUTHORING pipeline,
+        // the other shows the SHIPPED render. Don't collapse them.
+        embed: [
+          {
+            src:   "https://player.vimeo.com/video/1193813472?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
+            label: "Houdini tool · per-part GUI",
+            title: "Grape Hyacinth — Houdini Procedural Tool",
+          },
+          {
+            src:   "https://player.vimeo.com/video/1187001709?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
+            label: "Stylised render · VAT + PCG + MRQ",
+            title: "Grape Hyacinth — Shot 4B Transition",
+          },
+        ],
         compare: {
           before: null,
           after:  null,

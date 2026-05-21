@@ -131,10 +131,15 @@ export class AnnotationManager {
       el: null,
     };
 
-    // DOM marker
-    const dot = document.createElement("div");
+    // DOM marker — promoted from <div> to <button> + aria-label so
+    // assistive tech announces it as the interactive viewpoint anchor
+    // it is. Visual chrome is reset to match the original .annotation
+    // styling, so nothing changes for sighted users.
+    const dot = document.createElement("button");
+    dot.type = "button";
     dot.className = "annotation";
     dot.textContent = String(this.viewpoints.length + 1);
+    dot.setAttribute("aria-label", `Viewpoint ${this.viewpoints.length + 1} — ${name}`);
     dot.addEventListener("click", (ev) => {
       ev.stopPropagation();
       this.flyTo(id);
@@ -269,8 +274,22 @@ export class AnnotationManager {
     }
   }
 
+  // Master visibility flag. Set false to hide ALL viewpoint markers (e.g.,
+  // when the underlying splat is hidden via the Scene panel — the floating
+  // numbered dots in empty space were the visual artifact the user
+  // flagged: "如果隐藏scene 这个相关的资产卡片也应该消失").
+  setVisible(on) {
+    this._hidden = !on;
+    if (this._hidden) {
+      for (const vp of this.viewpoints) {
+        if (vp.el) vp.el.style.display = "none";
+      }
+    }
+  }
+
   // Project anchors to screen each frame
   updateMarkers(width, height) {
+    if (this._hidden) return;       // master-hide bypass
     if (!this.viewpoints.length) return;
     const camDir = new THREE.Vector3();
     this.camera.getWorldDirection(camDir);

@@ -25,7 +25,9 @@ import { IntroOverlay } from "./intro-overlay.js";
 import { OnboardingPointers } from "./onboarding-pointers.js";
 import { MobileNav } from "./mobile-nav.js";
 import { HandLandmarksOverlay } from "./hand-landmarks-overlay.js";
-import { CinematicFlourish }   from "./cinematic-flourish.js";
+// CinematicFlourish import dropped — the end-card was retired per user
+// feedback. The module remains in src/ but no longer ships in the bundle.
+// import { CinematicFlourish }   from "./cinematic-flourish.js";
 import { MobileUI } from "./mobile-ui.js";
 import { haptic }   from "./haptic.js";
 import { playSound, primeSound } from "./sounds.js";
@@ -59,13 +61,12 @@ import { loadColmapImages, buildColmapFrustums, colmapCameraPosition, colmapCame
 // concatenation is safe.
 const BASE = import.meta.env.BASE_URL;
 const SPLAT_URL = `${BASE}SplatGarden_PC.splat`;
-// Optional mobile-only variant — a smaller asset (lower splat count or
-// the .spz compressed format) dropped into /public for phones / tablets.
-// Loader probes via HEAD and silently falls through when missing, so
-// this is a zero-cost addition. Format is auto-detected from the file
-// extension via splatTypeFromUrl() below, so swapping in an .spz later
-// requires only renaming the constant.
-const SPLAT_MOBILE_URL = `${BASE}SplatGarden_Mobile.splat`;
+// (The optional mobile-only variant + SPLAT_MOBILE_URL constant were
+// removed alongside SplatGarden_Mobile.splat to free LFS bandwidth.
+// No code path was loading it after the mobile-variant fork was retired
+// per the "no reason to sacrifice detail" user direction. Re-add the
+// constant + the asset under /public if a future explicit-pick UI ever
+// re-introduces a smaller asset for metered connections.)
 
 // Map a URL's extension to Spark's SplatFileType enum value. Used so
 // the mobile variant can be either .splat or .spz / .ply / .ksplat
@@ -141,10 +142,56 @@ window.__isHighEndMobile = isHighEndMobile;
 const canvas       = document.getElementById("viewport");
 const loadingEl    = document.getElementById("loading");
 const loadingText  = document.getElementById("loading-text");
+
+// ---- WebGL2 pre-flight (PM-13) ------------------------------------------
+// Spark requires WebGL2. Older browsers / locked-down corporate machines
+// may not have it. Detecting BEFORE we kick off the 90 MB splat download
+// saves the user a long wait followed by a cryptic console error.
+function _showFatalError(title, body, retry = true) {
+  const el = document.createElement("div");
+  el.className = "fatal-error";
+  el.setAttribute("role", "alert");
+  el.innerHTML = `
+    <div class="fe-card">
+      <div class="fe-title">${title}</div>
+      <div class="fe-body">${body}</div>
+      ${retry ? `<button class="fe-retry" type="button">Try again</button>` : ""}
+    </div>`;
+  document.body.appendChild(el);
+  el.querySelector(".fe-retry")?.addEventListener("click", () => location.reload());
+  // Hide the still-spinning loading splash since we've shipped a worse
+  // error state and don't want the two stacking visually.
+  document.getElementById("loading")?.classList.add("hidden");
+  return el;
+}
+window.__showFatalError = _showFatalError;
+(function _preflightWebGL2() {
+  let gl;
+  try { gl = canvas.getContext("webgl2"); } catch {}
+  if (!gl) {
+    _showFatalError(
+      "WebGL 2 not available",
+      "SplatGarden requires WebGL 2 to render 3D Gaussian Splats. " +
+      "Most current Chrome / Edge / Firefox / Safari versions support it — " +
+      "please try a recent browser, or check whether hardware acceleration " +
+      "is disabled in your browser settings.",
+      true,
+    );
+    throw new Error("WebGL2 unavailable — halting boot");
+  }
+})();
 const annoLayer    = document.getElementById("annotation-layer");
 const viewList     = document.getElementById("viewpoint-list");
 const addBtn       = document.getElementById("add-viewpoint");
+const shareBtn     = document.getElementById("share-viewpoint");
 const statusEl     = document.getElementById("status");
+// "Copy link to this viewpoint" — wires to the share helper defined inside
+// loadSplat (it needs the camera/controls). Guard for early clicks before
+// the helper is wired.
+shareBtn?.addEventListener("click", () => {
+  if (typeof window.__copyViewLink === "function") window.__copyViewLink();
+  else statusEl.textContent = "Scene still loading — try again in a moment";
+});
 const handToggle   = document.getElementById("hand-toggle");
 const handVideo    = document.getElementById("hand-video");
 const handCursor   = document.getElementById("hand-cursor");
@@ -280,12 +327,91 @@ let _sceneCollapseCtrl = null;   // wired below after SceneLayers is built
 // snapshot path. Minor GPU cost; the headline cost was already paid by
 // post-FX render targets.
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, preserveDrawingBuffer: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, IS_MOBILE ? 1.5 : 2));
+// Pixel-ratio policy. The old cap of `min(dpr, 2)` matched native iPad/Retina
+// pixel density, but the user reported the iPad Air emulator in Chrome
+// DevTools rendered softer than expected — "looks like the mobile asset
+// even though SplatGarden_PC is loaded". Root cause: DevTools' iPad preset
+// often inherits the HOST monitor's devicePixelRatio (so a 1080p workstation
+// reports dpr=1), and at dpr=1 the 3M-splat scene is rasterised at exactly
+// CSS-pixel resolution with no headroom for the anti-aliasing the projected
+// Gaussians need to read as sharp.
+//
+// Updated policy:
+//   • Phone   — cap at 1.5× (fill-rate constrained; bumping higher
+//     thrashes thermals on the same hardware that has a small screen
+//     anyway).
+//   • Non-phone (tablet / iPad / desktop) — FLOOR at 1.5× and cap at 3×.
+//     The floor means a dpr=1 host gets a "free" 1.5× SSAA pass (2.25×
+//     the pixels, comfortable for a discrete or modern integrated GPU on
+//     3M splats). The cap at 3 honours iPhone Pro / iPad Pro Retina-3×
+//     without uncapped 4×+ on extreme external displays.
+//
+// Console-logged so the user can verify in DevTools which ratio actually
+// applied for their device/emulator combination.
+// ---- Performance preference ---------------------------------------------
+// Single user-facing dial — `Battery / Balanced / Max Quality` — that drives
+// pixel-ratio cap, bloom default, and particles default. Persists across
+// sessions in localStorage. A laptop user on battery can knock the whole
+// experience to "Battery" once and stop fighting the fan; a desktop user
+// can opt INTO Max Quality (uncapped DPR + bloom + particles ON) without
+// hunting through three folders.
+//
+// Profile values:
+//   battery   — dpr 1.0, bloom OFF, particles OFF  (fan-friendly)
+//   balanced  — dpr device-default (1.5 phone / 1.5-floor-3-cap desktop),
+//               bloom OFF, particles OFF  (the current shipped defaults)
+//   max       — dpr 3.0, bloom ON, particles ON  (showcase mode)
+const PERF_PREF_KEY = "splatgarden:perf";
+const PERF_PROFILES = {
+  battery:  { dprCap: 1.0,  bloom: false, particles: false },
+  balanced: { dprCap: null, bloom: false, particles: false },   // null = device-default
+  max:      { dprCap: 3.0,  bloom: true,  particles: true  },
+};
+let _perfPref;
+try { _perfPref = localStorage.getItem(PERF_PREF_KEY) || "balanced"; } catch { _perfPref = "balanced"; }
+if (!(_perfPref in PERF_PROFILES)) _perfPref = "balanced";
+const _perfProfile = PERF_PROFILES[_perfPref];
+
+const _hostDpr    = window.devicePixelRatio || 1;
+const _deviceDpr  = IS_MOBILE
+  ? Math.min(_hostDpr, 1.5)
+  : Math.min(Math.max(_hostDpr, 1.5), 3);
+const _dprApplied = _perfProfile.dprCap !== null
+  ? Math.min(_hostDpr, _perfProfile.dprCap)    // explicit perf-profile cap
+  : _deviceDpr;                                // device-default cap
+renderer.setPixelRatio(_dprApplied);
+console.info(
+  `[renderer] perf=${_perfPref} devicePixelRatio=${_hostDpr} applied=${_dprApplied}` +
+  ` (IS_PHONE=${IS_PHONE} IS_TABLET=${IS_TABLET} IS_IPAD=${IS_IPAD})`,
+);
 renderer.setSize(window.innerWidth, window.innerHeight, false);
 renderer.setClearColor(0x0b0f14, 1);
 
 const scene = new THREE.Scene();
-const spark = new SparkRenderer({ renderer });
+// SuperSplat / PlayCanvas-style "filled" rendering. The user noted that
+// SuperSplat's web viewer renders the same scene without the pinhole gaps
+// our default render shows. Two Spark knobs close the gap:
+//
+//   • preBlurAmount: 0.3  — adds 0.3 to each splat's 2D covariance diagonal,
+//     enlarging Gaussians so neighbours overlap. This is the documented
+//     default for splats trained WITHOUT the Inria anti-aliasing tweak
+//     (which describes Postshot / vanilla Inria pipelines). The Spark
+//     default is 0.0, which leaves the raw Gaussians and produces the
+//     pinhole look — visible especially on tile boundaries and edges.
+//
+//   • focalAdjustment: 2.0 — matches the splat-scale convention used by
+//     PlayCanvas / SuperSplat. Doubles the projected splat size relative to
+//     Spark's default of 1.0. Combined with preBlurAmount it reads as
+//     "every splat is a slightly larger soft blob" — the look the user
+//     called out as "把洞都给补上了" (holes are filled).
+//
+// These are renderer-level uniforms, so they apply uniformly across the
+// primary AND any imported secondary layers — no per-layer tuning needed.
+const spark = new SparkRenderer({
+  renderer,
+  preBlurAmount:    0.3,
+  focalAdjustment:  2.0,
+});
 scene.add(spark);
 
 const camera = new THREE.PerspectiveCamera(
@@ -385,9 +511,37 @@ const sceneLayers = new SceneLayers({
 // `effects` is hoisted later in this file; the guard tolerates the
 // race where this callback fires before the bridge target is wired.
 sceneLayers.onVisibilityChange = (_id, on, isPrimary) => {
-  if (!isPrimary) return;
-  if (typeof effects !== "undefined" && effects?.setLayerVis) {
+  if (isPrimary && typeof effects !== "undefined" && effects?.setLayerVis) {
     effects.setLayerVis("splat", on);
+  }
+  // Retarget effects / raycast / effector-mesh whenever any layer's eye
+  // toggles, so "interactive layer" follows the visible one. Fixes the
+  // bug where importing a second 3DGS and hiding the primary left clicks
+  // silently no-op'ing (raycaster was bound to the now-invisible primary).
+  // Defers through window.__retargetInteractiveLayer because the actual
+  // function is defined later (it depends on `splat`, `effects`, `raycaster`,
+  // `effectorMesh`, all of which are initialised inside loadSplat below).
+  window.__retargetInteractiveLayer?.();
+
+  // Hide every scene-anchored overlay when the primary splat is hidden
+  // (asset hotspot dots, numbered viewpoint anchors, data labels, COLMAP
+  // training-camera frustums). Otherwise these float in empty space —
+  // user reported them as "orphan cards" once they hid the scene.
+  // Restoring visibility on toggle-back honours each subsystem's own
+  // toggle state (the Tech Spec panel ON checkbox for hotspots /
+  // labels / cameras), so we don't overwrite a user's prior choice.
+  if (isPrimary) {
+    if (typeof assetHover    !== "undefined") assetHover?.setVisible(on && (window.__techEnableValue ?? true));
+    if (typeof annotations   !== "undefined") annotations?.setVisible?.(on);
+    if (typeof dataLabels    !== "undefined" && dataLabels?.setEnabled) {
+      // Only restore data labels if the user had them ON before. We track
+      // the last-user-set value on the controller, falling back to off.
+      const dataParamsOn = window.__dataLabelsUserOn ?? false;
+      dataLabels.setEnabled(on && dataParamsOn);
+    }
+    if (typeof cameraFrustums !== "undefined" && cameraFrustums) {
+      cameraFrustums.visible = on && (window.__camFrustumsUserOn ?? false);
+    }
   }
 };
 window.__sceneLayers = sceneLayers;
@@ -426,6 +580,21 @@ techSpec.onAssetToggle = (name, on) => assetHover.setItemVisible(name, on);
 // under the Tech Spec folder). The other two are driven by the camera
 // move's playback state (see __camMoveTick + the mixer 'finished' hook).
 const credits = new Credits({ mountEl: document.body });
+// Floating "About" pill in the bottom-toolbar opens the Credits panel.
+// Promoted from lil-gui's Tech Spec > Credits checkbox so visitors have
+// a project-level "what is this?" entry point that doesn't require any
+// drilling — see PM-6.
+const _aboutBtn = document.getElementById("about-btn");
+_aboutBtn?.addEventListener("click", () => {
+  credits.setOpen(true);
+  // Mirror the GUI checkbox state so the lil-gui control stays in sync.
+  try {
+    const gui = window.__gui;
+    gui?.controllersRecursive?.().forEach(c => {
+      if (c._name === "Credits" && typeof c.setValue === "function") c.setValue(true);
+    });
+  } catch {}
+});
 window.__credits = credits;
 const introOverlay = new IntroOverlay({ mountEl: document.body });
 window.__introOverlay = introOverlay;
@@ -453,13 +622,42 @@ const techOverlayScene = new THREE.Scene();
 // in the composer chain (tonemap, colour grade, vignette, grain) is
 // cheap and stays enabled.
 if (IS_PHONE) {
-  const handPanel = document.getElementById("hand-panel");
-  if (handPanel) handPanel.style.display = "none";
+  // (Hand-panel display is now orientation-reactive via CSS — see the
+  // `body.phone #hand-panel { display: none }` rule. The previous
+  // JS-set inline `style.display = "none"` was sticky from the initial
+  // PORTRAIT detection and persisted into landscape, leaving hand
+  // tracking unreachable when the user rotated. User reported:
+  // "手机横屏的handtracking显示有问题". CSS reacts to orientation,
+  // JS doesn't.)
   postfx.params.bloomEnable   = false;
   postfx.params.underwaterOn  = false;
   // gpParticleParams.enable already defaults to false, so particles stay
   // off on phones without extra plumbing.
 }
+// Performance profile overrides the bloom default (and later particles —
+// applied in the particles section once gpParticleParams exists). The
+// profile is OR'd with the phone-default — i.e., Max-Quality on a phone
+// still turns bloom on, but Battery on a desktop turns it off.
+postfx.params.bloomEnable = _perfProfile.bloom;
+
+// Status callback used by the lil-gui Performance chooser to surface a
+// "reload to fully apply" hint when the user switches profiles mid-session.
+// DPR + bloom-default + particles-default all branch at init from the
+// persisted profile, so a live switch can update SOME state (we toggle
+// bloom + particles inline below) but DPR genuinely needs a fresh boot.
+window.__perfStatus = (v) => {
+  // Live-apply what we can: bloom + particles toggle without reload.
+  const prof = PERF_PROFILES[v] || PERF_PROFILES.balanced;
+  postfx.params.bloomEnable = prof.bloom;
+  if (typeof gpgpuParticles !== "undefined" && gpgpuParticles?.setEnabled) {
+    gpgpuParticles.setEnabled(prof.particles);
+  }
+  if (typeof statusEl !== "undefined") {
+    statusEl.textContent = (v === _perfPref)
+      ? `Performance: ${v}`
+      : `Performance: ${v} — reload to fully apply DPR`;
+  }
+};
 // Mobile nav drawer (top-right hamburger). CSS hides it on non-touch.
 const mobileNav = new MobileNav();
 window.__mobileNav = mobileNav;
@@ -485,14 +683,10 @@ function setLoading(msg) {
 //  static editorial layout in index.html until a better motion
 //  treatment is shipped.)
 
-// End-of-cinematic title card. Mounted once, played each time the FBX
-// camera-move mixer emits "finished" (Replay Intro included). Builds
-// its DOM lazily on first .play() so it doesn't sit dark in the tree.
-// All copy comes from the constructor's defaults — title-case
-// "SplatGarden", mixed-case subtitle + credit — matching the loading
-// splash typography exactly so the opening + closing card read as
-// one continuous brand.
-const _cinematicFlourish = new CinematicFlourish({ mountEl: document.body });
+// (CinematicFlourish end-card mount removed — the card was retired per
+// user feedback as redundant with the opening title sequence. The class
+// + CSS remain in the codebase in case a different end-card treatment
+// is wanted later, but nothing instantiates it.)
 
 function hideLoading() {
   loadingEl?.classList.add("hidden");
@@ -635,11 +829,8 @@ async function loadSplat() {
   // fork + maxSplats cap was removed per user request: the download
   // time wasn't materially shorter on touch (both files travel the
   // same connection, both are tens of MB), but the detail loss WAS
-  // perceptible, so the optimization was net-negative.
-  //
-  // SplatGarden_Mobile.splat still ships in public/ in case a future
-  // explicit-pick UI re-introduces the smaller variant for users on
-  // metered connections — but no code path selects it automatically.
+  // perceptible, so the optimization was net-negative. The Mobile
+  // variant file was also removed from /public to save LFS bandwidth.
   const assetUrl  = SPLAT_URL;
   const assetType = "splat";
 
@@ -741,6 +932,9 @@ async function loadSplat() {
   splat.objectModifier = createScanModifier();
   splat.updateGenerator();
   const gui = buildGUI(effects);
+  window.__gui = gui;     // exposed so the floating About pill (and other
+                          // promoted affordances) can mirror state into
+                          // the lil-gui controllers that own canonical state
   postfx.attachGUI(gui);
   // Push lil-gui inward from the viewport edges so the panel doesn't
   // hug the right border (a little bleed reads more polished). Also
@@ -748,6 +942,84 @@ async function loadSplat() {
   gui.domElement.style.top         = "18px";
   gui.domElement.style.right       = "18px";
   gui.domElement.style.maxHeight   = "calc(100vh - 36px)";
+
+  // "Reset to default presentation" — single click that wipes the user's
+  // toggle / slider explorations and snaps everything back to the curated
+  // first-impression. Crucial after 5+ minutes of fiddling: today there's
+  // no way home except a hard refresh (which also nukes user-created
+  // viewpoints). This button keeps viewpoints + persisted prefs intact,
+  // but rolls FX/post/scene-layer/visibility back to the defaults the
+  // cinematic intro lands on.
+  const resetBtn = document.createElement("button");
+  resetBtn.className = "gui-reset-btn";
+  resetBtn.type = "button";
+  resetBtn.title = "Reset visual settings to the default presentation (keeps your viewpoints)";
+  resetBtn.setAttribute("aria-label", "Reset to default presentation");
+  resetBtn.innerHTML = `
+    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
+         stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polyline points="1 4 1 10 7 10"/>
+      <path d="M3.51 15A9 9 0 1 0 6 5.3L1 10"/>
+    </svg>
+    <span>Reset</span>
+  `;
+  resetBtn.addEventListener("click", () => {
+    // 1. Re-apply the default FX preset (snaps Effect + Color + Radius + …)
+    try {
+      const DEFAULT_FX = "Slime Molds";
+      gui.controllersRecursive().forEach(c => {
+        if (c._name === "Preset" && typeof c.setValue === "function") {
+          c.setValue(DEFAULT_FX);
+        }
+      });
+    } catch {}
+    // 2. Reset post-fx params to module defaults via the GUI controllers'
+    //    .reset() (each lil-gui controller knows its initial value).
+    try {
+      gui.controllersRecursive().forEach(c => {
+        if (typeof c.reset === "function") c.reset();
+      });
+    } catch {}
+    // 3. All splat layers visible (Scene panel eyes back ON)
+    try {
+      sceneLayers.layers.forEach(l => { if (!l.visible) sceneLayers.setVisible(l.id, true); });
+    } catch {}
+    // 4. Status confirmation
+    if (typeof statusEl !== "undefined") statusEl.textContent = "Reset to default presentation";
+  });
+  // "↻ Replay intro" — promotes the cinematic re-play out of the deeply
+  // nested Cinematic-FX folder into the always-visible panel title row.
+  // Sits NEXT TO Reset because both are "global, one-click, big action"
+  // affordances — Reset wipes state, Replay re-fires the directed camera
+  // move. They're not viewpoints (Viewpoints sidebar earlier was the wrong
+  // home — user feedback: "这个按钮放在这里不合适，因为不是viewport"),
+  // they're meta-actions affecting the whole experience.
+  const replayBtn = document.createElement("button");
+  replayBtn.className = "gui-reset-btn gui-replay-btn";
+  replayBtn.type = "button";
+  replayBtn.title = "Replay the opening cinematic camera move";
+  replayBtn.setAttribute("aria-label", "Replay cinematic intro");
+  replayBtn.innerHTML = `
+    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
+         stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polygon points="6 4 20 12 6 20 6 4"/>
+    </svg>
+    <span>Replay</span>
+  `;
+  replayBtn.addEventListener("click", () => {
+    if (typeof window.__replayIntro === "function") window.__replayIntro();
+    else statusEl.textContent = "Cinematic still loading — try again in a moment";
+  });
+
+  // Insert both global-action pills into the lil-gui title row, in order:
+  // Replay (the affirmative "play me") sits LEFT of Reset (the corrective
+  // "undo my fiddling") so the more common user intent — re-watching the
+  // cinematic — is closer to the eye.
+  const titleEl = gui.domElement.querySelector(".title");
+  if (titleEl) {
+    titleEl.appendChild(replayBtn);
+    titleEl.appendChild(resetBtn);
+  }
   // Top-level "Cinematic FX" — promotes the character-defining post-FX
   // (Lens Distortion / Underwater / Kaleidoscope) out of the colour-grading
   // Post-Process folder so they're immediately discoverable. The Particles
@@ -756,10 +1028,19 @@ async function loadSplat() {
   const fCine = gui.addFolder("Cinematic FX");
   postfx.attachFeaturedFX(fCine);
   gui.fCine = fCine;
-  // Mobile: auto-collapse every folder so the panel doesn't eat the viewport.
-  if (IS_MOBILE) {
+  // Phone (any orientation): auto-collapse every folder so the panel
+  // doesn't eat the short viewport. The previous gate (IS_MOBILE === IS_PHONE)
+  // was sticky from init-time portrait detection and missed phone-LANDSCAPE
+  // sessions — user report: "手机端只能显示一部分" (the phone version only
+  // shows a portion). Querying the live `phone-device` body class instead
+  // means the rule fires whether the phone is held portrait or landscape.
+  // iPad is intentionally excluded (room to breathe + power-user device).
+  // We also default-close the GUI itself on phone-portrait (mobile=phone in
+  // portrait), preserving the original behavior where the user taps the
+  // collapsed pill to open the rail.
+  if (document.body.classList.contains("phone-device")) {
     gui.foldersRecursive().forEach(f => f.close());
-    gui.close();
+    if (IS_MOBILE) gui.close();   // portrait — collapse the whole pill too
   }
   // Touch: tap outside the panel collapses it. The panel covers ~half the
   // phone viewport when open, so the user expects "tap the scene to get
@@ -910,6 +1191,49 @@ async function loadSplat() {
     controls.target.copy(activeVp.target);
     controls.update();
   }
+
+  // ---- Deep-link viewpoint via URL hash -----------------------------------
+  // Format: #v=px,py,pz,tx,ty,tz   (camera pos x/y/z + target x/y/z)
+  // If present at load, wins over the default landing viewpoint and flies
+  // the camera to the encoded pose. A "Copy link" action (added to the
+  // Viewpoints panel below) generates the hash from the current camera
+  // pose so a presenter can email "here's the gazebo angle I love".
+  function _parseViewHash() {
+    const m = (location.hash || "").match(/#v=([-\d.,eE]+)/);
+    if (!m) return null;
+    const nums = m[1].split(",").map(parseFloat);
+    if (nums.length !== 6 || nums.some(n => !Number.isFinite(n))) return null;
+    return {
+      position: new THREE.Vector3(nums[0], nums[1], nums[2]),
+      target:   new THREE.Vector3(nums[3], nums[4], nums[5]),
+    };
+  }
+  const _deepLinkPose = _parseViewHash();
+  if (_deepLinkPose) {
+    // Apply immediately AND flag so the auto-cinematic-intro defers to
+    // the explicit link (the user clearly wanted this specific view, not
+    // the canned opening shot).
+    camera.position.copy(_deepLinkPose.position);
+    controls.target.copy(_deepLinkPose.target);
+    controls.update();
+    window.__deepLinkLanded = true;
+  }
+  // Expose a helper any UI can call to copy the current pose as a share link.
+  window.__copyViewLink = async function _copyViewLink() {
+    const p = camera.position, t = controls.target;
+    const fmt = (n) => Number(n).toFixed(3);
+    const hash = `#v=${fmt(p.x)},${fmt(p.y)},${fmt(p.z)},${fmt(t.x)},${fmt(t.y)},${fmt(t.z)}`;
+    const url  = location.origin + location.pathname + location.search + hash;
+    try {
+      await navigator.clipboard.writeText(url);
+      statusEl.textContent = "Link copied — paste to share this exact viewpoint";
+    } catch {
+      // Fallback for non-secure contexts or denied clipboard permission:
+      // shove it in the address bar so the user can copy manually.
+      history.replaceState(null, "", hash);
+      statusEl.textContent = "Link updated in address bar — copy from there";
+    }
+  };
 
   // Viewport Tuner — press K to open; shows live pose + lets you commit
   // the current camera state into any seeded viewpoint slot. Skipped on
@@ -1125,11 +1449,16 @@ async function loadSplat() {
   const fTechSpec = gui.addFolder("Tech Spec");
   const techEnableCtrl = fTechSpec.add(techParams, "techEnable").name("Enable").onChange((v) => {
     // Asset hotspot layer is the only thing the master gates now.
+    window.__techEnableValue = !!v;
     if (assetHover) assetHover.setVisible(!!v);
   });
+  // Seed the initial value so the scene-visibility callback can read it
+  // on first paint (before the user has clicked anything).
+  window.__techEnableValue = techParams.techEnable;
   techEnableCtrl.domElement.title = "Show / hide the floating asset hotspots (Vine / Gazebo / Grape Hyacinth / Daffodil) on the splat.";
 
   const camCtrl = fTechSpec.add(dataParams, "enabled").name("Training Cameras").onChange(v => {
+    window.__camFrustumsUserOn = !!v;
     if (cameraFrustums) cameraFrustums.visible = !!v;
   });
   // Postshot-style: small wireframe pyramid icon next to the label.
@@ -1144,6 +1473,7 @@ async function loadSplat() {
   camCtrl.domElement.title = "Lets you toggle whether training camera poses are shown in the viewport.";
 
   const dataLabelsCtrl = fTechSpec.add(dataParams, "dataLabels").name("Data Labels").onChange(v => {
+    window.__dataLabelsUserOn = !!v;
     if (dataLabels) dataLabels.setEnabled(!!v);
   });
   dataLabelsCtrl.domElement.title = "Surveillance-card overlay showing per-viewpoint metadata.";
@@ -1799,6 +2129,7 @@ async function loadSplat() {
           camMoveRevertLerps();
           camMoveState = "idle";
           controls.enabled = true;
+          document.body.classList.remove("intro-playing");
           // No extra controls.update() — the render-loop's per-frame
           // call (line ~2116) already runs every frame and re-reads
           // camera.position / target each pass, so the spherical state
@@ -1809,15 +2140,18 @@ async function loadSplat() {
           // (700 ms fade-in + 1700 ms hold + 700 ms fade-out) so the
           // camera move feels authored to an ending instead of just
           // stopping. play() returns a promise that resolves AFTER
-          // the full sequence + cleanup, so we chain the first-visit
-          // onboarding UI (Quick Guide, pointers, USD tooltip) onto
-          // that promise — those used to fire at 250/600/1200 ms and
-          // visually competed with the flourish. Now they appear
-          // cleanly AFTER the SplatGarden card has disappeared.
-          const flourishDone = _cinematicFlourish?.play() ?? Promise.resolve();
+          // Cinematic flourish ("SplatGarden Studio Showcase" end card)
+          // was retired per user feedback — "intro 播完不用再出现splat
+          // garden 的文字介绍了 有点累赘". The opening title sequence
+          // (introOverlay) and the loading splash already wordmark the
+          // project at the start of the journey; a second wordmark at
+          // the end of a single auto-played camera move reads as
+          // redundant rather than as a bookend. We keep the resolved
+          // Promise so the existing chained-onboarding code below
+          // continues to fire on time, but skip the visible card.
+          const flourishDone = Promise.resolve();
           // Tear down the intro overlay (fires immediately — the
-          // overlay's own fade-out is fast and doesn't fight the
-          // flourish since they live on different DOM trees).
+          // overlay's own fade-out is fast).
           introOverlay?.hide();
           // Restore the Hand Tracking panel if the intro had hidden it
           // (don't unhide on phones, where it's permanently off via the
@@ -1829,26 +2163,21 @@ async function loadSplat() {
           }
           if (window.__autoPlayedIntro) {
             window.__autoPlayedIntro = false;
-            // Wait for the flourish to finish disappearing, then run
-            // the first-visit onboarding sequence with the same
-            // relative stagger the original 250/600/1200 ms timings
-            // produced (Quick Guide first, pointers a beat later,
-            // USD tooltip last).
+            // First-visit onboarding — reduced to 2 BEATS (was 3).
+            //   beat 1: Quick Guide (keyboard / mouse hints) — auto
+            //   beat 2: Pointer arrows calling out 3DGS/USD + Tech panels
+            //
+            // Removed: the third "USD tooltip auto-pop" — it was a no-op
+            // anyway since the USD spec badge moved into the always-
+            // visible 3DGS/USD panel, and the dead timer just added
+            // perceived load-time to the onboarding teaching sequence.
+            //
+            // Lengthened the gap between beats from ~340 ms → ~900 ms so
+            // each teaching surface gets a moment to be read before the
+            // next one slides in. Less barrage, same coverage.
             flourishDone.then(() => {
               setTimeout(() => keyHints?.showFor(6500), 120);
-              setTimeout(() => onboardingPointers?.show(), 460);
-              setTimeout(() => {
-                // The lil-gui USD badge moved into the new UsdLayers panel,
-                // so the popover-wrap is hidden via .hide(). Skip the auto-
-                // pop when offsetParent is null (no rendered ancestor) — the
-                // billboard badge is now visible permanently inside the
-                // 3DGS/USD panel and doesn't need a one-shot reveal.
-                const quadWrap = document.querySelector('.usd-spec-wrap[data-proto="billboard"]');
-                if (quadWrap?._show && quadWrap.offsetParent !== null) {
-                  quadWrap._show();
-                  setTimeout(() => quadWrap._hide?.(), 5500);
-                }
-              }, 1060);
+              setTimeout(() => onboardingPointers?.show(), 1020);
             });
           }
         });
@@ -1878,6 +2207,9 @@ async function loadSplat() {
       camMoveState = "paused";
       playCtrl.name("▶ Resume Camera Move");
       statusEl.textContent = "Camera move paused";
+      // Re-enable canvas / hotspot interaction while paused — the user
+      // may want to scrub or peek without the cinematic being live.
+      document.body.classList.remove("intro-playing");
     } else {
       // idle or paused → play
       if (camMoveState === "idle") {
@@ -1891,6 +2223,13 @@ async function loadSplat() {
       controls.enabled = false;
       playCtrl.name("⏸ Pause Camera Move");
       statusEl.textContent = "Playing camera move…";
+      // Block accidental clicks on the canvas / hotspots / viewpoint dots
+      // while the cinematic is running — the user shouldn't trigger Scan
+      // FX or fly-tos in the middle of an authored shot. The body class
+      // is the canonical signal; CSS handles the visual side (pointer-
+      // events: none on the relevant surfaces) and the click handlers
+      // also early-return when this class is present as a belt-and-braces.
+      document.body.classList.add("intro-playing");
     }
   }
 
@@ -1900,6 +2239,7 @@ async function loadSplat() {
     camMoveRevertLerps();
     camMoveState = "idle";
     controls.enabled = true;
+    document.body.classList.remove("intro-playing");
     playCtrl.name("▶ Play Camera Move");
     statusEl.textContent = "Camera move stopped";
   }
@@ -2087,7 +2427,9 @@ async function loadSplat() {
   // so it lives outside FX to avoid conceptual blur. All knobs use the
   // gpParticle* prefix per the dedicated-params-per-fx preference.
   const gpParticleParams = {
-    enable:        false,
+    // Default driven by the Performance profile: Max Quality turns
+    // particles ON out of the box; Battery / Balanced leave them OFF.
+    enable:        _perfProfile.particles,
     pointSize:     16.0,
     fieldStrength: 3.0,
     damping:       0.94,
@@ -2174,9 +2516,17 @@ async function loadSplat() {
       -((clientY - rect.top)  / rect.height) * 2 + 1,
     );
     raycaster.setFromCamera(ndc, camera);
-    const hits = raycaster.intersectObject(splat, false);
+    // Intersect EVERY visible splat layer, not just the primary, so a click
+    // on an imported secondary layer (primary hidden) still registers. The
+    // hit's `object` is the specific mesh struck; local-space coordinates
+    // are computed against THAT mesh, not always the primary — otherwise
+    // the scan effect would be aimed at the wrong object-space point.
+    const targets = sceneLayers?.getVisibleMeshes?.() ?? [splat];
+    if (!targets.length) return null;
+    const hits = raycaster.intersectObjects(targets, false);
     if (!hits?.[0]) return null;
-    return { hit: hits[0], local: splat.worldToLocal(hits[0].point.clone()) };
+    const hitObj = hits[0].object || splat;
+    return { hit: hits[0], local: hitObj.worldToLocal(hits[0].point.clone()), object: hitObj };
   }
 
   let downPos = null;
@@ -2344,6 +2694,11 @@ async function loadSplat() {
       controls.update();
       annotations.activeId = null;
       annotations._rebuildList();
+    } else if (e.key === "?" || e.key === "/" || e.key === "h" || e.key === "H") {
+      // Re-summon the Quick Guide overlay. "?" is the universal "help"
+      // affordance on desktop apps; "/" is the same key without Shift;
+      // H is the legacy binding (the GUI tooltip says "summon back with H").
+      keyHints?.showFor(6500);
     }
   });
 
@@ -2420,6 +2775,8 @@ async function loadSplat() {
 
   // Reusable helper: project screen XY → object-space hit point on the splat.
   // Returns the THREE.Vector3 _palmHit (mutated) or null when missing.
+  // Mirrors the mouse-path rayHitLocal: targets ALL visible splat layers so
+  // hand interactions follow the visible layer (not always primary).
   function screenToLocalHit(screenX, screenY) {
     const rect = canvas.getBoundingClientRect();
     ndc.set(
@@ -2427,10 +2784,12 @@ async function loadSplat() {
       -((screenY - rect.top)  / rect.height) * 2 + 1,
     );
     raycaster.setFromCamera(ndc, camera);
-    const hits = raycaster.intersectObject(splat, false);
+    const targets = sceneLayers?.getVisibleMeshes?.() ?? [splat];
+    if (!targets.length) return null;
+    const hits = raycaster.intersectObjects(targets, false);
     if (!hits?.[0]) return null;
     _palmHit.copy(hits[0].point);
-    splat.worldToLocal(_palmHit);
+    (hits[0].object || splat).worldToLocal(_palmHit);
     return _palmHit;
   }
 
@@ -2709,6 +3068,14 @@ async function loadSplat() {
     handToggle.querySelector(".state").textContent = "ERR";
   };
 
+  // Persist the hand-tracking preference. Re-enable automatically on next
+  // load if (a) the user had it ON last session and (b) the browser still
+  // remembers the camera permission grant (getUserMedia returns instantly
+  // without a permission prompt). Without (b) we'd silently trigger a
+  // permission popup on every page load, which is worse than just asking
+  // the user to click the toggle once.
+  const HAND_PREF_KEY = "splatgarden:hand-tracking-on";
+
   handToggle.addEventListener("click", async () => {
     // Clear stale error UI on retry
     handErrorEl.hidden = true;
@@ -2720,6 +3087,10 @@ async function loadSplat() {
     if (!handToggle.classList.contains("error")) {
       handToggle.classList.toggle("active", on);
       handToggle.querySelector(".state").textContent = on ? "ON" : "OFF";
+      // Persist for next session — only after a successful toggle (errors
+      // don't update the pref so a stuck "ON" doesn't keep blocking the
+      // user on every reload).
+      try { localStorage.setItem(HAND_PREF_KEY, on ? "1" : "0"); } catch {}
       // When the user actually engages hand tracking, surface the
       // gesture cheatsheet as a transient toast — the keyboard /
       // mouse hints in the sidebar intentionally don't list these
@@ -2728,6 +3099,38 @@ async function loadSplat() {
       if (on) showHandTrackingTip();
     }
   });
+
+  // Auto-restore — fired AFTER the cinematic intro has settled so we don't
+  // start a webcam stream while the user is being introduced to the scene.
+  // navigator.permissions.query is the safest probe: if the camera grant
+  // already exists (state === "granted"), the subsequent getUserMedia call
+  // inside hand.toggle() won't prompt, so the auto-resume feels seamless.
+  // On Safari / older browsers the API is missing — we skip auto-resume
+  // there to avoid an unprompted permission popup at first paint.
+  (async function _maybeRestoreHandPref() {
+    let want;
+    try { want = localStorage.getItem(HAND_PREF_KEY) === "1"; } catch { return; }
+    if (!want) return;
+    try {
+      const probe = await navigator.permissions?.query?.({ name: "camera" });
+      if (probe?.state !== "granted") return;        // would prompt — bail
+    } catch { return; }                              // API missing — bail
+    // Wait until the cinematic intro is done before claiming the webcam.
+    const fire = () => handToggle.click();
+    if (window.__autoPlayedIntro) {
+      // Set during intro startup, cleared at first user interaction.
+      // Poll briefly (≤ 6 s) for the flag to drop, then fire.
+      const t0 = performance.now();
+      const tick = () => {
+        if (!window.__autoPlayedIntro) return fire();
+        if (performance.now() - t0 > 6000) return;   // give up silently
+        setTimeout(tick, 250);
+      };
+      setTimeout(tick, 250);
+    } else {
+      fire();
+    }
+  })();
 
   // ---- Hand-tracking gesture cheatsheet (transient toast) ----
   // Surfaced only the first ~5 s after the user toggles tracking ON.
@@ -2785,6 +3188,12 @@ async function loadSplat() {
     try {
       const built = await createSplat(options);
       sceneLayers.add({ mesh: built.splat, name: options.fileName || "Layer" });
+      // Re-evaluate which layer is interactive. _retargetInteractiveLayer
+      // owns the modifier-attach side-effect, so we don't pre-attach here
+      // — that way a secondary that lands "behind" a visible primary stays
+      // a pure renderer (no shader divergence between layers with shared
+      // hit-point uniforms in different object-spaces).
+      window.__retargetInteractiveLayer?.();
       statusEl.textContent = `+ ${options.fileName || "splat"}`;
 
       // Bundled-scene-specific overlays (Training Cameras / Data Labels /
@@ -2799,6 +3208,53 @@ async function loadSplat() {
       hideLoading();
     }
   }
+
+  // ---- Interactive-layer retargeting --------------------------------------
+  // When the user toggles layer visibility in the Scene panel, we re-point
+  // `effects.mesh` and reparent the wireframe effector so that whichever
+  // layer is currently visible is the one that responds to clicks / brush /
+  // hand. Raycast targets are queried fresh per-event from
+  // sceneLayers.getVisibleMeshes(), so they don't need a separate hook.
+  //
+  // Voxelizer + Quadizer stay bound to the primary even when it's hidden,
+  // because they're "authored representations" of one specific splat — the
+  // voxel/quad cells were baked from the primary's positions and can't
+  // meaningfully follow a different mesh without a full rebuild. If the
+  // user later wants per-layer voxelization, that becomes an explicit
+  // "Re-bake for active layer" action rather than an automatic re-bind.
+  let _activeInteractive = splat;
+  window.__retargetInteractiveLayer = function _retargetInteractiveLayer() {
+    const active = sceneLayers.getInteractive()?.mesh || splat;
+    if (active === _activeInteractive) return;
+    const prev = _activeInteractive;
+    _activeInteractive = active;
+    // Move the scan modifier off the previous active mesh and onto the new
+    // one. We deliberately keep only ONE mesh with the modifier at a time
+    // because `uniforms.hit` is shared module-level state in effects.js —
+    // if two meshes both ran the modifier, they'd interpret the same hit
+    // point in their own object-spaces and play the scan in different
+    // world locations on each layer (visible discrepancy when both layers
+    // are shown). Single-active keeps the effect anchored to the layer the
+    // user actually clicked / brushed.
+    if (prev) {
+      prev.objectModifier = null;
+      prev.updateGenerator?.();
+    }
+    if (active) {
+      active.objectModifier = createScanModifier();
+      active.updateGenerator?.();
+    }
+    if (effects) effects.mesh = active;
+    window.__effects = effects;     // refresh dev pointer
+    // Reparent the wireframe effector sphere under the new active mesh so
+    // its local transform matches uniforms.maskCenter (which is now in the
+    // new active mesh's object-space).
+    if (effectorMesh && effectorMesh.parent !== active) {
+      effectorMesh.parent?.remove(effectorMesh);
+      active.add(effectorMesh);
+    }
+    statusEl.textContent = `Interactive layer → ${active === splat ? "primary" : "secondary"}`;
+  };
 
   // Hidden file input wired to Scene panel's "+ Add" button.
   const addSplatInput = document.createElement("input");
@@ -2908,7 +3364,16 @@ async function loadSplat() {
   const isFirstVisit = (() => {
     try { return !localStorage.getItem(FIRST_VISIT_KEY); } catch { return false; }
   })();
-  if (isFirstVisit) {
+  // A11y: visitors who've asked their OS for reduced motion shouldn't be
+  // dragged through a 7-second swooping camera move that they didn't
+  // request. We skip the cinematic outright AND mark the first-visit key
+  // so a subsequent reload (with the preference cleared) doesn't auto-fire
+  // either (the user landed in the scene already; the cinematic is a
+  // one-shot "welcome" gesture, not a returning-user payload).
+  const _prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  // Also skip the auto-play if a deep-link viewpoint landed us somewhere
+  // specific — the user wanted THIS view, not the canned opening.
+  if (isFirstVisit && !_prefersReducedMotion && !window.__deepLinkLanded) {
     try { localStorage.setItem(FIRST_VISIT_KEY, String(Date.now())); } catch {}
     window.__autoPlayedIntro = true;
     introOverlay?.show();
@@ -3106,5 +3571,14 @@ renderer.setAnimationLoop(() => {
 
 loadSplat().catch((err) => {
   console.error(err);
-  setLoading("Failed to load: " + (err?.message ?? err));
+  // PM-13: replace the previous "stuck-on-spinner with a sad message"
+  // failure mode with a proper recoverable card. Common causes the user
+  // can act on: (a) bad network → "Try again" reloads; (b) 404 / stale
+  // cache → likewise a reload fixes; (c) corrupted file on the host →
+  // hint visible in the body so the dev sees it in the console too.
+  const msg = err?.message ?? String(err);
+  const html =
+    `The 3D Gaussian Splatting scene didn't finish loading.<br><br>` +
+    `<code style="opacity:0.7;font-size:11px">${msg.replace(/</g, "&lt;")}</code>`;
+  _showFatalError("Couldn't load the scene", html, true);
 });

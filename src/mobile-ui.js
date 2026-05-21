@@ -497,7 +497,7 @@ export class MobileUI {
     const cam = document.createElement("div");
     cam.className = "ms-cam";
     cam.innerHTML = `
-      <button class="ms-action ms-action-primary" data-act="play">
+      <button class="ms-action" data-act="play">
         <span class="ms-icon-glyph">▶</span> Play / Pause
       </button>
       <button class="ms-action" data-act="replay">
@@ -505,6 +505,12 @@ export class MobileUI {
       </button>
       <div class="ms-help">Plays the authored fly-through. Replay starts over from the opening pose.</div>
     `;
+    // Play / Pause used to carry .ms-action-primary (white-filled pill)
+    // because it was the headline action when Stop also existed. With Stop
+    // removed and only two equally-weighted choices left, the bright fill
+    // made it read as "this is THE button" rather than "this is one of two
+    // options". User flagged it: "这个 play 不需要高亮". Both buttons now
+    // share the subtle .ms-action treatment.
     cam.querySelector('[data-act="play"]'  ).addEventListener("click", () => window.__camMovePlayPause?.());
     cam.querySelector('[data-act="replay"]').addEventListener("click", () => window.__replayIntro?.());
     wrap.appendChild(cam);

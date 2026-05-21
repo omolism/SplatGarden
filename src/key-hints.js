@@ -7,31 +7,43 @@
 // Player-facing essentials only — dev tools (P profiler, K tuner, V/C/R
 // viewpoint authoring, Esc) are intentionally omitted to keep the guide
 // short. Power users discover those via lil-gui or by reading the code.
+// Sections enriched lightly per the Quick-Guide readability redesign:
+// • action labels are imperatives ("orbit", not "Rotate" — tells the user
+//   what they GET if they press the key, the cheat-sheet's job)
+// • multi-key chords sit on one row, related single-key chords below
+// • added the missing essentials so a first-time visitor has the full
+//   keyboard / mouse vocabulary in one glance (Q/E down-up, Shift boost,
+//   right-drag pan, R reset, V save current view, "?" help shortcut)
 const DESKTOP_SECTIONS = [
   {
-    title: "Move the camera",
+    title: "Camera",
     rows: [
-      [`<span class="kh-mouse">drag</span>`,   "Rotate"],
-      [`<span class="kh-mouse">scroll</span>`, "Zoom"],
+      [`<span class="kh-mouse">drag</span>`,        "orbit"],
+      [`<span class="kh-mouse">right-drag</span>`,  "pan"],
+      [`<span class="kh-mouse">scroll</span>`,      "zoom"],
     ],
   },
   {
-    title: "Jump to a view",
+    title: "Walk",
     rows: [
-      [`<kbd>1</kbd>&ndash;<kbd>3</kbd>`, "Numbered viewpoints"],
+      [`<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>`, "move"],
+      [`<kbd>Q</kbd><kbd>E</kbd>`,                          "down · up"],
+      [`<kbd>⇧</kbd>`,                                       "boost"],
     ],
   },
   {
-    title: "Walk around",
+    title: "Viewpoints",
     rows: [
-      [`<kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>`, "Move"],
+      [`<kbd>1</kbd>&ndash;<kbd>9</kbd>`, "jump to a view"],
+      [`<kbd>V</kbd>`,                    "save current"],
+      [`<kbd>R</kbd>`,                    "reset"],
     ],
   },
   {
     title: "Panels",
     rows: [
-      [`<kbd>T</kbd>`, "Pipeline drawer"],
-      [`<kbd>H</kbd>`, "This guide"],
+      [`<kbd>T</kbd>`,                   "pipeline drawer"],
+      [`<kbd>?</kbd><kbd>/</kbd><kbd>H</kbd>`, "this guide"],
     ],
   },
 ];
@@ -85,10 +97,14 @@ export class KeyHints {
 
     // PHONES get the gesture-only variant; iPad and desktop see the
     // full keyboard-shortcut guide. (iPad can pair a Bluetooth
-    // keyboard and the touch-only guide hid useful info from desktop
-    // users browsing on a touch laptop.) The check uses .mobile
-    // because that class is set ONLY on phone-class touch devices.
-    const isPhone  = document.body.classList.contains("mobile");
+    // keyboard; desktop users on touch laptops still benefit from the
+    // keyboard hints.) Using `phone-device` (sticky, set when the
+    // browser is on a phone-class device) instead of the older
+    // `mobile` check (orientation-reactive, false in phone LANDSCAPE)
+    // — fixes the user-reported "手机端横屏不需要WASD" case where a
+    // phone held landscape was getting the desktop guide with key
+    // hints that the user has no keyboard to press.
+    const isPhone  = document.body.classList.contains("phone-device");
     const sections = isPhone ? TOUCH_SECTIONS : DESKTOP_SECTIONS;
 
     this.el = document.createElement("aside");

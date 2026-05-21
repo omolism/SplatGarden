@@ -1203,15 +1203,44 @@ export function buildGUI(controller) {
   // distinct from styling controls.
   const fLayers = gui.addFolder("3DGS/USD");
 
+  // ----- Top-level: FX (promoted from Customize → Play → FX) ---------------
+  // The Effect chooser + Color/Radius/Duration/Intensity are the headline
+  // interaction surface of the app — the whole "click to scan" experience.
+  // The old 4-level burial (Customize → Play → FX → Core) hid this
+  // discoverability cost: visitors had to drill twice before they could play.
+  // Promoting FX to top-level cuts that to one click, matching how often
+  // the user actually wants to reach for it.
+  const fFX = gui.addFolder("FX");
+
+  // ----- Top-level: Performance — Battery / Balanced / Max Quality ---------
+  // Single dial driving pixel-ratio cap, bloom default, particles default.
+  // Persisted to localStorage so a battery-conscious user only has to set
+  // it once. The actual perf-side switching (dpr, bloom toggle, particles
+  // toggle) is wired in main.js — here we just expose the chooser and
+  // persist the user's pick.
+  const PERF_LABEL = "Performance";
+  const PERF_OPTIONS = { Battery: "battery", Balanced: "balanced", "Max Quality": "max" };
+  let _currentPerf = "balanced";
+  try { _currentPerf = localStorage.getItem("splatgarden:perf") || "balanced"; } catch {}
+  if (!(_currentPerf in { battery:1, balanced:1, max:1 })) _currentPerf = "balanced";
+  const perfObj = { perf: _currentPerf };
+  const perfCtrl = gui.add(perfObj, "perf", PERF_OPTIONS).name(PERF_LABEL).onChange(v => {
+    try { localStorage.setItem("splatgarden:perf", v); } catch {}
+    // Most settings are applied at init from the persisted value — a
+    // change at runtime needs a reload to fully re-apply (DPR + bloom +
+    // particles default all branch off the profile during boot). Surface
+    // a status hint so the user knows what to do.
+    if (typeof window.__perfStatus === "function") window.__perfStatus(v);
+  });
+  perfCtrl.domElement.title = "Battery saves power · Max Quality enables bloom + particles. Reload to fully apply.";
+
   // ----- Top-level: Customize → everything visual --------------------------
   const fCustomize = gui.addFolder("Customize");
 
-  // Play — toy section housing the click FX + post-process. Demoted from
+  // Play — toy section housing the post-process tweaks etc. Demoted from
   // Customize-level so the headline UI stays on assets / pipeline / interaction.
+  // (FX moved OUT of here and up to top-level — see above.)
   const fPlay = fCustomize.addFolder("Play").close();
-
-  // FX section — all click-effect controls grouped to reduce confusion.
-  const fFX = fPlay.addFolder("FX");
   fFX.add(presetObj, "preset", presetKeys).name("Preset").onChange((name) => {
     Object.assign(params, PRESETS[name]);
     controller.applyParams();

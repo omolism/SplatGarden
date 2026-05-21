@@ -69,6 +69,12 @@ html, body {
   z-index: 10;
 }
 .annotation {
+  /* Promoted from <div> to <button> for a11y. Reset native button chrome
+     so the visual is identical to the original div. */
+  border: 0;
+  padding: 0;
+  font-family: inherit;
+  appearance: none;
   position: absolute;
   width: 24px;
   height: 24px;
@@ -356,6 +362,20 @@ html, body {
   background: var(--hover-strong);
   border-color: rgba(255, 255, 255, 0.22);
 }
+/* Viewpoints header — both action buttons (Share + Add) use the same
+   icon-only square pill. Equal padding, equal hit-target, same hover
+   treatment. Previously the +Add button was text-bearing and the Share
+   was icon-only — the asymmetry read as unfinished. */
+#sidebar .vp-header-btn {
+  padding: 4px 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-mid);
+}
+#sidebar .vp-header-btn:hover { color: var(--text); }
+#sidebar .vp-header-btn svg   { display: block; }
+#sidebar.sidebar-minimized header .vp-header-btn { display: none; }
 #viewpoint-list {
   list-style: none;
   margin: 0;
@@ -542,6 +562,24 @@ body.phone-device #scene-panel .hint { display: none; }
     left: 12px;
     bottom: 12px;
   }
+  /* Phone-landscape collapsed state — without this override the
+     `body.phone-device #hand-panel { width: 180px }` rule above wins
+     specificity over the generic `#hand-panel.hand-minimized { width: 38px }`
+     declaration, leaving a stranded 180-px-wide empty olive rectangle
+     when the user taps the chevron to collapse. User report:
+     "手机端横屏的收纳还是没做好 ... HANDTRACKING ui". Pin the
+     minimized state to a clean 36×36 pill so the collapse reads as
+     "tab IS the affordance" the same way it does on desktop. */
+  body.phone-device #hand-panel.hand-minimized {
+    width: 36px !important;
+    height: 36px !important;
+    padding: 0 !important;
+  }
+  body.phone-device #hand-panel.hand-minimized .hand-head,
+  body.phone-device #hand-panel.hand-minimized #hand-min-toggle.sidebar-toggle {
+    width: 36px !important;
+    height: 36px !important;
+  }
   /* USD annotation card — narrower + pulls in toward the right
      edge so it sits to the LEFT of the narrowed lil-gui rather
      than overlapping the viewport centre. */
@@ -563,21 +601,28 @@ body.phone-device #scene-panel .hint { display: none; }
     max-width: 280px !important;
     bottom: 12px !important;
   }
+  /* Quick Guide on phone landscape — single-column flow (the new desktop
+     layout already does this <700 px), tighter vertical rhythm so the
+     section breaks survive the short viewport. The key column auto-sizes
+     to its content; rows + sections sit in a clear top-to-bottom read. */
   body.phone-device #key-hints .kh-body {
-    grid-template-columns: 1fr !important;
-    gap: 10px 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
     padding: 10px 12px 12px !important;
   }
   body.phone-device #key-hints .kh-row {
-    grid-template-columns: 78px 1fr !important;
+    grid-template-columns: minmax(60px, auto) 1fr !important;
     font-size: 10.5px !important;
+    gap: 10px !important;
   }
   body.phone-device #key-hints .kh-sec-title {
-    font-size: 8.5px !important;
-    margin-bottom: 5px !important;
+    font-size: 9.5px !important;
+    margin-bottom: 6px !important;
   }
   body.phone-device #key-hints .kh-list {
-    gap: 3px !important;
+    gap: 4px !important;
+    padding-left: 8px !important;
   }
   /* USD annotation card text — slightly smaller in landscape
      so the narrower card still fits the intro + 2×2 grid
@@ -742,6 +787,8 @@ body.phone-device #scene-panel .hint { display: none; }
   background: var(--hover-strong);
   border-color: rgba(255, 255, 255, 0.22);
 }
+/* (A/B Compare button + divider CSS removed alongside the JS feature
+   removal — see scene-layers.js for the rationale.) */
 /* Animated minimize — list + hint collapse via max-height + opacity. */
 #scene-panel .layer-list,
 #scene-panel .hint {
@@ -929,6 +976,18 @@ kbd {
 }
 
 /* ============ Hand tracking panel ============ */
+/* Phone PORTRAIT only — hide the hand panel (camera-tracked input doesn't
+   work well held vertically with one thumb, and the panel competes with
+   the bottom-bar for screen real estate). In phone LANDSCAPE the body
+   class flips to .tablet and the panel reappears at its landscape position
+   (see the @media (orientation: landscape) block above which positions
+   it at left:12px / bottom:12px / width:180px). Replaces the previous
+   IS_PHONE init-time inline `style.display = "none"` that was sticky
+   from the initial portrait detection and persisted into landscape,
+   leaving hand tracking unreachable after rotation (user report:
+   "手机横屏的handtracking显示有问题"). */
+body.phone:not(.tablet) #hand-panel { display: none !important; }
+
 #hand-panel {
   position: absolute;
   left: 18px;
@@ -2000,6 +2059,33 @@ kbd {
   text-transform: uppercase;
   font-size: 10px;
   color: var(--text);
+  /* About-pill behavior — the brand text is now a button (see PM-6).
+     Strip the native button chrome so it visually matches the old
+     static label, but keep the click target obvious on hover. */
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font-family: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5em;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+#toolbar .brand:hover { color: var(--text); opacity: 1; }
+#toolbar .brand .brand-about-mark,
+#toolbar .brand .brand-about-label {
+  color: var(--text-mid);
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  opacity: 0.85;
+  transition: color 0.15s ease, opacity 0.15s ease;
+}
+#toolbar .brand:hover .brand-about-mark,
+#toolbar .brand:hover .brand-about-label {
+  color: var(--text);
+  opacity: 1;
 }
 #toolbar #status {
   color: var(--text-mid);
@@ -2342,11 +2428,68 @@ kbd {
   background: rgba(255, 255, 255, 0.04) !important;
   color: var(--text) !important;
   font-weight: 500 !important;
-  letter-spacing: 0.16em !important;
+  letter-spacing: 0.16em !important;     /* restored — the borderless 26-px icons free the horizontal budget */
   text-transform: uppercase !important;
-  font-size: 10px !important;
-  padding: 12px 14px !important;
+  font-size: 10px !important;             /* restored — no longer fighting for space with bordered pills */
+  padding: 10px 8px 10px 14px !important; /* tighter right padding now that the icons end the row */
   border-bottom: 1px solid var(--hair) !important;
+  /* Title row hosts injected Replay + Reset icon-buttons. Flex row +
+     nowrap + min-width: 0 lets the wordmark take only what it needs while
+     the borderless icons sit cleanly on the right. */
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  white-space: nowrap !important;
+  min-width: 0 !important;
+}
+
+/* Replay / Reset icon buttons in the lil-gui title row.
+   PM redesign: previously these were rounded pills with grey borders, which
+   read as bolted-on next to the borderless chevron `v` on the left of the
+   title — three sibling header controls that didn't share a visual language.
+   Now they match the chevron vocabulary exactly: borderless, transparent
+   background, identical 26×26 hit-target, identical hover treatment. The
+   header reads as one cohesive icon strip (chevron · title · play · reset)
+   instead of "title + 2 pill ornaments". The text labels are hidden
+   permanently (tooltips carry the meaning) since the lil-gui panel default
+   width can't host them without crowding the wordmark. */
+.gui-reset-btn {
+  margin-left: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 26px !important;
+  height: 26px !important;
+  padding: 0 !important;
+  font: inherit !important;
+  color: var(--text-mid) !important;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+/* Replay sits immediately after the title (auto-margin pushes it to the
+   right of the wordmark); Reset sits right next to Replay with a tiny gap. */
+.gui-replay-btn { margin-left: auto !important; }
+.gui-reset-btn + .gui-reset-btn,
+.gui-replay-btn + .gui-reset-btn,
+.gui-reset-btn ~ .gui-reset-btn { margin-left: 2px !important; }
+.gui-reset-btn:hover {
+  color: var(--text) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+.gui-reset-btn:active { background: rgba(255, 255, 255, 0.10) !important; }
+.gui-reset-btn span   { display: none !important; }     /* labels hidden — tooltips do the work */
+.gui-reset-btn svg    { display: block; width: 14px; height: 14px; flex: 0 0 auto; }
+/* Closed-panel state: the title becomes a self-contained pill — hide the
+   action buttons there because clicking the closed panel should expand it,
+   not trigger an action. */
+.lil-gui.root.closed .gui-reset-btn { display: none !important; }
+/* On phones specifically (more aggressive), hide Reset entirely and keep
+   only Replay — the more frequently-wanted action. Reset is still
+   reachable via the GUI controls if a phone user really needs it. */
+body.phone .gui-reset-btn:not(.gui-replay-btn) { display: none !important; }
   /* Tighter vertical padding when the whole panel is collapsed —
      keeps the chevron centered visually in the pill (see .closed rules
      below). Smooth so the height collapse feels of-a-piece. */
@@ -3044,6 +3187,8 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   pointer-events: none;
   z-index: 25;
   width: min(560px, calc(100vw - 60px));
+  /* (Original see-through panel — user kept this; the readability
+     concern turned out to be LAYOUT / typography, not backdrop.) */
   background: var(--panel-strong);
   backdrop-filter: blur(28px) saturate(140%);
   -webkit-backdrop-filter: blur(28px) saturate(140%);
@@ -3130,35 +3275,79 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   color: var(--text);
 }
 
+/* Quick Guide body — redesigned for readability per PM review.
+   Old layout used a 2-column section grid with a fixed 110-px key column
+   inside each row. Problems flagged by the user:
+   • zigzag scan path (sections side-by-side at different heights)
+   • fixed key column wasted space for short keys ([T]) and overflowed long
+     chords ([W][A][S][D])
+   • section titles indistinguishable from row labels
+   New layout:
+   • single column by default (cheat-sheet reading flow, top-to-bottom)
+   • opt-in 2-column at wide widths via @media (keeps the card compact on
+     desktops with room to spare, but never sacrifices readability)
+   • per-row grid auto-sizes the key column to its content, gap is fixed
+   • section titles get more breathing room above + stronger contrast vs.
+     row labels so the two tiers don't blur on a quick scan */
 #key-hints .kh-body {
-  padding: 14px 16px 16px;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px 24px;
+  padding: 16px 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
+@media (min-width: 700px) {
+  /* On wider hosts, fall back to 2-column layout to keep the card from
+     becoming a very tall list. column-gap is generous so the two columns
+     read as distinct vertical lanes, not a continuous flow. */
+  #key-hints .kh-body {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 32px;
+    row-gap: 20px;
+  }
+}
+/* Section title — bigger, more letter-spacing, hairline accent on the
+   left. The accent gives the eye an anchor at the section's x-position
+   so the row labels visually align beneath it. */
 #key-hints .kh-sec-title {
+  position: relative;
+  padding-left: 10px;
   font-family: var(--font-ui);
-  font-size: 9px;
-  font-weight: 500;
-  letter-spacing: 0.20em;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--text-dim);
-  margin-bottom: 8px;
+  color: var(--text);
+  margin-bottom: 10px;
+}
+#key-hints .kh-sec-title::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 11px;
+  background: rgba(255, 255, 255, 0.40);
+  border-radius: 2px;
 }
 #key-hints .kh-list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: 0 0 0 10px;     /* indent rows to align with section title's accent edge */
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 7px;
 }
+/* Row pairing — auto-sized key column instead of a fixed 110 px, and a
+   tighter 12 px gap. Result: keys and labels read as one chord per row
+   with no extra horizontal whitespace to bridge. */
 #key-hints .kh-row {
   display: grid;
-  grid-template-columns: 110px 1fr;
+  grid-template-columns: minmax(72px, auto) 1fr;
   align-items: center;
-  gap: 10px;
-  font-size: 11px;
+  gap: 12px;
+  font-size: 11.5px;
 }
 #key-hints .kh-row .kh-k {
   display: inline-flex;
@@ -3736,6 +3925,66 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   color: var(--text-dim);
   margin-bottom: 10px;
 }
+/* About block — opens the Credits panel with project-level context BEFORE
+   the team / software / tech-stack sections. Typography intentionally
+   mirrors the loading-splash & cinematic-flourish hero card (.ld-title)
+   so the project's three "bookend" surfaces speak the same language. */
+#credits .cr-about {
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--hair, rgba(255, 255, 255, 0.08));
+  text-align: center;
+}
+#credits .cr-about-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 8px;
+}
+#credits .cr-about-title {
+  font-family: var(--font-ui, var(--font-mono));
+  font-size: clamp(28px, 4vw, 38px);
+  font-weight: 300;
+  letter-spacing: -0.025em;
+  line-height: 1;
+  color: var(--text);
+  margin: 0 0 6px 0;
+}
+#credits .cr-about-sub {
+  font-family: var(--font-ui, var(--font-mono));
+  font-size: 12px;
+  font-weight: 300;
+  letter-spacing: 0.02em;
+  color: var(--text-mid);
+  margin-bottom: 10px;
+}
+#credits .cr-about-stack {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+/* Quiet hardware-acknowledgement line at the bottom of the Credits panel.
+   Sits below Tech Stack, separated by a hairline so it reads as a
+   distinct "small print" thank-you rather than another featured chip. */
+#credits .cr-hw-thanks {
+  margin-top: 4px;
+  padding-top: 18px;
+  border-top: 1px solid var(--hair, rgba(255, 255, 255, 0.08));
+  font-family: var(--font-mono);
+  font-size: 10px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+#credits .cr-hw-thanks strong {
+  color: var(--text-mid);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
 #credits .cr-list {
   list-style: none;
   margin: 0;
@@ -3809,6 +4058,16 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   font-weight: 500;
   letter-spacing: 0.06em;
   padding: 5px 11px;
+}
+/* "Also: ..." footnote under the chip grid — for software used minimally
+   that deserves credit but not equal billboard space. Sits below the
+   chips at small mono weight so the visual hierarchy stays clear. */
+#credits .cr-also {
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
 }
 
 /* ============================================================
@@ -5228,7 +5487,13 @@ body.mobile #mobile-bottombar { display: flex; }
    (sheet has its own close), drop the in-card chrome that would
    double up with the sheet header. */
 #mobile-sheet .ms-asset-card .ah-close { display: none; }
-#mobile-sheet .ms-asset-card .ah-head { margin-bottom: 8px; }
+/* The mobile bottom-sheet renders its own title in the sheet header
+   (from this.sheet.show("asset", it.name, ...)), so the card's INTERNAL
+   .ah-head (which also renders the asset name) was producing the
+   duplicate "Vine / Vine" the user reported on mobile. Hide it — the
+   sheet header is the canonical title; the body starts with toolchain
+   / embed / etc. straight away. */
+#mobile-sheet .ms-asset-card .ah-head { display: none; }
 
 /* ---- Toast ---- */
 #mobile-toast {
@@ -5975,3 +6240,156 @@ body:has(#hand-toggle.active) .asset-hotspot .ahot-label {
    which prevents the browser's default tap-to-pan behaviour from
    stealing finger events meant for the asset hotspot. */
 body.touch .asset-hotspot { touch-action: none; }
+
+/* ============================================================
+   Accessibility — reduced motion (PM-8)
+
+   Visitors who've set their OS preference to "Reduce motion"
+   shouldn't experience: long camera fly-tos, animated splash
+   particles, sliding panels, lengthy entrance choreography.
+   We damp the durations to near-zero and disable looping /
+   bouncy animations entirely.
+
+   The biggest motion source — the FBX cinematic auto-play —
+   is gated in main.js (matchMedia "prefers-reduced-motion:
+   reduce") so we don't even spin up the mixer. The CSS below
+   handles the smaller UI motion: panel slides, hover bounces,
+   choreographed ui-ready entrances, hotspot pulses.
+   ============================================================ */
+/* ============================================================
+   Cinematic intro lockout
+
+   While the auto-played camera move is running we don't want the user
+   to accidentally trigger Scan FX (click on splat), fly to a hotspot
+   (click on asset dot), jump to a numbered viewpoint (click on the
+   annotation dot), or activate the brush. Body.intro-playing is set/
+   cleared in main.js around camera-move state transitions; here we
+   just neutralise pointer-events on the relevant scene surfaces.
+
+   The right-rail GUI, Scene panel, Viewpoints sidebar, About pill —
+   these stay clickable because they're how the user can ESCAPE the
+   intro (e.g. by pressing Stop in lil-gui). Only the IN-VIEWPORT
+   click surfaces get disabled.
+   ============================================================ */
+body.intro-playing #viewport {
+  pointer-events: none;
+}
+body.intro-playing .asset-hotspot,
+body.intro-playing .annotation,
+body.intro-playing #annotation-layer {
+  pointer-events: none;
+}
+
+/* ============================================================
+   Fatal error card (PM-13)
+
+   Shown when:
+   - WebGL 2 is unavailable (pre-flight check at boot)
+   - Splat asset failed to load (404, network error, corruption)
+
+   Sits above the loading splash with a centered card that can be
+   read and acted on (Try again → reload). Designed to feel like
+   part of the editorial design language, not a stock browser
+   error message: same glassmorphism, same typography, same
+   one-clear-action affordance as the rest of the app.
+   ============================================================ */
+.fatal-error {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(11, 15, 20, 0.96);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  font-family: var(--font-ui, system-ui);
+  color: var(--text, #fff);
+}
+.fatal-error .fe-card {
+  max-width: 520px;
+  width: 100%;
+  padding: 28px 30px 26px;
+  background: var(--panel, rgba(16, 20, 26, 0.92));
+  border: 1px solid var(--hair-strong, rgba(255, 255, 255, 0.12));
+  border-radius: 14px;
+  box-shadow: var(--shadow-soft, 0 12px 40px rgba(0, 0, 0, 0.6));
+  text-align: center;
+}
+.fatal-error .fe-title {
+  font-size: 18px;
+  font-weight: 300;
+  letter-spacing: -0.015em;
+  margin-bottom: 12px;
+  color: var(--text, #fff);
+}
+.fatal-error .fe-body {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-mid, rgba(255, 255, 255, 0.7));
+  margin-bottom: 22px;
+}
+.fatal-error .fe-retry {
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text, #fff);
+  background: transparent;
+  border: 1px solid var(--hair-strong, rgba(255, 255, 255, 0.18));
+  padding: 9px 22px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease;
+}
+.fatal-error .fe-retry:hover {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.32);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================================
+   Mobile touch-action audit (PM-7)
+
+   Goal: every scrollable panel scrolls cleanly with one finger;
+   every gesture-capturing surface doesn't fight the browser's
+   default vertical pan. The canvas already gets `touch-action:
+   none` (it captures orbit / pan / zoom gestures whole) but the
+   floating overlay PANELS (Tech Spec drawer, Credits, Asset Hover
+   card, mobile bottom-sheet) are content surfaces — they need
+   the OPPOSITE: allow vertical-pan scrolling, smooth iOS momentum.
+
+   Applied surfaces: anything with overflow-y:auto that the user
+   reads with their thumb. Excludes the canvas explicitly via
+   :not(#viewport) so this doesn't clobber the orbit handler.
+   ============================================================ */
+body.touch #tech-spec,
+body.touch #credits,
+body.touch #asset-hover-card,
+body.touch #mobile-sheet,
+body.touch #scene-panel .layer-list,
+body.touch #sidebar #viewpoint-list,
+body.touch .ah-card,
+body.touch .ts-content {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;   /* iOS momentum scrolling */
+  overscroll-behavior: contain;        /* don't bounce the page itself */
+}
+/* The lil-gui panel on touch — same treatment. Its inner .children
+   contain knob rows AND scrollable folders, so we want vertical scroll
+   to work without the user accidentally dragging the panel itself. */
+body.touch .lil-gui.root,
+body.touch .lil-gui.root .children {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}

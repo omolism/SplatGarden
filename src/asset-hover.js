@@ -93,7 +93,9 @@ export function renderCard(it) {
 
     ${it.simVideo ? renderSimVideo(it.simVideo) : ""}
 
-    ${it.embed ? renderEmbed(it.embed) : ""}
+    ${Array.isArray(it.embed)
+        ? it.embed.map(e => renderEmbed(e)).join("")
+        : (it.embed ? renderEmbed(it.embed) : "")}
 
     ${(media.style || media.original || media.result) ? `<section class="ah-section ah-media-row">
       <div class="ah-sec-title">Texture Stylization</div>

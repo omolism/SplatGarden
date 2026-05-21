@@ -114,6 +114,38 @@ export class SceneLayers {
 
   getPrimary() { return this.layers.find(l => l.isPrimary) || null; }
 
+  // ---- Active / interactive layer ----------------------------------------
+  // "Interactive" = the splat layer that effects + raycast + voxelizer should
+  // bind to. The model: primary wins if visible, otherwise the topmost OTHER
+  // visible layer. Returns null if every layer is hidden (interactions cleanly
+  // no-op rather than secretly firing on an invisible primary, which is the
+  // bug the user reported: "import a second 3DGS, hide primary, secondary
+  // doesn't respond to clicks").
+  getInteractive() {
+    const prim = this.getPrimary();
+    if (prim?.visible) return prim;
+    // Fall back to the most-recently-added visible secondary (last in array).
+    for (let i = this.layers.length - 1; i >= 0; i--) {
+      if (this.layers[i].visible) return this.layers[i];
+    }
+    return null;
+  }
+
+  // All currently-visible meshes — used by the raycaster so a click on ANY
+  // visible layer registers (not just the primary). The order doesn't matter
+  // because Raycaster.intersectObjects already sorts by distance.
+  getVisibleMeshes() {
+    return this.layers.filter(l => l.visible && l.mesh).map(l => l.mesh);
+  }
+
+  // (A/B Compare mode was removed — the V1 split-screen-wipe had several
+  // unfinished pieces: the centre divider line wasn't draggable, it
+  // overlapped the hand-tracking UI, and there was no mouse-interaction
+  // lockout while compare was active. The feature is parked rather than
+  // shipped half-built. If revived, design it around a dedicated overlay
+  // layer that disables raycast + hand-cursor + hotspot pointer-events
+  // for the duration, with the divider as a first-class draggable handle.)
+
   // ---- Panel ---------------------------------------------------------------
 
   _buildPanel(mountEl) {

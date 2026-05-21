@@ -26,11 +26,16 @@ const SPECIAL_THANKS = [
 
 // Software — commercial / production DCC tools the team authored in.
 // Unreal Engine and Houdini are the hero entries (top of the section,
-// highlighted via .cr-chip-featured).
+// highlighted via .cr-chip-featured). SpeedTree was used minimally
+// (a single asset class) and per user direction is now demoted out of
+// the chip row entirely into the small SOFTWARE_ALSO footnote rendered
+// below the chip grid — keeps the credit honest without granting it
+// equal billboard space alongside the production-heavy tools.
 const SOFTWARE_FEATURED = ["Unreal Engine", "Houdini"];
 const SOFTWARE_OTHER    = [
-  "SpeedTree", "Postshot", "Perforce", "Lichtfeld Studio",
+  "Postshot", "Perforce", "Lichtfeld Studio",
 ];
+const SOFTWARE_ALSO     = ["SpeedTree"];
 
 // Tech Stack — the research / runtime / interop methods that ride
 // underneath the visible scene. HP AI Studio and OpenUSD are the
@@ -64,10 +69,21 @@ export class Credits {
     this.el.id = "credits";
     this.el.innerHTML = `
       <header class="cr-head">
-        <span class="cr-title">CREDITS</span>
+        <span class="cr-title">ABOUT &middot; CREDITS</span>
         <button class="cr-close" data-act="close" title="Close">&times;</button>
       </header>
       <div class="cr-body">
+        <!-- About / project-level context. Mirrors the loading-splash +
+             cinematic-flourish wordmark vocabulary so the panel reads as
+             the "this is the project" surface. Added per PM-6 review:
+             the page previously had no project-level "what am I looking
+             at" anywhere — only per-asset detail in the Tech Spec. -->
+        <section class="cr-sec cr-about">
+          <div class="cr-about-eyebrow">A 3D Gaussian Splatting showcase</div>
+          <h2 class="cr-about-title">SplatGarden</h2>
+          <div class="cr-about-sub">Studio Showcase</div>
+          <div class="cr-about-stack">Houdini &middot; Unreal &middot; COLMAP &middot; Spark</div>
+        </section>
         <section class="cr-sec">
           <div class="cr-sec-title">Team</div>
           <ul class="cr-list">
@@ -109,6 +125,7 @@ export class Credits {
             ${SOFTWARE_FEATURED.map(s => `<span class="cr-chip cr-chip-featured">${s}</span>`).join("")}
             ${SOFTWARE_OTHER   .map(s => `<span class="cr-chip">${s}</span>`).join("")}
           </div>
+          ${SOFTWARE_ALSO.length ? `<div class="cr-also">Also: ${SOFTWARE_ALSO.join(" &middot; ")}</div>` : ""}
         </section>
         <section class="cr-sec">
           <div class="cr-sec-title">Tech Stack</div>
@@ -117,6 +134,16 @@ export class Credits {
             ${TECH_OTHER   .map(s => `<span class="cr-chip">${s}</span>`).join("")}
           </div>
         </section>
+        <!-- Hardware acknowledgement — kept as a small mono footer line
+             so it reads as a quiet thank-you rather than a featured chip
+             (the NVIDIA workstations enabled the AI-stylization rendering
+             but it's hardware credit, distinct from the software stack
+             above). "An" dropped per user note: more than one unit was
+             sponsored, so the line refers to the model class, not a
+             single machine. -->
+        <div class="cr-hw-thanks">
+          Rendered on <strong>NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation Edition</strong> — sincere thanks to NVIDIA.
+        </div>
       </div>
     `;
     mountEl.appendChild(this.el);

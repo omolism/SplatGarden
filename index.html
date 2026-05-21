@@ -118,7 +118,26 @@
               </svg>
             </button>
             <div class="title">Viewpoints</div>
-            <button id="add-viewpoint" title="Click to add a new viewpoint at current camera pose">+ Add</button>
+            <!-- Both header buttons share one visual vocabulary now: icon-only
+                 square pills, equal padding, the same border + hover treatment
+                 as the Scene panel's chevron-toggle. Previously +Add was a
+                 text-pill and Share was an icon-square — the asymmetry read
+                 as unfinished. Tooltips carry the labels for discoverability. -->
+            <button id="share-viewpoint" class="vp-header-btn" title="Copy a link to the current viewpoint" aria-label="Copy link to this viewpoint">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="18" cy="5"  r="3"/>
+                <circle cx="6"  cy="12" r="3"/>
+                <circle cx="18" cy="19" r="3"/>
+                <line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/>
+                <line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/>
+              </svg>
+            </button>
+            <button id="add-viewpoint" class="vp-header-btn" title="Add a new viewpoint at the current camera pose" aria-label="Add new viewpoint">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="12" y1="5"  x2="12" y2="19"/>
+                <line x1="5"  y1="12" x2="19" y2="12"/>
+              </svg>
+            </button>
           </header>
           <ol id="viewpoint-list"></ol>
           <div class="hint">
@@ -146,7 +165,16 @@
 
       <!-- Bottom toolbar -->
       <footer id="toolbar">
-        <div class="brand">SplatGarden</div>
+        <!-- "About" pill — opens the Credits / project-context panel.
+             The brand text used to be a static label; now it's a clickable
+             affordance so visitors have a discoverable "what is this?"
+             entry point without drilling into lil-gui's Tech Spec folder.
+             Wired in main.js (search for "about-btn"). -->
+        <button id="about-btn" class="brand" type="button"
+                title="About this project — credits, software, tech stack"
+                aria-label="About this project">
+          SplatGarden <span class="brand-about-mark">·</span> <span class="brand-about-label">About</span>
+        </button>
         <div id="status">--</div>
       </footer>
     </div>
