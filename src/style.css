@@ -3133,6 +3133,57 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   cursor: pointer;
   pointer-events: auto;
   will-change: transform;
+  /* Button reset — element is now a <button> for VoiceOver / screen
+     reader semantics, so we strip the default browser button chrome
+     and keep the visual identical to the previous <div>. */
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+/* Invisible 44 × 44 hit halo on every device (was body.touch-only).
+   Pulls effective tap target up to Apple HIG minimum without
+   resizing the visible dot. Pointer events bubble to the button
+   owner so the existing click / pointer handlers fire as before. */
+.asset-hotspot::before {
+  content: "";
+  position: absolute;
+  inset: -11px;
+  border-radius: 50%;
+}
+/* Tap reactivity — when .asset-hotspot--firing is added (by
+   asset-hover.js on click / tap / phone tap), the visible dot
+   does a quick pop-scale and a separate burst ring expands
+   outward. Together with the camera fly-to, the click feels
+   like a "reveal" instead of just a transit. The class is
+   removed ~480 ms later so a subsequent tap can re-fire. */
+.asset-hotspot .ahot-burst {
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(1);
+}
+.asset-hotspot--firing .ahot-burst {
+  animation: ahotBurst 0.45s cubic-bezier(.2, .7, .3, 1) forwards;
+}
+.asset-hotspot--firing .ahot-dot {
+  animation: ahotPop 0.35s cubic-bezier(.2, .7, .3, 1);
+}
+@keyframes ahotBurst {
+  0%   { opacity: 0.95; transform: scale(1);   border-width: 2px; }
+  60%  { opacity: 0.45; transform: scale(3.2); border-width: 1px; }
+  100% { opacity: 0;    transform: scale(5);   border-width: 0.5px; }
+}
+@keyframes ahotPop {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.55); }
+  100% { transform: scale(1); }
 }
 .asset-hotspot .ahot-dot {
   width: 10px; height: 10px;
@@ -5792,18 +5843,11 @@ body.touch .asset-hotspot .ahot-label { font-size: 12px; }
    the card for screen space. Dots themselves remain visible so the
    user can still see WHERE assets sit in 3D. */
 body.asset-card-pinned .asset-hotspot .ahot-label { opacity: 0; }
-/* Touch hit area: 22 px is below Apple 44 / Google 48 minimums, so a
-   finger often lands just-off-dot — and because the dot is transformed
-   every frame, a slow tap can have its pointerdown land on the dot and
-   its pointerup land on empty space, dropping the click. We add an
-   invisible ::before that extends the hit zone to 44 × 44 without
-   resizing the visible dot / ring / label. Pointer events on the
-   pseudo-element bubble to the .asset-hotspot owner so the touch logic
-   in asset-hover.js sees them normally. */
+/* Touch hit-area + drag isolation. The 44 × 44 hit halo itself lives
+   on the universal .asset-hotspot::before rule (was scoped to
+   body.touch before the HIG audit — the wider hit zone helps every
+   device including mouse users with motor disabilities). All that
+   stays touch-specific is the `touch-action: none` declaration,
+   which prevents the browser's default tap-to-pan behaviour from
+   stealing finger events meant for the asset hotspot. */
 body.touch .asset-hotspot { touch-action: none; }
-body.touch .asset-hotspot::before {
-  content: "";
-  position: absolute;
-  inset: -11px;
-  border-radius: 50%;
-}

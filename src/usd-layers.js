@@ -12,7 +12,10 @@
 // "what's in the scene" zone.
 // ---------------------------------------------------------------------------
 
-const EYE_OPEN = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>`;
+import { haptic }    from "./haptic.js";
+import { playSound } from "./sounds.js";
+
+const EYE_OPEN =`<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>`;
 const EYE_OFF  = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>`;
 
 // Row definitions — each describes one layer family. `section` groups
@@ -166,6 +169,10 @@ export class UsdLayers {
   }
 
   _setVisible(row, on) {
+    // Snap-style micro-feedback for the toggle event. Both no-op
+    // gracefully on platforms without their respective APIs.
+    haptic(6);
+    playSound("tic");
     this.params[row.visKey] = !!on;
     this.controller?.setLayerVis(row.layerKey, !!on);
     if (on) this.onLayerActivate?.(row.layerKey);

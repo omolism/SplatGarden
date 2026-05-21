@@ -11,6 +11,8 @@
 
 import * as THREE from "three";
 import { renderCompare, wireCompareFrame } from "./tech-spec.js";
+import { haptic }    from "./haptic.js";
+import { playSound } from "./sounds.js";
 
 const _v = new THREE.Vector3();
 
@@ -179,13 +181,44 @@ export class AssetHoverManager {
     const IS_PHONE_MODE = IS_TOUCH && document.body.classList.contains("mobile");
 
     this.dots = this.items.map(it => {
-      const dot = document.createElement("div");
+      // Promoted from <div> to <button> so VoiceOver / screen readers
+      // announce it as a proper interactive control. The aria-label
+      // reads the asset name aloud; visually nothing changes (the
+      // .asset-hotspot CSS already resets all native button chrome).
+      // The new .ahot-burst element is a normally-invisible ring that
+      // gets a 300 ms expanding-out animation when the asset is tapped
+      // — closes the "camera moves but the asset stays silent" feedback
+      // gap the HIG audit flagged (Strategic #1).
+      const dot = document.createElement("button");
+      dot.type = "button";
       dot.className = "asset-hotspot";
+      dot.setAttribute("aria-label", `Asset · ${it.name}`);
       dot.innerHTML = `
         <span class="ahot-ring"></span>
+        <span class="ahot-burst" aria-hidden="true"></span>
         <span class="ahot-dot"></span>
         <span class="ahot-label">${escapeHtml(it.name)}</span>
       `;
+      // Helper: fire the tap-reactivity animation. Adding the class
+      // restarts the keyframe each time (we re-add after a frame so a
+      // double-tap re-triggers cleanly). Pairs with the camera fly-to
+      // so the user gets BOTH a transit AND a "yes, this is the thing"
+      // micro-reveal at the hotspot location.
+      const fireBurst = () => {
+        dot.classList.remove("asset-hotspot--firing");
+        // Force reflow so the animation restarts on rapid taps.
+        void dot.offsetWidth;
+        dot.classList.add("asset-hotspot--firing");
+        // Sync with the CSS keyframe duration; class is removed after
+        // so the dot returns to its idle pulse + can re-fire later.
+        setTimeout(() => dot.classList.remove("asset-hotspot--firing"), 480);
+        // Multi-channel feedback paired with the visual burst:
+        //   • Tactile pulse on devices that support Web Vibration
+        //   • A synthesized "pop" sound — pairs with the radial ring
+        //     so the asset-selected event reads in ear + eye + hand
+        haptic(12);
+        playSound("pop");
+      };
       dot.addEventListener("mouseenter", () => { if (!this._pinned) this._show(it); });
       dot.addEventListener("mouseleave", () => { if (!this._pinned) this._hide(); });
 
@@ -199,6 +232,7 @@ export class AssetHoverManager {
           const same = this._pinned === it;
           this._pinned = same ? null : it;
           if (this._pinned) {
+            fireBurst();                 // tap-reactivity pulse
             this._show(it);
             this.onAssetSelect?.(it);   // camera fly-to (subscribed in main.js)
           } else {
@@ -258,6 +292,7 @@ export class AssetHoverManager {
             // Phone: every tap = fly + open bottom sheet. The floating
             // hover card is CSS-hidden on .mobile so we don't try to
             // show it; the sheet is the canonical card surface.
+            fireBurst();                 // tap-reactivity pulse
             this.onAssetSelect?.(it);
             this.onAssetShortTap?.(it);
           } else {
@@ -267,6 +302,7 @@ export class AssetHoverManager {
             const same = this._pinned === it;
             this._pinned = same ? null : it;
             if (this._pinned) {
+              fireBurst();               // tap-reactivity pulse
               this._show(it);
               this.onAssetSelect?.(it);
             } else {

@@ -25,6 +25,27 @@ import { IntroOverlay } from "./intro-overlay.js";
 import { OnboardingPointers } from "./onboarding-pointers.js";
 import { MobileNav } from "./mobile-nav.js";
 import { MobileUI } from "./mobile-ui.js";
+import { haptic }   from "./haptic.js";
+import { playSound, primeSound } from "./sounds.js";
+
+// Web Audio AudioContext can only start after a user gesture (modern
+// browser autoplay policy). We attach a one-shot primer on the FIRST
+// pointerdown / keydown — by the time the user has interacted with
+// anything in the page, the context is materialised and resumed, so
+// every subsequent playSound() lands on the first attempt instead of
+// silently being eaten by a suspended context. The listeners remove
+// themselves after firing once.
+{
+  const primeOnce = () => {
+    primeSound();
+    document.removeEventListener("pointerdown", primeOnce, true);
+    document.removeEventListener("keydown",     primeOnce, true);
+    document.removeEventListener("touchstart",  primeOnce, true);
+  };
+  document.addEventListener("pointerdown", primeOnce, true);
+  document.addEventListener("keydown",     primeOnce, true);
+  document.addEventListener("touchstart",  primeOnce, true);
+}
 import { UsdLayers } from "./usd-layers.js";
 import { UsdAnnotations } from "./usd-annotations.js";
 import { uniforms as effectUniforms } from "./effects.js";
@@ -1492,6 +1513,10 @@ async function loadSplat() {
     // If they were already paused (or scrubbed from a paused state),
     // stay paused — they're inspecting a specific frame.
     if (_scrubPrevState === "playing") camMoveState = "playing";
+    // Snap-style micro-feedback at the seek commit. Low-energy tic so
+    // it reads as "released here" rather than "new event".
+    haptic(8);
+    playSound("tic");
   };
   ctBarEl.addEventListener("pointerup",     endScrub);
   ctBarEl.addEventListener("pointercancel", endScrub);

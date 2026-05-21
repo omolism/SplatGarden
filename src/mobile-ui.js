@@ -31,6 +31,8 @@
 // ---------------------------------------------------------------------------
 
 import { renderCard as renderAssetCard } from "./asset-hover.js";
+import { haptic }    from "./haptic.js";
+import { playSound } from "./sounds.js";
 
 // Lucide-style line icons. Stroke 1.7 reads crisp at the rendered ~22 px.
 const ICONS = {
@@ -363,6 +365,13 @@ export class MobileUI {
           this._setActive(null);
         } else {
           if (this.sheet.open) this.sheet.close();
+          // Micro-feedback for the "panel rises" event — short tactile
+          // pulse + the rise sound's 140 ms upward sweep. Reads as
+          // "container opened" rather than "button pressed". Same
+          // treatment applies to the Tour / Effects / Info sheets below
+          // so all four primary tabs share one open-sound vocabulary.
+          haptic(6);
+          playSound("rise");
           this.studio._show();
           this._setActive("studio");
         }
@@ -376,6 +385,8 @@ export class MobileUI {
         return;
       }
       const built = this._sections[tab]();
+      haptic(6);
+      playSound("rise");
       this.sheet.show(tab, built.title, built.node);
       this._setActive(tab);
     });

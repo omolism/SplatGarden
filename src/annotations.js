@@ -1,4 +1,6 @@
 import * as THREE from "three";
+import { haptic }    from "./haptic.js";
+import { playSound } from "./sounds.js";
 
 // ---------------------------------------------------------------------------
 // Sketchfab-style annotation system.
@@ -202,6 +204,14 @@ export class AnnotationManager {
   flyTo(id) {
     const vp = this.viewpoints.find((v) => v.id === id);
     if (!vp) return;
+
+    // Multi-channel "departure" feedback paired with the visual tween.
+    // The whoosh sound's 220 ms downward sweep cues motion at the
+    // instant the camera begins moving; the brief haptic pulse marks
+    // the snap-to commit on touch hardware. No-ops gracefully on
+    // platforms without vibrate() / pre-user-gesture audio.
+    haptic(8);
+    playSound("whoosh");
 
     this.activeId = id;
     this._rebuildList();
