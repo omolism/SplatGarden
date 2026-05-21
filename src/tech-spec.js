@@ -13,36 +13,63 @@
 // ---------------------------------------------------------------------------
 
 export const TECH_SPECS = [
-  // ============== Three layered groups ==============
-  // L1 R&D       — research / spec work: AI tooling + USD interop
-  // L2 Production — assets + Unreal scene assembly
-  // L3 3DGS       — capture + training (the Unreal -> splat conversion)
+  // ============== Observer-first ordering ==============
+  // Overview — one-screen anchor: what is this, in one sentence.
+  // L3 3DGS  — what the viewer is actually LOOKING AT (rendering primitive
+  //            + capture + training). Leads because observers ask "what is
+  //            this?" before "how did the team organise to build it?"
+  // L2 Production — the per-asset authoring that produced the captured scene.
+  // L1 R&D   — the research / tooling layer behind the assets. Last because
+  //            it's furthest from what's on screen — interesting once the
+  //            reader has understood the result + the assets that fed it.
+  // (The numeric `layerNum` fields keep their original L1/L2/L3 values for
+  //  semantic stability — the reorder is presentational only.)
   {
-    section:   "R&D",
-    group:     "layer",
-    layerNum:  1,
-    desc:      "Research + interop layer — the custom AI texture tool plus the OpenUSD spec for our alternative render subforms.",
-    toolchain: ["IP-Adapter", "ControlNet", "AdaIN", "Diffusion", "OpenUSD", "UsdGeomPointInstancer"],
+    section:   "Overview",
+    group:     "summary",
+    desc:      "What you're looking at, in one screen.",
     items: [
       {
-        name:      "AI Texture Stylization",
-        ref:       "Diffusion-based painterly tool with controllable color preservation",
-        toolchain: ["IP-Adapter", "ControlNet (Tile / Canny)", "AdaIN", "Diffusion"],
-        output:    "Painterly textures · pre-approved palette preserved",
-        note:      "Custom tool driving the painterly look on Daffodil + Landscape. Two artist-selectable modes — Full Style Transfer (color + texture + tone from a reference) and Texture-Only Transfer (auto-grayscale + AdaIN, preserves the original color palette). Per-channel histogram matching + patch-wise AdaIN run post-generation to deterministically correct residual color drift. Artist knobs: ControlNet mode, ControlNet strength, IP-Adapter strength, inference steps, guidance scale. PyTorch 2.11 / CUDA 13.0 on an NVIDIA RTX PRO 6000 Blackwell (96 GB VRAM) — 4K in ≈ 20 s at 20 inference steps, driven from a Gradio interface.",
-        compare: {
-          before: null,
-          after:  null,
-          labelA: "Original",
-          labelB: "Stylized",
-        },
+        name:      "SplatGarden",
+        ref:       "Houdini × SpeedTree × Unreal · captured at a multi-cam rig · 3DGS-trained · rendered live in your browser",
+        output:    "≈ 3 M splats · 990 capture frames · 16.67 s authored flythrough",
+        note:      "A Unreal-authored garden, captured at a multi-camera rig, reconstructed with COLMAP, trained in parallel by Postshot and Lichtfeld Studio, optimised with Houdini GSOP, and rendered in real time via Spark on Three.js + WebGL 2. The breakdown below walks the pipeline backwards — first the rendering primitive you're looking at right now, then the assets that produced it, then the R&D layer that authored those assets.",
+      },
+    ],
+  },
+
+  {
+    section:   "3DGS",
+    group:     "layer",
+    layerNum:  3,
+    desc:      "Capturing the dressed Unreal scene and training it as a 3D Gaussian Splat. Postshot and Lichtfeld Studio run in parallel — two independent trainers we cross-compare to pick the cleaner result.",
+    toolchain: ["Multi-camera rig", "COLMAP", "Postshot", "Lichtfeld Studio", "Spark"],
+    items: [
+      {
+        name: "3D Gaussian Splatting",
+        ref:  "Kerbl et al., SIGGRAPH 2023 · rendered in-browser via @sparkjsdev/spark",
+        note: "The render primitive: per-splat ellipsoidal Gaussians + spherical-harmonic view-dependent colour. The composed garden ends up as a single .splat asset, rasterised in real time by Spark on Three.js + WebGL 2.",
       },
       {
-        name:      "OpenUSD subforms",
-        ref:       "Billboard + Voxel as UsdGeomPointInstancer prims",
-        toolchain: ["UsdGeomPointInstancer", "UsdGeomPlane", "UsdGeomCube", "UsdGeomSphere", "primvars:displayColor"],
-        output:    "USD-compatible alternative renderings of the same splat data",
-        note:      "Two alternative render representations of the splat, each expressed as a USD PointInstancer prim. The Billboard layer uses proto = UsdGeomPlane (per-instance camera-facing billboards), with a Quad subform (full square) and a Circle subform (unit-disc discard for soft round impostors). The Voxel layer buckets splats into a uniform grid with averaged colour per cell, rendered as proto = UsdGeomCube or proto = UsdGeomSphere depending on the subform. All variants carry per-instance positions, orientations, scales, and a primvars:displayColor array. Toggle live via the GUI's 3DGS/USD folder.",
+        name:   "Capture",
+        ref:    "Multi-camera capture rig",
+        note:   "The whole Unreal scene is photographed at a multi-camera array — every frame feeds the downstream pose-solver + trainers.",
+      },
+      {
+        name:   "Pose reconstruction",
+        ref:    "COLMAP Structure-from-Motion · 990 cameras recovered",
+        note:   "COLMAP solves intrinsics + extrinsics for every capture frame; the resulting 990 camera poses feed both trainers (and double as the Training Cameras overlay in Tech Spec).",
+        source: "src/colmap-loader.js:50",
+      },
+      {
+        name: "Splat training (parallel)",
+        ref:  "Postshot · Lichtfeld Studio",
+        note: "Two trainers fit the captured frames into a 3D Gaussian Splat at the same time. Postshot is the artist-driven path; Lichtfeld is the studio's in-house pipeline. We compare outputs and hand the cleaner one off to the next stage for optimization.",
+      },
+      {
+        name: "Splat optimization",
+        ref:  "GSOP · Houdini",
+        note: "The trainer output runs through Houdini's GSOP (Gaussian Splat Operators) toolset for cleanup + decimation: outlier splats are pruned, redundant low-opacity points are merged, and the splat count is brought down to ≈ 3M without a visible quality loss. Ships as public/SplatGarden_PC.splat.",
       },
     ],
   },
@@ -58,6 +85,61 @@ export const TECH_SPECS = [
         name: "Scene assembly",
         ref:  "Unreal Engine — every asset set-dressed into one scene",
         note: "Perforce-backed version control across artists. All set-dressed assets land here before the capture stage.",
+      },
+      // Landscape promoted from the end of this list to the second slot
+      // because it's the asset that demonstrates the full L1 → L2 pipeline
+      // most completely (AI Texture Stylization → Houdini COPNET →
+      // NormalMap-Online → Unreal terrain). Reading it right after Scene
+      // assembly anchors the rest of the Production list against a
+      // concrete "tool-chain in action" example.
+      {
+        name:      "Landscape",
+        location:  "Whole scene base",
+        // World position resolved with the same +Z-forward → -Z-forward
+        // flip used for all other hotspots (see AssetHoverManager).
+        // X nudged left in stages — 1.051 → 0.651 → 0.251 → -0.749 —
+        // each move responding to the user's request to pull the dot
+        // further away from the foreground foliage band. Final pose
+        // sits squarely over the open ground patch in the middle-left
+        // of the scene.
+        worldPos:  [-0.749, -0.827, 0.981],
+        toolchain: [
+          "AI Texture Stylization",
+          "Houdini COPNET",
+          "NormalMap-Online",
+          "Unreal Engine (terrain authoring)",
+        ],
+        output:    "Stylized terrain · painterly base colour + COPNET-authored height + tool-converted normal",
+        note:      "Three-stage texture pipeline for the ground. (1) The AI Texture Stylization tool from L1 applies a brush-stroke style from a chosen style reference onto the original ground tile, producing the painterly base colour. (2) The result is taken into a Houdini COPNET to fine-tune colour balance, paint in additional surface detail (rocks, scattered debris, mid-tone variation), and bake out a paired height map. (3) The stylized base colour is then run through cpetry.github.io/NormalMap-Online to derive the matching normal map. Final terrain is authored in Unreal Engine and dressed into the scene before the 3DGS capture stage.",
+        embed: {
+          src:   "https://player.vimeo.com/video/1194203694?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
+          label: "Final rendered landscape · in-scene",
+          title: "Shot4B_MontyVersion_4.53_1",
+          // Vimeo reports the player at 75 % padding-top (4:3) but the
+          // underlying clip is actually 16:9 — the 75 % padding was the
+          // Vimeo template default rather than a real source size,
+          // which produced the black letterbox bars top + bottom that
+          // the user flagged. Forcing the iframe to 16:9 tiles the
+          // video edge-to-edge inside the card.
+          aspectRatio: "16 / 9",
+        },
+        // Triptych: style reference (the overall stylized landscape look) /
+        // original ground tile / AI-stylized result. The renderCard()
+        // helper auto-renders the "Texture Stylization" triptych section
+        // when any of these three keys are set.
+        media: {
+          style:    "/textures/landscape/LandScape_Stylized.png",
+          original: "/textures/landscape/Ground_Original.png",
+          result:   "/textures/landscape/Ground_Stylized_BaseColor.png",
+          // Pipeline strip: the three downstream texture maps produced by
+          // stages (2) + (3) of the note above. renderCard() lays these
+          // out as a horizontal filmstrip below the triptych.
+          pipeline: [
+            { src: "/textures/landscape/Ground_Stylized_BaseColor.png", label: "Base Color · AI" },
+            { src: "/textures/landscape/Ground_Stylized_Height.png",    label: "Height · Houdini COPNET" },
+            { src: "/textures/landscape/Ground_Stylized_Normal.png",    label: "Normal · NormalMap-Online" },
+          ],
+        },
       },
       {
         name:      "Gazebo",
@@ -131,89 +213,35 @@ export const TECH_SPECS = [
         toolchain: ["SpeedTree", "Unreal Engine (set dress)"],
         note:      "Procedural tree authored in SpeedTree, dressed into the Unreal scene before the env capture.",
       },
-      {
-        name:      "Landscape",
-        location:  "Whole scene base",
-        // World position resolved with the same +Z-forward → -Z-forward
-        // flip used for all other hotspots (see AssetHoverManager).
-        // X nudged a further -0.4 (1.051 → 0.651 → 0.251) so the dot
-        // sits squarely over the open landscape patch the user
-        // selected, well clear of the foreground foliage that was
-        // visually overlapping the marker.
-        worldPos:  [0.251, -0.827, 0.981],
-        toolchain: [
-          "AI Texture Stylization",
-          "Houdini COPNET",
-          "NormalMap-Online",
-          "Unreal Engine (terrain authoring)",
-        ],
-        output:    "Stylized terrain · painterly base colour + COPNET-authored height + tool-converted normal",
-        note:      "Three-stage texture pipeline for the ground. (1) The AI Texture Stylization tool from L1 applies a brush-stroke style from a chosen style reference onto the original ground tile, producing the painterly base colour. (2) The result is taken into a Houdini COPNET to fine-tune colour balance, paint in additional surface detail (rocks, scattered debris, mid-tone variation), and bake out a paired height map. (3) The stylized base colour is then run through cpetry.github.io/NormalMap-Online to derive the matching normal map. Final terrain is authored in Unreal Engine and dressed into the scene before the 3DGS capture stage.",
-        embed: {
-          src:   "https://player.vimeo.com/video/1194203694?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
-          label: "Final rendered landscape · in-scene",
-          title: "Shot4B_MontyVersion_4.53_1",
-          // Vimeo reports the player at 75 % padding-top (4:3) but the
-          // underlying clip is actually 16:9 — the 75 % padding was the
-          // Vimeo template default rather than a real source size,
-          // which produced the black letterbox bars top + bottom that
-          // the user flagged. Forcing the iframe to 16:9 tiles the
-          // video edge-to-edge inside the card.
-          aspectRatio: "16 / 9",
-        },
-        // Triptych: style reference (the overall stylized landscape look) /
-        // original ground tile / AI-stylized result. The renderCard()
-        // helper auto-renders the "Texture Stylization" triptych section
-        // when any of these three keys are set.
-        media: {
-          style:    "/textures/landscape/LandScape_Stylized.png",
-          original: "/textures/landscape/Ground_Original.png",
-          result:   "/textures/landscape/Ground_Stylized_BaseColor.png",
-          // Pipeline strip: the three downstream texture maps produced by
-          // stages (2) + (3) of the note above. renderCard() lays these
-          // out as a horizontal filmstrip below the triptych.
-          pipeline: [
-            { src: "/textures/landscape/Ground_Stylized_BaseColor.png", label: "Base Color · AI" },
-            { src: "/textures/landscape/Ground_Stylized_Height.png",    label: "Height · Houdini COPNET" },
-            { src: "/textures/landscape/Ground_Stylized_Normal.png",    label: "Normal · NormalMap-Online" },
-          ],
-        },
-      },
     ],
   },
 
   {
-    section:   "3DGS",
+    section:   "R&D",
     group:     "layer",
-    layerNum:  3,
-    desc:      "Capturing the dressed Unreal scene and training it as a 3D Gaussian Splat. Postshot and Lichtfeld Studio run in parallel — two independent trainers we cross-compare to pick the cleaner result.",
-    toolchain: ["Multi-camera rig", "COLMAP", "Postshot", "Lichtfeld Studio", "Spark"],
+    layerNum:  1,
+    desc:      "Research + interop layer — the custom AI texture tool plus the OpenUSD spec for our alternative render subforms.",
+    toolchain: ["IP-Adapter", "ControlNet", "AdaIN", "Diffusion", "OpenUSD", "UsdGeomPointInstancer"],
     items: [
       {
-        name: "3D Gaussian Splatting",
-        ref:  "Kerbl et al., SIGGRAPH 2023 · rendered in-browser via @sparkjsdev/spark",
-        note: "The render primitive: per-splat ellipsoidal Gaussians + spherical-harmonic view-dependent colour. The composed garden ends up as a single .splat asset, rasterised in real time by Spark on Three.js + WebGL 2.",
+        name:      "AI Texture Stylization",
+        ref:       "Diffusion-based painterly tool with controllable color preservation",
+        toolchain: ["IP-Adapter", "ControlNet (Tile / Canny)", "AdaIN", "Diffusion"],
+        output:    "Painterly textures · pre-approved palette preserved",
+        note:      "Custom tool driving the painterly look on Daffodil + Landscape. Two artist-selectable modes — Full Style Transfer (color + texture + tone from a reference) and Texture-Only Transfer (auto-grayscale + AdaIN, preserves the original color palette). Per-channel histogram matching + patch-wise AdaIN run post-generation to deterministically correct residual color drift. Artist knobs: ControlNet mode, ControlNet strength, IP-Adapter strength, inference steps, guidance scale. PyTorch 2.11 / CUDA 13.0 on an NVIDIA RTX PRO 6000 Blackwell (96 GB VRAM) — 4K in ≈ 20 s at 20 inference steps, driven from a Gradio interface.",
+        compare: {
+          before: null,
+          after:  null,
+          labelA: "Original",
+          labelB: "Stylized",
+        },
       },
       {
-        name:   "Capture",
-        ref:    "Multi-camera capture rig",
-        note:   "The whole Unreal scene is photographed at a multi-camera array — every frame feeds the downstream pose-solver + trainers.",
-      },
-      {
-        name:   "Pose reconstruction",
-        ref:    "COLMAP Structure-from-Motion · 990 cameras recovered",
-        note:   "COLMAP solves intrinsics + extrinsics for every capture frame; the resulting 990 camera poses feed both trainers (and double as the Training Cameras overlay in Tech Spec).",
-        source: "src/colmap-loader.js:50",
-      },
-      {
-        name: "Splat training (parallel)",
-        ref:  "Postshot · Lichtfeld Studio",
-        note: "Two trainers fit the captured frames into a 3D Gaussian Splat at the same time. Postshot is the artist-driven path; Lichtfeld is the studio's in-house pipeline. We compare outputs and hand the cleaner one off to the next stage for optimization.",
-      },
-      {
-        name: "Splat optimization",
-        ref:  "GSOP · Houdini",
-        note: "The trainer output runs through Houdini's GSOP (Gaussian Splat Operators) toolset for cleanup + decimation: outlier splats are pruned, redundant low-opacity points are merged, and the splat count is brought down to ≈ 3M without a visible quality loss. Ships as public/SplatGarden_PC.splat.",
+        name:      "OpenUSD subforms",
+        ref:       "Billboard + Voxel as UsdGeomPointInstancer prims",
+        toolchain: ["UsdGeomPointInstancer", "UsdGeomPlane", "UsdGeomCube", "UsdGeomSphere", "primvars:displayColor"],
+        output:    "USD-compatible alternative renderings of the same splat data",
+        note:      "Two alternative render representations of the splat, each expressed as a USD PointInstancer prim. The Billboard layer uses proto = UsdGeomPlane (per-instance camera-facing billboards), with a Quad subform (full square) and a Circle subform (unit-disc discard for soft round impostors). The Voxel layer buckets splats into a uniform grid with averaged colour per cell, rendered as proto = UsdGeomCube or proto = UsdGeomSphere depending on the subform. All variants carry per-instance positions, orientations, scales, and a primvars:displayColor array. Toggle live via the GUI's 3DGS/USD folder.",
       },
     ],
   },
