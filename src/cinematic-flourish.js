@@ -1,34 +1,34 @@
 // ---------------------------------------------------------------------------
-// cinematic-flourish.js — end-of-cinematic title-card. Fires when the
-// FBX camera-move mixer emits "finished", overlaying a brief
-// "SPLATGARDEN" signature card so the cinematic feels authored to its
-// conclusion rather than just stopping.
+// cinematic-flourish.js — end-of-cinematic title card. Fires when the FBX
+// camera-move mixer emits "finished", overlaying a brief "SplatGarden"
+// signature card so the cinematic feels authored to its conclusion
+// rather than just stopping.
 //
-// Timing — matches a film-credits beat:
-//   0    – 600 ms  fade-in        (the hairline sweep draws across first,
-//                                  then the title letters reveal behind it)
-//   600  – 2100 ms hold           (full opacity, gentle letter-spacing
-//                                  breath to make the type feel alive)
-//   2100 – 2900 ms fade-out       (linear opacity to 0, scale 1 → 1.04
-//                                  for a soft "drift away" feel)
+// Typography mirrors the LOADING SPLASH exactly (same .ld-title /
+// .ld-sub / .ld-rule recipe under different class names) so the
+// opening + closing bookends of the user journey are typographically
+// continuous. No all-caps on the hero title, no letter-spacing
+// gymnastics, no scale-on-exit. Just an opacity fade — the natural
+// idiom for a single film-style end card.
 //
-// Self-cleaning: the DOM element + listeners are torn down at the end of
-// the fade-out so a subsequent Replay-intro can mount a fresh card.
-// Idempotent — calling play() while already mid-show is a no-op.
+// Timing:
+//   0    – 700 ms   opacity fade-in
+//   700  – 2400 ms  hold (no animation; the card is still)
+//   2400 – 3100 ms  opacity fade-out
 //
-// Mounting: builds its own element on first play() so wiring stays
-// declarative ("just call fx.play()") and the element doesn't sit dark
-// in the DOM all session.
+// Self-cleaning: the DOM element is torn down at the end of the fade-
+// out so a subsequent Replay-intro mounts a fresh card. Idempotent —
+// calling play() while already mid-show is a no-op.
 // ---------------------------------------------------------------------------
 
 const TIMING = {
-  fadeInMs:  600,
-  holdMs:   1500,
-  fadeOutMs: 800,
+  fadeInMs:  700,
+  holdMs:   1700,
+  fadeOutMs: 700,
 };
 
 export class CinematicFlourish {
-  constructor({ mountEl = document.body, title = "SPLATGARDEN", subtitle = "STUDIO · 2026", credit = "Houdini · SpeedTree · Unreal · COLMAP · Spark" } = {}) {
+  constructor({ mountEl = document.body, title = "SplatGarden", subtitle = "Studio Showcase", credit = "Houdini · SpeedTree · Unreal · COLMAP · Spark" } = {}) {
     this.mountEl  = mountEl;
     this.title    = title;
     this.subtitle = subtitle;
@@ -47,16 +47,19 @@ export class CinematicFlourish {
     this._active = true;
 
     // Build the card on demand so the DOM stays clean between cinematics.
+    // Structure mirrors the loading splash (.ld-title → .ld-sub → .ld-rule
+    // → .ld-desc) so the closing card reads as the typographic sibling of
+    // the opening one — same hero word, same hairline, same mono caption.
     const el = document.createElement("div");
     el.className = "cinematic-flourish";
     el.setAttribute("aria-hidden", "true");
     el.innerHTML = `
-      <div class="cf-rule" aria-hidden="true"></div>
       <div class="cf-stack">
         <h2 class="cf-title">${this.title}</h2>
         <div class="cf-sub">${this.subtitle}</div>
+        <div class="cf-rule" aria-hidden="true"></div>
+        <div class="cf-credit">${this.credit}</div>
       </div>
-      <div class="cf-credit">${this.credit}</div>
     `;
     this.mountEl.appendChild(el);
     this._el = el;

@@ -476,15 +476,14 @@ if (loadingEl) {
   });
 }
 
-// End-of-cinematic title-card. Mounted once, played each time the FBX
+// End-of-cinematic title card. Mounted once, played each time the FBX
 // camera-move mixer emits "finished" (Replay Intro included). Builds
 // its DOM lazily on first .play() so it doesn't sit dark in the tree.
-const _cinematicFlourish = new CinematicFlourish({
-  mountEl:  document.body,
-  title:    "SPLATGARDEN",
-  subtitle: "STUDIO · 2026",
-  credit:   "Houdini · SpeedTree · Unreal · COLMAP · Spark",
-});
+// All copy comes from the constructor's defaults — title-case
+// "SplatGarden", mixed-case subtitle + credit — matching the loading
+// splash typography exactly so the opening + closing card read as
+// one continuous brand.
+const _cinematicFlourish = new CinematicFlourish({ mountEl: document.body });
 
 function hideLoading() {
   // Kick off the particle exit pulse BEFORE the splash fades out — the
