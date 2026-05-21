@@ -12,11 +12,21 @@
 //   │                                 │
 //   │  [ sheet content slides up ]    │ ← #mobile-sheet (drag-handle, swipe-down)
 //   ├─────────────────────────────────┤
-//   │ [Views][FX][Cam][Info][Share]   │ ← #mobile-bottombar
+//   │ [Tour][FX][ Studio ][Info][Share]│ ← #mobile-bottombar
 //   └─────────────────────────────────┘
 //
-// The bottom-bar owns the *daily-use* surfaces; the hamburger still owns
-// the advanced / occasional ones (Pipeline, Quick Guide, Profiler, etc.).
+// Bar layout (portrait):
+//   Tour    — viewpoint list + camera-movement controls (merged; was 2 tabs)
+//   FX      — curated click effects + Open Studio Advanced
+//   Studio  — 3DGS / USD layer toggles (the project's CORE showcase; placed
+//             in the CENTER slot as a visually dominant "primary action"
+//             pill — same idiom as Apple's centre-button for Wallet, etc.)
+//   Info    — FPS / splats / pipeline / guide / credits
+//   Share   — one-shot share action (no sheet)
+//
+// Studio replaces the old top-right floating "#mobile-studio-btn" pill —
+// having one always-on showcase trigger in the middle of the bottom bar is
+// more thumb-friendly and removes a competing UI element from the top.
 // One sheet at a time; re-tapping the same toolbar button closes it.
 // ---------------------------------------------------------------------------
 
@@ -41,6 +51,15 @@ const ICONS = {
   views: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"/>
             <path d="M2.5 12C4.5 7.5 8 5.5 12 5.5s7.5 2 9.5 6.5c-2 4.5-5.5 6.5-9.5 6.5S4.5 16.5 2.5 12z"/>
+          </svg>`,
+  // Tour — two waypoint pins joined by an arc. Reads as "guided
+  // path through the scene", which is exactly what the tab does:
+  // jump-to viewpoint pins + run the authored camera fly-through.
+  tour:  `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 16c2-6 6-10 9-10s5 3 5 7-4 5-7 5-5 1-7 2"/>
+            <circle cx="5"  cy="16" r="1.8" fill="currentColor"/>
+            <circle cx="19" cy="13" r="1.8" fill="currentColor"/>
+            <circle cx="12" cy="9"  r="1.4" fill="currentColor"/>
           </svg>`,
   fx:    `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>
@@ -118,16 +137,13 @@ class BottomSheet {
     this.handleEl.addEventListener("pointermove", (e) => {
       if (this._dragStart == null) return;
       this._dragY = Math.max(0, e.clientY - this._dragStart);
-      // In landscape on phone, the sheet is horizontally centred via
-      // transform: translateX(-50%) ... — compose with our translateY
-      // so the drag doesn't snap the sheet off-centre. Portrait + tablet
-      // + desktop keep the pure translateY.
-      const isLandscapeMobile =
-        document.body.classList.contains("mobile") &&
-        window.matchMedia("(orientation: landscape)").matches;
-      this.el.style.transform = isLandscapeMobile
-        ? `translateX(-50%) translateY(${this._dragY}px)`
-        : `translateY(${this._dragY}px)`;
+      // The sheet is centred horizontally in EVERY orientation now
+      // (translateX(-50%) is on the base #mobile-sheet rule because
+      // the sheet is a centred floating CARD, not a full-width slab
+      // bolted to the bottom edge). Compose translateY with the
+      // centring translateX so the finger-follow drag doesn't snap
+      // the card off-centre.
+      this.el.style.transform = `translateX(-50%) translateY(${this._dragY}px)`;
     });
     const endDrag = () => {
       if (this._dragStart == null) return;
@@ -189,6 +205,10 @@ class MobileStudioPanel {
     // Camera Movement), even though it was authored to live at the top.
     this.originalNextSibling = usdLayersEl?.nextSibling ?? null;
     this.open           = false;
+    // Optional callback fired AFTER close() runs. MobileUI uses this to
+    // clear the bottom-bar's "studio" tab highlight when the panel is
+    // dismissed via × or outside-tap (not just via the bar button).
+    this._onClose       = null;
 
     // Trigger button — top-right, same coordinate the hamburger used.
     this.btn = document.createElement("button");
@@ -267,6 +287,9 @@ class MobileStudioPanel {
       if (this.open) return;
       this.panel.setAttribute("hidden", "");
     }, 240);
+    // Fire AFTER the panel is in its closed state so listeners (like the
+    // bottom-bar active-tab clear) see consistent open=false.
+    this._onClose?.();
   }
 }
 
@@ -289,8 +312,12 @@ export class MobileUI {
     this.sheet = new BottomSheet();
     // The Studio panel is the project's "core showcase" surface on
     // mobile — toggling 3DGS layers + their USD subform is the most
-    // visually-striking interaction in the app. Promoting it from
-    // "buried inside Advanced" to its own top-right affordance.
+    // visually-striking interaction in the app. The panel itself stays
+    // a top-anchored slide-down drop-down (re-parents the live
+    // #usd-layers-panel so its state + listeners survive), but the
+    // ENTRYPOINT moved from a separate top-right floating button into
+    // the CENTRE slot of the bottom bar. One canonical affordance,
+    // thumb-friendly, no top-right competition with the tab strip.
     if (refs.usdLayers?.el) {
       this.studio = new MobileStudioPanel(refs.usdLayers.el);
     }
@@ -303,12 +330,16 @@ export class MobileUI {
     this.bar = document.createElement("nav");
     this.bar.id = "mobile-bottombar";
     this.bar.setAttribute("aria-label", "Main");
+    // 5-slot layout — `studio` sits in the centre as a visually dominant
+    // "primary action" pill (mb-center class scales the icon + adds a
+    // subtle ring). Tour (slot 1) merges the old Views + Camera tabs:
+    // viewpoint list above, camera-movement controls below.
     this.bar.innerHTML = `
-      <button data-tab="views"  aria-label="Viewpoints"><span class="mb-ico">${ICONS.views}</span><span class="mb-lbl">Views</span></button>
-      <button data-tab="fx"     aria-label="Effects"   ><span class="mb-ico">${ICONS.fx   }</span><span class="mb-lbl">Effects</span></button>
-      <button data-tab="cam"    aria-label="Camera"    ><span class="mb-ico">${ICONS.cam  }</span><span class="mb-lbl">Camera</span></button>
-      <button data-tab="info"   aria-label="Info"      ><span class="mb-ico">${ICONS.info }</span><span class="mb-lbl">Info</span></button>
-      <button data-tab="share"  aria-label="Share"     ><span class="mb-ico">${ICONS.share}</span><span class="mb-lbl">Share</span></button>
+      <button data-tab="tour"   aria-label="Tour"        ><span class="mb-ico">${ICONS.tour  }</span><span class="mb-lbl">Tour</span></button>
+      <button data-tab="fx"     aria-label="Effects"     ><span class="mb-ico">${ICONS.fx    }</span><span class="mb-lbl">Effects</span></button>
+      <button data-tab="studio" aria-label="3DGS Studio" class="mb-center"><span class="mb-ico">${ICONS.studio}</span><span class="mb-lbl">Studio</span></button>
+      <button data-tab="info"   aria-label="Info"        ><span class="mb-ico">${ICONS.info  }</span><span class="mb-lbl">Info</span></button>
+      <button data-tab="share"  aria-label="Share"       ><span class="mb-ico">${ICONS.share }</span><span class="mb-lbl">Share</span></button>
     `;
     document.body.appendChild(this.bar);
 
@@ -316,8 +347,28 @@ export class MobileUI {
       const btn = e.target.closest("button[data-tab]");
       if (!btn) return;
       const tab = btn.dataset.tab;
+
       // Share is a one-shot action (no sheet).
       if (tab === "share") { this._doShare(); return; }
+
+      // Studio opens the existing MobileStudioPanel (top-anchored slide-
+      // down hosting #usd-layers-panel) instead of the bottom sheet, so
+      // the live USD layer DOM with all its event handlers + reactive
+      // state comes along untouched. Close any open bottom sheet first
+      // so the Studio panel isn't visually layered on top of it.
+      if (tab === "studio") {
+        if (!this.studio) return;
+        if (this.studio.open) {
+          this.studio.close();
+          this._setActive(null);
+        } else {
+          if (this.sheet.open) this.sheet.close();
+          this.studio._show();
+          this._setActive("studio");
+        }
+        return;
+      }
+
       // Re-tapping the active tab closes the sheet (toggle behaviour).
       if (this.sheet.isOpen(tab)) {
         this.sheet.close();
@@ -331,9 +382,17 @@ export class MobileUI {
 
     // Keep the bottom-bar's active-tab highlight in sync with sheet state.
     this.sheet._onDismiss = () => this._setActive(null);
+    // Same for the Studio panel — when the user dismisses it via × or
+    // outside-tap, clear the "studio" active highlight.
+    if (this.studio) {
+      this.studio._onClose = () => {
+        if (this._activeTab === "studio") this._setActive(null);
+      };
+    }
   }
 
   _setActive(tab) {
+    this._activeTab = tab;
     this.bar.querySelectorAll("button[data-tab]").forEach(b => {
       b.classList.toggle("active", b.dataset.tab === tab);
     });
@@ -342,41 +401,83 @@ export class MobileUI {
   _buildContents() {
     // Lazy factories — each invocation rebuilds the DOM so toggles
     // reflect current state (e.g. active viewpoint, postfx.enabled).
+    // `tour` = old views + cam merged into one sheet (jump-to viewpoints
+    // above, camera-movement controls below). The old `views` and `cam`
+    // entries are gone — Studio occupies the centre slot now and has its
+    // own panel (no sheet).
     this._sections = {
-      views: () => ({ title: "Viewpoints",   node: this._viewsContent() }),
-      fx:    () => ({ title: "Effects",      node: this._fxContent()    }),
-      cam:   () => ({ title: "Camera Move",  node: this._camContent()   }),
-      info:  () => ({ title: "Scene Info",   node: this._infoContent()  }),
+      tour:  () => ({ title: "Tour",        node: this._tourContent() }),
+      fx:    () => ({ title: "Effects",     node: this._fxContent()   }),
+      info:  () => ({ title: "Scene Info",  node: this._infoContent() }),
     };
   }
 
-  // ---- Views ----------------------------------------------------------
-  _viewsContent() {
+  // ---- Tour (Viewpoints + Camera-movement merged) ---------------------
+  // Why merged: on a phone, "jump to viewpoint" and "play the fly-
+  // through" are the SAME mental model — getting around the scene
+  // without manually dragging. Splitting them across two tabs forced
+  // users to think about implementation details (preset vs animation).
+  // Combining them into one Tour sheet (Viewpoints list on top, camera
+  // controls below) makes the affordance feel like a single feature.
+  _tourContent() {
     const wrap = document.createElement("div");
-    wrap.className = "ms-views";
+    wrap.className = "ms-tour";
+
+    // -- Viewpoints section --
     const annotations = this.refs.annotations;
-    if (!annotations || annotations.viewpoints.length === 0) {
-      wrap.innerHTML = `<div class="ms-empty">No viewpoints yet.</div>`;
-      return wrap;
-    }
-    const list = document.createElement("ul");
-    list.className = "ms-views-list";
-    annotations.viewpoints.forEach((vp, i) => {
-      const li = document.createElement("li");
-      const isActive = annotations.activeId === vp.id;
-      if (isActive) li.classList.add("active");
-      li.innerHTML = `
-        <span class="ms-vp-num">${i + 1}</span>
-        <span class="ms-vp-name">${escapeHtml(vp.name)}</span>
-        ${isActive ? `<span class="ms-vp-badge">Active</span>` : ""}
-      `;
-      li.addEventListener("click", () => {
-        annotations.flyTo(vp.id);
-        this.sheet.close();
+    const hasViewpoints = annotations && annotations.viewpoints.length > 0;
+    wrap.appendChild(this._row("Viewpoints"));
+    if (hasViewpoints) {
+      const list = document.createElement("ul");
+      list.className = "ms-views-list";
+      annotations.viewpoints.forEach((vp, i) => {
+        const li = document.createElement("li");
+        const isActive = annotations.activeId === vp.id;
+        if (isActive) li.classList.add("active");
+        li.innerHTML = `
+          <span class="ms-vp-num">${i + 1}</span>
+          <span class="ms-vp-name">${escapeHtml(vp.name)}</span>
+          ${isActive ? `<span class="ms-vp-badge">Active</span>` : ""}
+        `;
+        li.addEventListener("click", () => {
+          annotations.flyTo(vp.id);
+          this.sheet.close();
+        });
+        list.appendChild(li);
       });
-      list.appendChild(li);
-    });
-    wrap.appendChild(list);
+      wrap.appendChild(list);
+    } else {
+      const empty = document.createElement("div");
+      empty.className = "ms-empty";
+      empty.textContent = "No viewpoints yet.";
+      wrap.appendChild(empty);
+    }
+
+    // -- Camera Movement section --
+    // Per user request: drop the "Stop & reset" button. Play / Pause +
+    // Replay cover the actual mobile journeys (start watching, pause if
+    // distracted, start again from the top). "Stop & reset" was a
+    // duplicate of Replay's first half — replay both stops AND resets
+    // since the cinematic loops back to its opening pose. Removing it
+    // also tightens the Tour sheet by one row, matching the AR-style
+    // "as few controls as possible" direction the rest of the mobile
+    // UI is heading.
+    wrap.appendChild(this._row("Camera Movement"));
+    const cam = document.createElement("div");
+    cam.className = "ms-cam";
+    cam.innerHTML = `
+      <button class="ms-action ms-action-primary" data-act="play">
+        <span class="ms-icon-glyph">▶</span> Play / Pause
+      </button>
+      <button class="ms-action" data-act="replay">
+        <span class="ms-icon-glyph">↻</span> Replay intro
+      </button>
+      <div class="ms-help">Plays the authored fly-through. Replay starts over from the opening pose.</div>
+    `;
+    cam.querySelector('[data-act="play"]'  ).addEventListener("click", () => window.__camMovePlayPause?.());
+    cam.querySelector('[data-act="replay"]').addEventListener("click", () => window.__replayIntro?.());
+    wrap.appendChild(cam);
+
     return wrap;
   }
 
@@ -482,27 +583,9 @@ export class MobileUI {
     };
   }
 
-  // ---- Camera ---------------------------------------------------------
-  _camContent() {
-    const wrap = document.createElement("div");
-    wrap.className = "ms-cam";
-    wrap.innerHTML = `
-      <button class="ms-action ms-action-primary" data-act="play">
-        <span class="ms-icon-glyph">▶</span> Play / Pause
-      </button>
-      <button class="ms-action" data-act="stop">
-        <span class="ms-icon-glyph">■</span> Stop &amp; reset
-      </button>
-      <button class="ms-action" data-act="replay">
-        <span class="ms-icon-glyph">↻</span> Replay intro
-      </button>
-      <div class="ms-help">Plays the authored fly-through. Stop returns full control to drag / WASD.</div>
-    `;
-    wrap.querySelector('[data-act="play"]'  ).addEventListener("click", () => window.__camMovePlayPause?.());
-    wrap.querySelector('[data-act="stop"]'  ).addEventListener("click", () => window.__camMoveStop?.());
-    wrap.querySelector('[data-act="replay"]').addEventListener("click", () => window.__replayIntro?.());
-    return wrap;
-  }
+  // (Old _camContent() removed — Camera-movement controls now live
+  //  inside _tourContent() so users find them next to the Viewpoints
+  //  list. See the "tour" tab in _buildBar/_buildContents.)
 
   // ---- Info -----------------------------------------------------------
   _infoContent() {

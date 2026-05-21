@@ -51,15 +51,7 @@ html, body {
   user-select: none;
 }
 
-/* #app — fills the viewport, but uses `position: absolute` (NOT
-   `fixed`) on purpose. `position: fixed` ALWAYS creates a stacking
-   context, and stacking contexts in Chromium prevent descendants'
-   `backdrop-filter` from compositing against the hardware-accelerated
-   WebGL canvas layer (the panel's glass blur collapses to a faint
-   tint). `position: absolute; inset: 0` on a body-direct child gives
-   identical viewport-fill behaviour AND does not create a stacking
-   context, so descendant backdrop-filter still reaches the canvas. */
-#app   { position: absolute; inset: 0; }
+#app   { position: fixed; inset: 0; }
 #viewport {
   position: absolute;
   inset: 0;
@@ -425,26 +417,228 @@ html, body {
 #sidebar .hint {
   border-top: 1px solid var(--hair);
   padding: 10px 14px;
-  font-size: 10px;
+  font-size: 9.5px;
   color: var(--text-dim);
-  line-height: 1.55;
+  line-height: 1.6;
   letter-spacing: 0.02em;
 }
+/* Each hint row is a single physical row of content (icon + kbd shortcuts
+   + descriptors). At the panel's 240 px width the longer rows don't fit
+   on one line — they wrap. Without help the wrap point breaks the line
+   right after the icon, leaving the wrapped descriptors visually
+   disconnected from their key (reads as "incomplete display" — exactly
+   the screenshot the user just reported). Block + hanging indent fixes
+   it: the icon sits at the left edge on line 1, and any wrapped content
+   indents to align with the first kbd on the line above so the wrap
+   reads as a continuation, not a new sentence. */
 #sidebar .hint .hint-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  display: block;
+  padding-left: 18px;
+  text-indent: -18px;
   margin: 3px 0;
-  flex-wrap: wrap;
 }
 #sidebar .hint .hint-key {
-  font-size: 11px;
+  font-size: 10.5px;
+  display: inline-block;
   width: 14px;
-  flex-shrink: 0;
+  margin-right: 4px;
   filter: grayscale(1) brightness(2);
   opacity: 0.7;
+  vertical-align: -1px;
 }
-#sidebar .hint kbd { margin-right: 1px; }
+#sidebar .hint kbd { margin: 0 1px; }
+/* Hide keyboard + mouse shortcut hints on phone devices — there's no
+   physical keyboard, and listing WASD / Q / E / V / R alongside the
+   viewpoints reads as misleading clutter. Bound to `body.phone-device`
+   (sticky, hardware-based) so this survives orientation changes —
+   the existing `body.mobile #sidebar { display: none }` rule only
+   hides the sidebar in PORTRAIT (mobile flips off when an iPhone
+   rotates to landscape and the viewport width crosses 768 px),
+   leaving the hints visible in landscape. */
+body.phone-device #sidebar .hint { display: none; }
+/* Same logic for the Scene panel's drag-and-drop hint — phones can't
+   really drag files onto the canvas (the "+ Add" file picker and the
+   Studio panel's "Use My Own" pill cover the same job on touch), and
+   the hint footer was eating ~50 px of an already-short panel. Hiding
+   it reclaims that height for the actual layer list. */
+body.phone-device #scene-panel .hint { display: none; }
+
+/* ============================================================
+   Phone LANDSCAPE — #left-stack is only ≈ 312 px tall (viewport
+   height ≈ 430 minus 18 px top + 100 px bottom buffer for the
+   hand-panel). The default 60 / 40 split between Viewpoints and
+   Scene gives Scene only ≈ 125 px, of which 38 px is the header
+   and the layer list ends up clamped to ≈ 37 px — too short to
+   show even one full row, hence the user's report of "scene 部分
+   不显示" (Scene contents not displaying).
+
+   Rebalance for that orientation:
+   • Viewpoints (#sidebar) — hints are already hidden on
+     body.phone-device, so the panel only ever holds the 3-item
+     default viewpoint list. 36 % is plenty (≈ 112 px → header
+     38 + 3 rows ≈ 108 fits within scroll).
+   • Scene (#scene-panel) — the panel users actually read; let
+     it own most of the column.
+   The bound applies only to short landscape viewports so it
+   doesn't perturb iPad / desktop. body.phone-device anchors to
+   the device (sticky), not the orientation-derived `.mobile`
+   class (which is OFF in this exact case), so the rule fires
+   whether the body has `.tablet` or `.phone` attached. */
+@media (orientation: landscape) and (max-height: 520px) {
+  body.phone-device #sidebar     { max-height: 36%; }
+  body.phone-device #scene-panel { max-height: 64%; }
+}
+
+/* ============================================================
+   Phone LANDSCAPE — comprehensive size + layout pass.
+   In landscape the viewport is wide-but-short (≈ 932 × 430 on
+   iPhone 14 PM, ≈ 844 × 390 on smaller phones). The default
+   desktop-derived layout (used because `body.mobile` flips off
+   above 768 px) stacks the Viewpoints / Scene / Hand-Tracking
+   panels on the left, the lil-gui Studio on the right, plus
+   any open hover card / Quick Guide / USD annotation card in
+   between — together they easily occupy 100 % of the short
+   viewport with multiple overlaps (the user's screenshot
+   showed exactly this).
+
+   Scoped to `body.phone-device` so iPad + desktop are
+   untouched. Strategy:
+     • Shrink lil-gui to a narrow right-rail
+     • Shrink Viewpoints / Scene to a slim left-rail
+     • Hand-Tracking starts collapsed (less footprint by default)
+     • USD annotation card narrows + pulls closer to right edge
+     • Asset hover card stays at its 0.72 zoom (existing rule)
+     • Quick Guide narrows so it doesn't span the viewport
+   ============================================================ */
+@media (orientation: landscape) and (max-height: 520px) {
+  /* lil-gui Studio — narrow rail on the right, not the full
+     280-px desktop width. Tight max-height so it never spills
+     past the viewport's bottom edge. */
+  body.phone-device .lil-gui.root {
+    width: 220px !important;
+    max-width: 220px !important;
+    top: 12px !important;
+    right: 12px !important;
+    bottom: auto !important;
+    max-height: calc(100vh - 24px) !important;
+    --width: 220px !important;
+    --font-size: 10.5px !important;
+  }
+  /* Left rail — Viewpoints + Scene panels narrower so they
+     don't eat the centre of the viewport. */
+  body.phone-device #left-stack {
+    width: 180px;
+    top: 12px;
+    left: 12px;
+    bottom: 78px;
+  }
+  /* Hand Tracking panel — starts visually minimised in
+     landscape so it doesn't dominate the short viewport. The
+     pill remains tappable to expand. */
+  body.phone-device #hand-panel {
+    width: 180px;
+    left: 12px;
+    bottom: 12px;
+  }
+  /* USD annotation card — narrower + pulls in toward the right
+     edge so it sits to the LEFT of the narrowed lil-gui rather
+     than overlapping the viewport centre. */
+  #usd-annotations {
+    width: min(280px, calc(100vw - 280px));
+    right: 244px;       /* 220 (gui) + 12 (gui right offset) + 12 gap */
+    top: 12px;
+  }
+  /* Quick Guide — narrower so it stops spanning the whole
+     viewport in landscape. */
+  body.phone-device #key-hints {
+    max-width: 280px !important;
+    bottom: 12px !important;
+  }
+  /* USD annotation card text — slightly smaller in landscape
+     so the narrower card still fits the intro + 2×2 grid
+     comfortably. */
+  #usd-annotations .ua-title    { font-size: 20px; }
+  #usd-annotations .ua-hero     { font-size: 18px; }
+  #usd-annotations .ua-intro    { font-size: 11.5px; margin: 6px 0 10px; }
+  #usd-annotations .ua-body     { font-size: 10.5px; }
+  #usd-annotations .ua-tile     { padding: 8px 10px; }
+  #usd-annotations .ua-tile-v   { font-size: 11px; }
+  #usd-annotations .ua-grid     { gap: 6px; margin-bottom: 10px; }
+
+  /* ---- Further compression of the left rail panels ----
+     The user's screenshot shows Viewpoints clipped after 2 items
+     and Scene barely fitting one layer row. Squeeze every visual
+     by ~25 % so 3 viewpoints + the layer list fit cleanly in
+     the ≈ 340-px tall #left-stack. */
+  body.phone-device #sidebar header,
+  body.phone-device #scene-panel header {
+    padding: 8px 10px 6px !important;
+  }
+  body.phone-device #sidebar header .title,
+  body.phone-device #scene-panel header .title {
+    font-size: 9px !important;
+    letter-spacing: 0.16em !important;
+  }
+  body.phone-device #sidebar #add-viewpoint,
+  body.phone-device #scene-panel .add-splat {
+    padding: 3px 8px !important;
+    font-size: 10px !important;
+  }
+  body.phone-device #viewpoint-list {
+    padding: 4px !important;
+  }
+  body.phone-device #viewpoint-list li {
+    padding: 5px 8px !important;
+    font-size: 11.5px !important;
+    gap: 8px !important;
+  }
+  body.phone-device #viewpoint-list li .badge {
+    width: 17px !important; height: 17px !important;
+    font-size: 9px !important;
+  }
+  body.phone-device #scene-panel .layer-list {
+    padding: 4px !important;
+  }
+  body.phone-device #scene-panel .layer {
+    padding: 5px 8px !important;
+    font-size: 11px !important;
+    gap: 7px !important;
+  }
+  body.phone-device #scene-panel .layer .eye {
+    width: 17px !important; height: 17px !important;
+  }
+  /* Hand panel — tighter padding so the toggle pill takes the
+     full panel width without dead space around it. */
+  body.phone-device #hand-panel {
+    padding: 8px !important;
+  }
+  body.phone-device #hand-toggle {
+    padding: 7px 10px !important;
+    font-size: 11px !important;
+  }
+}
+/* Soft empty-state for the viewpoint list — when seed defaults haven't
+   landed yet (or the user has deleted every saved viewpoint), the OL
+   collapses to its 6 px padding and the panel reads as broken: header
+   → empty stripe → hints. This pseudo-element fills the space with a
+   short prompt that explains the affordance. The OL still has `flex: 1`
+   so the placeholder occupies the natural list slot — no layout shift
+   when a real viewpoint LI gets prepended. */
+#viewpoint-list:empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 64px;
+  padding: 14px 18px;
+}
+#viewpoint-list:empty::before {
+  content: "Press V or + Add to save the current view";
+  font-size: 10.5px;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+}
 
 /* ============ Scene layers panel ============ */
 #scene-panel {
@@ -462,6 +656,24 @@ html, body {
   border: 1px solid var(--hair);
   border-radius: var(--radius);
   box-shadow: var(--shadow-soft);
+}
+/* ============================================================
+   Adaptive heights — when one of the left-stack panels collapses
+   to its 38 × 38 tab, the sibling should reclaim the freed space
+   instead of staying at its baseline `max-height: 40%` / 60% cap.
+   Without these rules, collapsing Viewpoints leaves the Scene
+   panel stuck at 40% of #left-stack — most of the column unused,
+   the layer list visibly clipped a few rows in (this is exactly
+   the bug the screenshot showed: ONE layer + hint, when there
+   was room for several more rows below). The general-sibling
+   combinator handles "Viewpoints collapsed → Scene grows"; the
+   :has() selector handles the reverse direction.
+   ============================================================ */
+#sidebar.sidebar-minimized ~ #scene-panel {
+  max-height: 100%;
+}
+#left-stack:has(#scene-panel.sidebar-minimized) #sidebar {
+  max-height: 100%;
 }
 #scene-panel header {
   display: flex;
@@ -772,39 +984,81 @@ kbd {
   width: 224px;
   box-shadow: var(--shadow-soft);
 }
+/* Hand Tracking toggle — reverted to the simpler bordered-pill
+   visual the user pointed to. Single rounded pill with the hand
+   icon + label + a small mono "ON / OFF / ERR" badge on the right.
+   No left-edge accent bar, no iOS-knob switch, no halo glow — the
+   older treatment had a clearer visual identity and matched the
+   rest of the side panels' typography weight. The COLLAPSE
+   FUNCTION is preserved separately on #hand-min-toggle below
+   (the chevron is hidden on .hand-head's default state and only
+   appears when the panel is collapsed, so the visual when
+   expanded matches the user's reference screenshot). */
 #hand-toggle {
   display: flex;
   align-items: center;
   gap: 10px;
   background: transparent;
   border: 1px solid var(--hair-strong);
-  border-radius: var(--radius-sm);
-  padding: 8px 12px;
+  border-radius: 10px;
+  padding: 9px 12px;
   cursor: pointer;
   color: var(--text);
   font-family: var(--font-ui);
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.01em;
-  transition: background 0.12s, border-color 0.12s;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
-#hand-toggle:hover { background: var(--hover-strong); border-color: rgba(255, 255, 255, 0.22); }
-#hand-toggle .icon { font-size: 14px; filter: grayscale(1) brightness(2); }
-#hand-toggle .label { flex: 1; text-align: left; }
+#hand-toggle:hover {
+  background: var(--hover-strong);
+  border-color: rgba(255, 255, 255, 0.22);
+}
+#hand-toggle .icon {
+  font-size: 14px;
+  filter: grayscale(1) brightness(2);
+}
+#hand-toggle .label {
+  flex: 1;
+  text-align: left;
+}
 #hand-toggle .state {
   font-family: var(--font-mono);
   font-size: 9.5px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.10em;
   color: var(--text-dim);
-  padding: 2px 7px;
-  border-radius: 3px;
+  padding: 3px 8px;
+  border-radius: 4px;
   background: rgba(255, 255, 255, 0.05);
+  transition: color 0.15s ease, background 0.15s ease;
 }
-#hand-toggle.active        { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.20); }
-#hand-toggle.active .state { color: var(--text); background: rgba(255, 255, 255, 0.12); }
-#hand-toggle.loading .state{ color: var(--text-mid); }
-#hand-toggle.error         { border-color: rgba(255, 100, 100, 0.30); }
-#hand-toggle.error .state  { color: #ff8a8a; background: rgba(255, 100, 100, 0.10); }
+#hand-toggle.active {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.20);
+}
+#hand-toggle.active .state {
+  color: #0e1014;
+  background: #fff;
+}
+#hand-toggle.loading .state {
+  color: var(--text-mid);
+}
+#hand-toggle.error {
+  border-color: rgba(255, 100, 100, 0.30);
+}
+#hand-toggle.error .state {
+  color: #ff8a8a;
+  background: rgba(255, 100, 100, 0.10);
+}
+/* Collapse chevron — kept FUNCTIONAL but visually subtle. Hidden
+   when the panel is expanded (matches the user's reference: the
+   toggle pill IS the visible header). Only reappears when the
+   panel is in .hand-minimized state so the user can restore it.
+   Same chevron button (#hand-min-toggle) — driven by setupCollap-
+   siblePanel() in main.js. */
+#hand-panel:not(.hand-minimized) .hand-head {
+  display: none;
+}
 
 #hand-preview-wrap {
   display: none;
@@ -842,34 +1096,102 @@ kbd {
   letter-spacing: 0.04em;
 }
 
+/* Hand tracking error card — refined glass card. Replaces the old
+   flat red-tinted box with: a warning icon mark, a quietly-coloured
+   title (coral instead of pure red), a muted body, and a clear
+   primary Retry button next to a tertiary "How to enable" link.
+   The icon + title sit in a header row, the body wraps naturally
+   below, and actions are pushed to the footer so the structure
+   reads as a proper alert dialog rather than a stack of red lines. */
 #hand-error {
   display: none;
-  background: rgba(255, 100, 100, 0.06);
-  border: 1px solid rgba(255, 100, 100, 0.20);
-  border-radius: var(--radius-sm);
-  padding: 9px 11px;
-  font-size: 11px;
+  position: relative;
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(255, 120, 120, 0.10), transparent 70%),
+    rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 120, 120, 0.18);
+  border-radius: 14px;
+  padding: 12px 14px 12px 44px;   /* left padding leaves room for icon */
+  font-size: 11.5px;
   line-height: 1.55;
   color: var(--text);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 6px 18px rgba(0, 0, 0, 0.22);
 }
 #hand-error:not([hidden]) { display: block; }
-#hand-error .title {
+/* Triangle warning glyph — absolute-positioned in the left gutter so
+   the title + body align vertically without needing flex math.
+   Coral fill keeps with the soft red palette of the card. */
+#hand-error .he-icon {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: #ffb0b0;
+  background: rgba(255, 120, 120, 0.10);
+  border: 1px solid rgba(255, 120, 120, 0.20);
+}
+#hand-error .he-icon svg { width: 13px; height: 13px; display: block; }
+#hand-error .title {
+  color: #ffb8b8;
   font-weight: 500;
   margin-bottom: 4px;
   letter-spacing: 0.01em;
+  font-size: 12.5px;
 }
-#hand-error .hint { color: var(--text-mid); }
+#hand-error .hint {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 11px;
+  line-height: 1.5;
+}
+/* Action footer — Retry primary + How-to link tertiary, separated
+   by automatic flex spacing so the link sits on the right edge. */
+#hand-error .he-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+#hand-error .he-retry {
+  flex: 0 0 auto;
+  background: #fff;
+  color: #0e1014;
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 16px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.20) inset,
+              0 4px 12px rgba(255, 255, 255, 0.12);
+}
+#hand-error .he-retry:hover {
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.20) inset,
+              0 6px 16px rgba(255, 255, 255, 0.18);
+}
+#hand-error .he-retry:active { transform: scale(0.97); }
 #hand-error .docs {
-  display: inline-block;
-  margin-top: 6px;
-  color: var(--text);
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  color: rgba(255, 255, 255, 0.58);
   text-decoration: none;
-  font-size: 10px;
-  border-bottom: 1px dashed var(--hair-strong);
-  padding-bottom: 1px;
+  font-size: 10.5px;
+  letter-spacing: 0.02em;
+  transition: color 0.15s ease;
+  border-bottom: 0;
 }
-#hand-error .docs:hover { color: var(--text); border-color: var(--text); }
+#hand-error .docs:hover { color: var(--text); }
 
 /* ============ Hand virtual cursor ============ */
 /* Drag-and-drop splat upload overlay */
@@ -1951,6 +2273,95 @@ kbd {
   font-size: 10px !important;
   padding: 12px 14px !important;
   border-bottom: 1px solid var(--hair) !important;
+  /* Tighter vertical padding when the whole panel is collapsed —
+     keeps the chevron centered visually in the pill (see .closed rules
+     below). Smooth so the height collapse feels of-a-piece. */
+  transition: padding 0.22s cubic-bezier(.16,1,.3,1),
+              border-radius 0.22s ease,
+              border-bottom-color 0.22s ease;
+}
+/* Collapsed state — the SplatGarden Studio panel shrinks to just its
+   title bar. We treat the closed panel as a SELF-CONTAINED CAPSULE
+   PILL rather than a flat slab:
+   • drop the title's bottom-border (no children beneath it now),
+   • fatten the radius so all four corners read as a true pill,
+   • tighten + balance vertical padding so the chevron + title sit
+     centred in the capsule with even breathing room,
+   • slim the title-row to a single height so the panel doesn't
+     reserve extra space for a non-existent body,
+   • brighten the hover state (background + tiny scale) so the
+     capsule feels tappable rather than decorative,
+   • brighten the chevron a touch so the affordance reads at a
+     glance against the brighter pill background,
+   • lengthen letter-spacing slightly so SPLATGARDEN STUDIO breathes
+     inside the smaller pill format.
+   The base .lil-gui already has `overflow: hidden`, so the rounded
+   corners naturally clip whatever children remain underneath. */
+.lil-gui.root.closed {
+  border-radius: 999px !important;
+  /* Soften the closed-state shadow a touch — at the smaller pill
+     footprint the full panel-sized shadow read as heavy. */
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.32),
+              0 1px 0 rgba(255, 255, 255, 0.06) inset !important;
+  transition: background 0.2s ease, transform 0.2s ease,
+              box-shadow 0.2s ease, border-color 0.2s ease !important;
+}
+.lil-gui.root.closed > .title {
+  /* Flex row + align-items: center forces the chevron ::before pseudo
+     AND the title text onto the same vertical centre. The old block
+     layout left the pseudo on the baseline (defaults to
+     vertical-align: baseline) which sat ~2 px above the cap-line of
+     the small-caps title — visible as "text not vertically centred
+     inside the pill" in the user's screenshot. Flex sidesteps the
+     baseline alignment entirely. */
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  line-height: 1 !important;
+  padding: 12px 20px !important;
+  border-bottom: 1px solid transparent !important;
+  border-radius: 999px !important;
+  letter-spacing: 0.20em !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+  /* Subtle inner highlight on the top edge — same "etched glass"
+     treatment the lil-gui itself uses, scaled down for the pill. */
+  background:
+    linear-gradient(180deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0.02) 100%) !important;
+}
+/* Chevron ::before — explicit vertical-align inside the flex row.
+   line-height: 1 + align-items: center hands the glyph the same
+   centre line as the title text, killing the half-pixel baseline
+   drift that made the closed pill read as "text not centred". */
+.lil-gui.root.closed > .title::before {
+  display: inline-flex !important;
+  align-items: center !important;
+  line-height: 1 !important;
+  vertical-align: middle !important;
+}
+/* Hover — lift the capsule with a brighter surface + tiny scale.
+   Tactile cue that the pill is a tappable affordance, not chrome. */
+.lil-gui.root.closed:hover {
+  background: rgba(28, 30, 36, 0.62) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.40),
+              0 1px 0 rgba(255, 255, 255, 0.10) inset !important;
+}
+.lil-gui.root.closed:hover > .title {
+  color: #fff !important;
+  background:
+    linear-gradient(180deg,
+      rgba(255, 255, 255, 0.10) 0%,
+      rgba(255, 255, 255, 0.04) 100%) !important;
+}
+/* Chevron — lil-gui draws "▾" as a ::before pseudo on .title that
+   rotates -90° in the closed state. Pop it from a faint grey to a
+   confident white so the open affordance reads first. */
+.lil-gui.root.closed > .title::before {
+  opacity: 0.95 !important;
+  color: #fff !important;
 }
 .lil-gui .title {
   font-weight: 500 !important;
@@ -2172,30 +2583,102 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   align-items: center;
   gap: 12px;
   justify-content: space-between;
+  flex-wrap: nowrap;
+}
+.cam-timeline .ct-label,
+.cam-timeline .ct-time,
+.cam-timeline .ct-frame {
+  /* Each cell stays on one line — in phone landscape the timeline
+     gets squeezed enough that the default wrap broke "CAMERA MOVE"
+     into two lines and split "14.04s / 16.58s" across visual rows.
+     nowrap forces single-line rendering and gives the flexbox a
+     fair shrink target. */
+  white-space: nowrap;
 }
 .cam-timeline .ct-label {
   color: rgba(255, 255, 255, 0.45);
   text-transform: uppercase;
   font-size: 9.5px;
+  flex-shrink: 0;
 }
 .cam-timeline .ct-time,
 .cam-timeline .ct-frame {
   color: #f0f3f6;
   font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
+/* Scrub bar — the whole .cam-timeline carries pointer-events: none so
+   the user can keep orbiting the scene during playback, but the
+   progress bar itself opts back in so it accepts click + drag and
+   becomes a seekable timeline. Hit area is the .ct-track (12 px
+   tall transparent gutter); the visible groove is the thinner inner
+   line. Same idiom YouTube uses — the bar is small visually but
+   easy to grab. */
 .cam-timeline .ct-bar {
   position: relative;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  pointer-events: auto;
+  touch-action: none;          /* drag scrubs, never page-pans */
+  /* No background here — the visible groove is the inner .ct-track */
+  overflow: visible;
+}
+.cam-timeline .ct-bar::before {
+  /* The visible groove — drawn as a pseudo so the .ct-bar itself can
+     stay the big-hit-area wrapper. Sits horizontally centred. */
+  content: "";
+  position: absolute;
+  left: 0; right: 0;
   height: 3px;
-  background: rgba(255, 255, 255, 0.10);
+  background: rgba(255, 255, 255, 0.14);
   border-radius: 2px;
-  overflow: hidden;
+  transition: height 0.15s ease, background 0.15s ease;
+}
+.cam-timeline .ct-bar:hover::before,
+.cam-timeline.scrubbing .ct-bar::before {
+  height: 5px;
+  background: rgba(255, 255, 255, 0.22);
 }
 .cam-timeline .ct-fill {
   position: absolute;
-  inset: 0 auto 0 0;
+  left: 0; top: 50%;
+  transform: translateY(-50%);
+  height: 3px;
   width: 0%;
-  background: rgba(255, 255, 255, 0.65);
-  transition: width 0.06s linear;
+  background: rgba(255, 255, 255, 0.78);
+  border-radius: 2px;
+  transition: width 0.06s linear, height 0.15s ease, background 0.15s ease;
+  pointer-events: none;
+}
+.cam-timeline .ct-bar:hover .ct-fill,
+.cam-timeline.scrubbing .ct-fill {
+  height: 5px;
+  background: #fff;
+}
+/* Thumb knob — hidden by default, appears on hover or during scrub.
+   Sits at the right edge of .ct-fill so its centre tracks the play
+   head. Sized for both pointer and touch (12 px visual / 14 px hit
+   via the parent .ct-bar's vertical gutter). */
+.cam-timeline .ct-fill::after {
+  content: "";
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translate(0, -50%) scale(0);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45),
+              0 0 0 3px rgba(255, 255, 255, 0.10);
+  transition: transform 0.18s cubic-bezier(.18, 1, .3, 1);
+  pointer-events: none;
+}
+.cam-timeline .ct-bar:hover .ct-fill::after,
+.cam-timeline.scrubbing .ct-fill::after {
+  transform: translate(0, -50%) scale(1);
 }
 
 /* Hover tooltip for training-camera frustums */
@@ -3700,131 +4183,253 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
  * connector rule on the left so the eye reads it as pinned to the
  * scene rather than floating in the chrome.
  * ============================================================ */
+/* UsdAnnotations — redesigned to follow the user's iOS reference
+   (Outer Hebrides weather widget). The card now has the same
+   information hierarchy as that reference:
+
+     ┌──────────────────────────────────────┐
+     │ EYEBROW · UPPERCASE         × close │
+     │ Title (big)              HeroValue ▶│
+     │ Friendly intro line in plain English│
+     │ ┌──────────┐  ┌──────────┐          │
+     │ │ icon  k  │  │ icon  k  │          │ ← 2×2 grid
+     │ │       v  │  │       v  │          │
+     │ └──────────┘  └──────────┘          │
+     │ ┌──────────┐  ┌──────────┐          │
+     │ │ icon  k  │  │ icon  k  │          │
+     │ │       v  │  │       v  │          │
+     │ └──────────┘  └──────────┘          │
+     │ italic body — "why we built this"   │
+     └──────────────────────────────────────┘
+
+   Anchored upper-left of centre (not pinned to the lil-gui rail any
+   more) so it reads as a free-floating glass widget instead of a
+   tooltip hanging off the panel. Same heavy frosted-glass treatment
+   as the Studio panel for visual continuity. */
 #usd-annotations {
-  /* Sits LEFT of the lil-gui right rail (which is 280 px wide pinned
-   * 18 px from the right edge), with the connector rule on the card's
-   * right edge pointing back at the panel that triggered the toggle.
-   * z-index 1080 keeps it above lil-gui (1001) but below Credits
-   * (1100) and the mobile nav drawer (1500). */
   position: fixed;
-  top: 12vh;
-  right: 322px;             /* 18 + 280 + 24 = clears lil-gui + gap */
-  width: min(340px, calc(100vw - 360px));
+  /* Anchored to the RIGHT side of the viewport — sits adjacent to
+     the lil-gui Studio panel (which is `right: 18 / width: 280`),
+     so the card lands right where the user's eye already is after
+     tapping a layer toggle. Was previously centred; the user asked
+     for it to "sit closer to the right UI". 322 px = 18 (gui right
+     offset) + 280 (gui width) + 24 (gap). */
+  top: 80px;
+  right: 322px;
+  left: auto;
+  width: min(360px, calc(100vw - 32px));
   z-index: 1080;
-  flex-direction: row-reverse;   /* rule on the right, pointing right */
-  display: flex;
-  align-items: stretch;
-  gap: 12px;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(20px);
-  transition: opacity 0.28s ease, transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
   font-family: var(--font-ui);
   color: var(--text);
+  /* Heavy frosted-glass card matching the iOS reference. Subtle
+     warm tint instead of pure dark so the card has the same
+     creamy quality as the reference's "Outer Hebrides" widget. */
+  background: rgba(26, 28, 34, 0.62);
+  backdrop-filter: blur(36px) saturate(170%) brightness(1.04);
+  -webkit-backdrop-filter: blur(36px) saturate(170%) brightness(1.04);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 22px;
+  padding: 16px 18px 16px;
+  box-shadow:
+    0 20px 56px rgba(0, 0, 0, 0.50),
+    0 1px 0 rgba(255, 255, 255, 0.08) inset;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px);
+  transition: opacity 0.28s ease,
+              transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+  /* Draggable affordance — the card is grabbable anywhere except
+     the close button + interactive elements (those keep default
+     cursor via the inner rules). Switches to grabbing while drag
+     is active (.dragging class set by usd-annotations.js). */
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
 }
 #usd-annotations[hidden] { display: none; }
 #usd-annotations.show {
   opacity: 1;
   pointer-events: auto;
-  transform: translateX(0);
+  transform: translateY(0);
 }
-#usd-annotations .ua-rule {
-  width: 1px;
-  background: linear-gradient(180deg,
-    rgba(255, 255, 255, 0.0) 0%,
-    rgba(255, 255, 255, 0.55) 20%,
-    rgba(255, 255, 255, 0.55) 80%,
-    rgba(255, 255, 255, 0.0) 100%);
-  flex-shrink: 0;
+#usd-annotations.dragging {
+  cursor: grabbing;
+  /* Disable the transform transition during drag so the card sticks
+     to the finger / cursor without easing. Re-enabled when the
+     drag ends and .dragging is removed. */
+  transition: none;
 }
-#usd-annotations .ua-body {
-  flex: 1;
-  background: rgba(15, 16, 18, 0.78);
-  border: 1px solid var(--hair-strong);
-  border-radius: var(--radius);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-  padding: 14px 16px 16px;
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.45);
-}
-#usd-annotations .ua-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
-#usd-annotations .ua-eyebrow {
-  flex: 1;
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.20em;
-  text-transform: uppercase;
-  color: rgba(220, 230, 240, 0.85);
-}
-#usd-annotations .ua-close {
-  background: transparent;
-  border: 0;
-  color: var(--text-dim);
-  font-size: 18px;
-  line-height: 1;
+/* Interactive elements inside the card revert to a normal pointer
+   cursor (so the user knows they can click these without lifting
+   the whole card). */
+#usd-annotations .ua-close,
+#usd-annotations .ua-tile {
   cursor: pointer;
-  padding: 0 2px;
-  border-radius: 3px;
-  transition: color 0.12s ease;
 }
-#usd-annotations .ua-close:hover { color: var(--text); }
-#usd-annotations .ua-title {
-  margin: 8px 0 8px;
-  font-size: 19px;
-  font-weight: 400;
-  letter-spacing: 0.01em;
-  line-height: 1.15;
-  color: #fff;
-}
-#usd-annotations .ua-text {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.6;
-  color: rgba(220, 220, 230, 0.85);
-  letter-spacing: 0.005em;
-}
-#usd-annotations .ua-facts {
-  margin: 14px 0 0;
-  padding-top: 10px;
-  border-top: 1px solid var(--hair);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-#usd-annotations .ua-fact {
-  display: grid;
-  grid-template-columns: 86px 1fr;
-  gap: 10px;
-  align-items: baseline;
-}
-#usd-annotations .ua-fact dt {
+
+/* Eyebrow caption — small uppercase mono line above the title row.
+   Same role as "H:24° L:8° 6:01" in the reference. */
+#usd-annotations .ua-eyebrow {
   font-family: var(--font-mono);
   font-size: 9px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  margin: 0;
+  letter-spacing: 0.22em;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 6px;
+  padding-right: 32px;        /* leaves room for the × button */
 }
-#usd-annotations .ua-fact dd {
+
+/* Close button — small circular chip top-right. */
+#usd-annotations .ua-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+#usd-annotations .ua-close svg { width: 12px; height: 12px; display: block; }
+#usd-annotations .ua-close:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+#usd-annotations .ua-close:active { transform: scale(0.92); }
+
+/* Title row — big title on the left, hero value on the right.
+   Mirrors "Outer Hebrides | 12°" balance. */
+#usd-annotations .ua-titleRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+}
+#usd-annotations .ua-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.1;
+  color: #fff;
+}
+#usd-annotations .ua-hero {
+  font-family: var(--font-ui);
+  font-size: 22px;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 0;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Intro — ONE friendly plain-English sentence. Top tier of the
+   three-tier information ladder (intro → grid → body). */
+#usd-annotations .ua-intro {
+  margin: 8px 0 14px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.86);
+  letter-spacing: 0.005em;
+}
+
+/* 2×2 fact grid — translucent inner tiles, each with an icon, a
+   tiny mono label, and a value. Matches the Wind / Humidity /
+   UV / Rain layout in the reference. */
+#usd-annotations .ua-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+#usd-annotations .ua-tile {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  row-gap: 1px;
+  align-items: center;
+}
+#usd-annotations .ua-tile-icon {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  width: 18px;
+  height: 18px;
+  color: rgba(255, 255, 255, 0.78);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+#usd-annotations .ua-tile-icon svg { width: 18px; height: 18px; display: block; }
+#usd-annotations .ua-tile-k {
+  grid-column: 2; grid-row: 1;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.48);
+  line-height: 1.2;
+}
+#usd-annotations .ua-tile-v {
+  grid-column: 2; grid-row: 2;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+  letter-spacing: 0.005em;
+  line-height: 1.3;
+  /* Allow the value to wrap to a 2nd / 3rd line instead of getting
+     truncated by an ellipsis — the previous `white-space: nowrap`
+     + `text-overflow: ellipsis` clipped "Anisotropic 3D Gaussian"
+     to "Anisotropic 3D G…" and lost the key information. The grid
+     row auto-sizes so the tile grows vertically to fit; the iOS
+     reference's short values ("5 km/h") never needed wrap, but
+     our longer USD terms do. word-break: break-word so any single
+     value longer than the tile width still fits without overflowing
+     the card. */
+  white-space: normal;
+  overflow: visible;
+  word-break: break-word;
+}
+
+/* Italic body — "why we built this" paragraph. Lower weight, soft
+   colour, italic so it reads as a quieter footnote than the intro
+   above. Same role as the gray italic blurb at the bottom of the
+   reference card. */
+#usd-annotations .ua-body {
   margin: 0;
   font-size: 11.5px;
-  color: var(--text);
-  letter-spacing: 0.01em;
+  font-style: italic;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.62);
+  letter-spacing: 0.005em;
+  text-align: center;
 }
-@media (max-width: 767px) {
-  /* Phone: bottom sheet, full width, no row-reverse so the rule lines
-   * up flush with the right edge of the screen. */
+
+/* Narrow viewports — drop to a single column for the fact tiles so
+   the values don't get truncated to ellipses, and shrink padding
+   so the card still floats in the centre without dominating the
+   viewport. */
+@media (max-width: 480px) {
   #usd-annotations {
-    top: auto;
-    bottom: 8vh;
-    right: 8px;
-    width: calc(100vw - 16px);
-    flex-direction: row;
+    width: calc(100vw - 24px);
+    padding: 14px 14px 14px;
   }
+  #usd-annotations .ua-grid {
+    grid-template-columns: 1fr;
+  }
+  #usd-annotations .ua-title { font-size: 21px; }
+  #usd-annotations .ua-hero  { font-size: 19px; }
 }
 
 /* ============================================================
@@ -3973,14 +4578,26 @@ body.mobile #mobile-nav-btn { display: none !important; }
  * so it's invisible BEFORE its delay (prevents a flash).
  * ============================================================ */
 /* Keyframes intentionally OPACITY-ONLY (no transform) for any element
-   that has backdrop-filter, or whose descendants do. Chromium drops
-   backdrop-filter pass-through whenever an ancestor sits in a non-
-   identity transform context — even after the animation completes,
-   `transform: translateX(0)` from `animation-fill-mode: both` keeps
-   the stacking context alive and the children's glass blur breaks
-   (visible as the dim/weak background on Viewpoints / Scene / Hand
-   Tracking panels). Plain opacity has no such side-effect. The
-   bottom toolbar + Studio button DON'T contain backdrop-filter
+   that has backdrop-filter. Chromium drops backdrop-filter pass-through
+   whenever an ancestor sits in a non-identity transform context — even
+   after the animation completes, `transform: translateX(0)` from
+   `animation-fill-mode: both` keeps the stacking context alive and the
+   glass blur breaks. Plain opacity has no such side-effect.
+
+   CRITICAL — animate the LEAF panel, not its wrapper. Putting an
+   `animation` on `#left-stack` (a parent of `#sidebar` + `#scene-panel`)
+   promotes #left-stack onto its own compositor layer; once that happens
+   its DESCENDANTS' backdrop-filter can only sample inside that layer,
+   so #sidebar and #scene-panel render as flat tinted panels with no
+   blur of the 3D scene behind them. lil-gui works because its
+   animation is on `.lil-gui.root` — the same element that owns the
+   backdrop-filter — so the filter samples its own layer's input
+   (which IS the canvas). We follow the same pattern for the left
+   stack: animate #sidebar + #scene-panel directly, leave #left-stack
+   untouched. #hand-panel owns its backdrop-filter so it can keep the
+   animation on itself.
+
+   The bottom toolbar + Studio button DON'T contain backdrop-filter
    children, so they can keep the translate motion. */
 @keyframes ui-enter-opacity {
   from { opacity: 0; }
@@ -3993,8 +4610,13 @@ body.mobile #mobile-nav-btn { display: none !important; }
 body.ui-ready .lil-gui.root {
   animation: ui-enter-opacity 0.55s cubic-bezier(.16,1,.3,1) 0.08s both;
 }
-body.ui-ready #left-stack {
+/* Animate the panels DIRECTLY, not their #left-stack wrapper —
+   see comment above. Two-step stagger inside the left column. */
+body.ui-ready #sidebar {
   animation: ui-enter-opacity 0.55s cubic-bezier(.16,1,.3,1) 0.20s both;
+}
+body.ui-ready #scene-panel {
+  animation: ui-enter-opacity 0.55s cubic-bezier(.16,1,.3,1) 0.26s both;
 }
 body.ui-ready #hand-panel {
   animation: ui-enter-opacity 0.50s cubic-bezier(.16,1,.3,1) 0.32s both;
@@ -4094,6 +4716,34 @@ body.mobile #mobile-bottombar { display: flex; }
 }
 #mobile-bottombar button.active .mb-ico { transform: translateY(-1px); color: rgba(255, 255, 255, 0.98); }
 
+/* Center "Studio" slot — the project's primary action (3DGS / USD
+   showcase). Visually elevated above the other tabs so the eye lands
+   there first. Slightly wider, brighter ring on idle, fuller fill +
+   subtle glow when active. Same pattern as Apple Health's centre +
+   button or Wallet's Pay button: one obvious focal action surrounded
+   by secondary affordances. */
+#mobile-bottombar button.mb-center {
+  min-width: 64px;
+  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+#mobile-bottombar button.mb-center .mb-ico {
+  width: 26px;
+  height: 26px;
+  color: rgba(255, 255, 255, 0.96);
+}
+#mobile-bottombar button.mb-center .mb-ico svg { width: 26px; height: 26px; }
+#mobile-bottombar button.mb-center:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+#mobile-bottombar button.mb-center.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.26),
+              0 0 22px rgba(255, 255, 255, 0.08);
+}
+
 /* (No backdrop — the sheet is non-modal. Scene above stays bright +
    interactive. User closes via the × button, swipe-down on the
    handle, or re-tap of the active bottom-bar tab.) */
@@ -4103,35 +4753,42 @@ body.mobile #mobile-bottombar { display: flex; }
    3-item list doesn't take half the viewport. Capped at max-height
    for content that genuinely needs scroll. Portfolite-inspired:
    larger corner radius, softer borders, more breathing room. */
+/* Bottom sheet — restyled to match the iOS reference (Outer Hebrides
+   weather widget) the user supplied. Was previously a full-width slab
+   bolted to the bottom edge with only the top corners rounded; now it
+   floats as a centred glass CARD with all four corners rounded, sitting
+   ABOVE the capsule bottom-bar (not flush against it), with the same
+   luminous frosted glass + warm tint the Studio panel + USD annotation
+   card use. Visual continuity across Tour / Effects / Info → Studio
+   so every bottom-bar tab reads as part of the same family. */
 #mobile-sheet {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  max-height: 78vh;
+  left: 50%;
+  bottom: calc(64px + 14px + env(safe-area-inset-bottom, 0px) + 14px); /* clears the floating bar */
+  width: calc(100vw - 24px);
+  max-width: 480px;
+  max-height: min(70vh, 560px);
   z-index: 1496;
-  background: rgba(17, 18, 22, 0.94);
-  /* Softer top border — drops the harsh hair-strong contrast for a
-     light kiss of luminescence that catches the viewport behind. */
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 20px 20px 0 0;
-  backdrop-filter: blur(26px) saturate(160%);
-  -webkit-backdrop-filter: blur(26px) saturate(160%);
+  background: rgba(26, 28, 34, 0.62);
+  backdrop-filter: blur(36px) saturate(170%) brightness(1.04);
+  -webkit-backdrop-filter: blur(36px) saturate(170%) brightness(1.04);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 22px;
   font-family: var(--font-ui);
   color: var(--text);
   display: flex;
   flex-direction: column;
-  transform: translateY(100%);
-  transition: transform 0.30s cubic-bezier(.22, 1, .36, 1);
-  box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.55),
-              inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  /* Reserve room for the floating capsule bar that hovers above the
-     bottom edge — bar height (64) + lift (14) + bar's own safe-area
-     padding + a small gap so the last content row clears the bar. */
-  padding-bottom: calc(64px + 14px + env(safe-area-inset-bottom, 0px) + 12px);
+  padding-bottom: 14px;
+  /* Compose translate: X centres the card horizontally; Y starts off-
+     screen (below the bottom edge) and slides up to 0 on .open. */
+  transform: translateX(-50%) translateY(100vh);
+  transition: transform 0.32s cubic-bezier(.22, 1, .36, 1);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.55),
+    0 1px 0 rgba(255, 255, 255, 0.08) inset;
 }
-#mobile-sheet.open { transform: translateY(0); }
-#mobile-sheet.dragging { transition: none; }   /* finger-follow is direct */
+#mobile-sheet.open      { transform: translateX(-50%) translateY(0); }
+#mobile-sheet.dragging  { transition: none; }   /* finger-follow is direct */
 
 #mobile-sheet .ms-handle {
   height: 18px;
@@ -4201,6 +4858,16 @@ body.mobile #mobile-bottombar { display: flex; }
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.42);
   margin: 4px 0 10px;
+}
+/* Second-and-later section label inside the same sheet body — adds
+   visual separation between merged sections (e.g. Tour's Viewpoints
+   list above + Camera Movement controls below). Without this the
+   "CAMERA MOVEMENT" header would visually touch the last viewpoint
+   row, reading as a label of THAT row rather than a new section. */
+#mobile-sheet .ms-row-label ~ .ms-row-label {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 #mobile-sheet .ms-chips {
   display: flex;
@@ -4434,6 +5101,17 @@ body.mobile #mobile-bottombar { display: flex; }
    replaces it, and they fight for the same corner. (Tablet keeps the
    desktop toolbar since the bottom-bar isn't shown there.) */
 body.mobile #toolbar { display: none !important; }
+/* Phone landscape ALSO hides the bottom-left status strip
+   (dimensions readout + "click the splat to fire X" hint). The
+   existing rule above only covers phone PORTRAIT because
+   `.mobile` toggles off when the iPhone rotates and the width
+   crosses 768 px. The hardware-bound `.phone-device` class
+   survives that flip, so this rule keeps the status hidden on
+   the same physical phone regardless of which way it's held —
+   nobody reads a one-line technical status on a phone, and the
+   strip was floating over the splat in landscape per the user's
+   screenshot. */
+body.phone-device #toolbar { display: none !important; }
 /* Lift the Quick Guide above the new bottom-bar so it stops being
    covered by it. 54 (bar) + 18 (gap) + safe-area. */
 body.mobile #key-hints {
@@ -4493,7 +5171,13 @@ body.mobile #intro-overlay .io-phase {
               inset 0 1px 0 rgba(255, 255, 255, 0.05);
   transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
 }
-body.mobile #mobile-studio-btn { display: flex; }
+/* DEPRECATED on phone — Studio now lives in the centre slot of the
+   bottom bar (#mobile-bottombar button.mb-center). Keep the floating
+   button hidden so users get one canonical Studio entrypoint. The
+   #mobile-studio-panel itself is still triggered from the centre tab
+   via MobileStudioPanel._show(), so its drop-down behaviour + USD
+   layer DOM re-parenting remain unchanged. */
+body.mobile #mobile-studio-btn { display: none; }
 #mobile-studio-btn svg { width: 22px; height: 22px; display: block; }
 #mobile-studio-btn:active { transform: scale(0.96); background: rgba(28, 30, 34, 0.92); }
 #mobile-studio-btn[aria-expanded="true"] {
@@ -4502,33 +5186,58 @@ body.mobile #mobile-studio-btn { display: flex; }
   color: #fff;
 }
 
+/* Studio panel — repositioned per UX/UI/PM analysis the user
+   requested. WAS: top: 66 / right: 14 (top-right drop-down), which
+   broke the spatial relationship with its trigger button — users
+   tapped the centre "Studio" slot in the bottom-bar and the panel
+   appeared diagonally across the screen. Three issues with that:
+     1. Eye context-switch from tap point to result location.
+     2. Inconsistent with Tour / Effects / Info, which already use
+        a centred bottom-sheet pattern — one mental model for the
+        bar's left tabs, a different one for the centre tab.
+     3. One-handed reach: top-right is the FURTHEST spot from a
+        thumb resting on the bottom-bar.
+   NOW: centred horizontally, anchored above the floating capsule
+   bar — same coords as #mobile-sheet, same translateX(-50%) +
+   translateY() compose, same heavy frosted-glass treatment as the
+   USD annotation card. Slides up from the bar rather than dropping
+   in from the corner, so the affordance reads as "the centre tab
+   opens this card right above where you tapped". */
 #mobile-studio-panel {
   position: fixed;
-  top: 66px;
-  right: 14px;
-  width: min(330px, calc(100vw - 28px));
-  max-height: min(560px, calc(100vh - 100px - (54px + env(safe-area-inset-bottom, 0px))));
+  left: 50%;
+  bottom: calc(64px + 14px + env(safe-area-inset-bottom, 0px) + 14px);
+  width: calc(100vw - 24px);
+  max-width: 380px;
+  /* Cap tuned for the AR-compact row layout WITH the size slider
+     restored. A typical row is ≈ 70 px when the slider is showing
+     (40 px header line + 30 px slider line). Three rows × 70 +
+     header 80 + upload pill 60 ≈ 350 px, plus breathing room.
+     Still well below the old ≈ 560 px when each layer was a
+     vertically-stacked card. */
+  max-height: min(440px, calc(100vh - 100px - (54px + env(safe-area-inset-bottom, 0px))));
   z-index: 1501;            /* below the trigger (1502), above bottom-bar (1500) */
-  background: rgba(13, 14, 17, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
+  background: rgba(26, 28, 34, 0.62);
+  backdrop-filter: blur(36px) saturate(170%) brightness(1.04);
+  -webkit-backdrop-filter: blur(36px) saturate(170%) brightness(1.04);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 22px;
   display: flex;
   flex-direction: column;
   font-family: var(--font-ui);
-  backdrop-filter: blur(24px) saturate(150%);
-  -webkit-backdrop-filter: blur(24px) saturate(150%);
-  box-shadow: 0 20px 56px rgba(0, 0, 0, 0.55),
-              inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.55),
+    0 1px 0 rgba(255, 255, 255, 0.08) inset;
   opacity: 0;
-  transform: translateY(-12px);
+  transform: translateX(-50%) translateY(12px);
   pointer-events: none;
-  transition: opacity 0.22s ease, transform 0.22s ease;
+  transition: opacity 0.22s ease, transform 0.28s cubic-bezier(.22, 1, .36, 1);
   overflow: hidden;
 }
 #mobile-studio-panel[hidden] { display: none; }
 #mobile-studio-panel.open {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateX(-50%) translateY(0);
   pointer-events: auto;
 }
 #mobile-studio-panel .msp-head {
@@ -4601,6 +5310,356 @@ body.mobile #mobile-studio-btn { display: flex; }
   background: transparent !important;
 }
 
+/* ============================================================
+ * MobileStudioPanel — visual refresh (reference: sulmurry_ui_ux
+ * "Venuxo" event-space mobile concept). The goal is a luminous,
+ * airy glass-morphism panel that reads as a stack of FLOATING
+ * TRANSLUCENT CARDS rather than the previous flat-dark rectangle.
+ *
+ * Design language vs the old panel:
+ *   • Outer container — lighter, more translucent glass with heavier
+ *     blur + saturation. Border-radius bumped 14 → 28 so it feels
+ *     like a pill-stack instead of a window. Soft diffused outer
+ *     shadow + a 1-px inner highlight ring on the top edge for the
+ *     iOS-26 "etched glass" look.
+ *   • Header — drop the divider hairline; the cards below provide
+ *     enough visual separation. Title weight up, subtitle goes
+ *     softer caps. Close × becomes a soft circular chip.
+ *   • Each .usd-row becomes its OWN floating glass card (white
+ *     translucent fill, 1-px hairline, soft shadow). Rows now
+ *     stack with breathing room instead of running edge-to-edge.
+ *   • .usd-pill — capsule chips with brighter active state + a
+ *     subtle white glow. Reads as "tab chips" matching the
+ *     Weddings / Concerts / Outdoor row in the reference.
+ *   • .usd-toggle — keep the iOS-style switch; lift the "on" state
+ *     to pure white + add a soft halo so it pops against the
+ *     glass card.
+ *   • .usd-upload — promoted from text-link into a tappable pill
+ *     so it lines up visually with the other primary affordances
+ *     (a small "ghost button" rather than vanishing text).
+ *
+ * All overrides scoped to #mobile-studio-panel so the embedded-
+ * inside-lil-gui desktop experience keeps its compact treatment.
+ * ============================================================ */
+#mobile-studio-panel {
+  /* Lighter glass — lets the splat read through softly. Heavier
+     blur + saturation gives the colours behind a creamy tint
+     instead of muddy dark. */
+  background: rgba(26, 28, 34, 0.55) !important;
+  backdrop-filter: blur(40px) saturate(170%) brightness(1.05) !important;
+  -webkit-backdrop-filter: blur(40px) saturate(170%) brightness(1.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-radius: 26px !important;
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.50),
+    0 1px 0 rgba(255, 255, 255, 0.10) inset,
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset !important;
+}
+/* Header — bigger title, softer divider (dropped), close pill */
+#mobile-studio-panel .msp-head {
+  padding: 18px 18px 12px 22px !important;
+  border-bottom: 0 !important;
+}
+#mobile-studio-panel .msp-title {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+}
+#mobile-studio-panel .msp-sub {
+  font-size: 9.5px !important;
+  letter-spacing: 0.22em !important;
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+#mobile-studio-panel .msp-close {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  color: rgba(255, 255, 255, 0.78) !important;
+  transition: background 0.15s ease, transform 0.15s ease !important;
+}
+#mobile-studio-panel .msp-close:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+}
+#mobile-studio-panel .msp-close:active {
+  transform: scale(0.94) !important;
+}
+#mobile-studio-panel .msp-body {
+  padding: 4px 14px 18px !important;
+}
+
+/* The hint strip ("TOGGLE LAYERS · STACK FREELY") above the rows —
+   tighten to a single mono caption that reads as a section eyebrow
+   instead of a chunky paragraph. */
+#mobile-studio-panel #usd-layers-panel .usd-hint {
+  padding: 0 6px 12px !important;
+  font-size: 8.5px !important;
+  letter-spacing: 0.22em !important;
+  color: rgba(255, 255, 255, 0.40) !important;
+}
+
+/* Row list — vertical stack with cards as children. Remove the
+   default 6px padding and use gap so the cards float free. */
+#mobile-studio-panel #usd-layers-panel .usd-row-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  padding: 0 !important;
+}
+
+/* AR-COMPACT GRID MODE — each layer row uses CSS grid with a
+   FIXED 2-column structure so the three slider tracks all share
+   the same start AND end X coordinates across rows:
+       column 1 (110 px)        column 2 (1 fr, right-aligned)
+       ┌───────────────────────┬──────────────────────────────┐
+   r1: │ [toggle] Name         │            [pill] [pill]     │
+   r2: │            ━━━━━━━━●━━━━━━━━━━━━━━━━━━ slider full   │
+       └───────────────────────┴──────────────────────────────┘
+   This matches the user's "三个滑动条都要对齐" requirement.
+   `.usd-row-sub` uses `display: contents` so its children
+   participate in the .usd-row grid directly (no nested layout
+   container blocking the alignment). Tighter padding (8/2 px
+   vs the old 10/2 + 10/16) shrinks each row by ~30 %, satisfying
+   the "更紧凑" ask without sacrificing tap target size. */
+#mobile-studio-panel #usd-layers-panel .usd-row {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  padding: 8px 2px !important;
+  box-shadow: none !important;
+  display: grid !important;
+  grid-template-columns: 110px 1fr !important;
+  grid-template-rows: auto auto !important;
+  column-gap: 12px !important;
+  row-gap: 4px !important;
+  align-items: center !important;
+  transition: opacity 0.18s ease !important;
+}
+/* Thin separator BETWEEN rows so the rhythm reads as a list, not
+   floating cards. First row stays flush with the panel padding. */
+#mobile-studio-panel #usd-layers-panel .usd-row + .usd-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+/* "Off" row — softer hue across the whole row so state reads at a
+   glance without needing to find the toggle position. */
+#mobile-studio-panel #usd-layers-panel .usd-row.hidden-row {
+  opacity: 0.55 !important;
+}
+
+/* Toggle + name cluster — pinned to grid column 1 / row 1, fixed
+   width so the divider between toggle-area and controls is at the
+   SAME X for every row (this is what makes the sliders below
+   line up perfectly across rows). */
+#mobile-studio-panel #usd-layers-panel .usd-row-main {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+/* `.usd-row-sub` becomes a layout-transparent wrapper — its
+   children (pills + size) flow into the parent grid directly,
+   so we can place each one in an explicit grid cell below. */
+#mobile-studio-panel #usd-layers-panel .usd-row-sub {
+  display: contents !important;
+}
+#mobile-studio-panel #usd-layers-panel .usd-name {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: #fff !important;
+}
+/* Technical badge ("PointInstancer · Plane" etc.) — hidden in the
+   compact view. Re-discoverable on the desktop Advanced panel; on
+   mobile the subform pill names already convey "what you're
+   looking at" without the schema string fighting for line width. */
+#mobile-studio-panel #usd-layers-panel .usd-badge {
+  display: none !important;
+}
+
+/* Pills cluster — placed in grid column 2, row 1, justified to
+   the END so the chips hug the right edge of the panel. The
+   grid's fixed column 1 + this right-justify means the chips
+   for every row land in a consistent vertical lane. */
+#mobile-studio-panel #usd-layers-panel .usd-pill-group {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  justify-self: end !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+}
+/* Size slider — spans both columns on the SECOND grid row, so all
+   three sliders share the same left + right edge. This is what
+   the user asked for: "滑动条三个都要对齐". The slider sits flush
+   to the row's full width regardless of how long each layer's
+   name happens to be. Compact treatment matches the previous
+   inline-flex slider (slim track, 14-px thumb, mono caption +
+   value). When the slider is hidden (Splat in Gaussian mode), the
+   grid row simply collapses to 0. */
+#mobile-studio-panel #usd-layers-panel .usd-size {
+  display: flex !important;
+  grid-column: 1 / -1 !important;
+  grid-row: 2 !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin: 2px 0 0 0 !important;
+  padding: 0 !important;
+}
+#mobile-studio-panel #usd-layers-panel .usd-size-label {
+  font-family: var(--font-mono) !important;
+  font-size: 9px !important;
+  letter-spacing: 0.18em !important;
+  color: rgba(255, 255, 255, 0.45) !important;
+  text-transform: uppercase !important;
+  flex: 0 0 auto !important;
+  white-space: nowrap !important;
+}
+#mobile-studio-panel #usd-layers-panel .usd-size input[type="range"] {
+  flex: 1 1 auto !important;
+  height: 18px !important;
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  background: transparent !important;
+}
+#mobile-studio-panel #usd-layers-panel .usd-size input[type="range"]::-webkit-slider-runnable-track {
+  height: 3px !important;
+  border-radius: 2px !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+#mobile-studio-panel #usd-layers-panel .usd-size input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none !important;
+  width: 14px !important;
+  height: 14px !important;
+  margin-top: -5.5px !important;
+  border-radius: 50% !important;
+  background: #fff !important;
+  border: 0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+  cursor: grab !important;
+}
+#mobile-studio-panel #usd-layers-panel .usd-size input[type="range"]::-moz-range-track {
+  height: 3px !important;
+  border-radius: 2px !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+#mobile-studio-panel #usd-layers-panel .usd-size input[type="range"]::-moz-range-thumb {
+  width: 14px !important;
+  height: 14px !important;
+  border-radius: 50% !important;
+  background: #fff !important;
+  border: 0 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+  cursor: grab !important;
+}
+#mobile-studio-panel #usd-layers-panel .usd-size-val {
+  font-family: var(--font-mono) !important;
+  font-size: 10px !important;
+  font-variant-numeric: tabular-nums !important;
+  color: rgba(255, 255, 255, 0.92) !important;
+  flex: 0 0 auto !important;
+  min-width: 42px !important;
+  text-align: right !important;
+}
+
+/* Subform pill chips — capsule, soft fill, brighter active state
+   with a tiny white glow halo. Tightened down a notch for the
+   compact one-line layout (was 6/14, now 4/11) so two pills fit
+   comfortably on the right side of a 320-ish-px-wide row. */
+#mobile-studio-panel #usd-layers-panel .usd-pill-group {
+  gap: 4px !important;
+}
+#mobile-studio-panel #usd-layers-panel .usd-pill {
+  padding: 5px 11px !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  color: rgba(255, 255, 255, 0.78) !important;
+  font-size: 10.5px !important;
+  letter-spacing: 0.02em !important;
+  transition: background 0.15s ease, color 0.15s ease, box-shadow 0.18s ease !important;
+}
+#mobile-studio-panel #usd-layers-panel .usd-pill:hover {
+  background: rgba(255, 255, 255, 0.10) !important;
+  color: #fff !important;
+}
+#mobile-studio-panel #usd-layers-panel .usd-pill.active {
+  background: rgba(255, 255, 255, 0.20) !important;
+  border-color: rgba(255, 255, 255, 0.30) !important;
+  color: #fff !important;
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.12) !important;
+}
+
+/* iOS toggle — sized down a notch to match the compact one-line
+   row layout. Bright "on" state keeps the halo so the toggle still
+   pops against the panel's glass. */
+#mobile-studio-panel #usd-layers-panel .usd-toggle {
+  width: 38px !important;
+  height: 22px !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.10) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+  transition: background 0.2s ease, box-shadow 0.2s ease !important;
+}
+#mobile-studio-panel #usd-layers-panel .usd-toggle.on {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border-color: rgba(255, 255, 255, 0.95) !important;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.18) !important;
+}
+#mobile-studio-panel #usd-layers-panel .usd-toggle .usd-toggle-knob {
+  width: 16px !important;
+  height: 16px !important;
+  background: #fff !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35) !important;
+}
+#mobile-studio-panel #usd-layers-panel .usd-toggle.on .usd-toggle-knob {
+  background: #0e1014 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.20) !important;
+}
+
+/* Size slider — pull the label / value into a single tidy row
+   that fits inside the card's padding. */
+#mobile-studio-panel #usd-layers-panel .usd-size {
+  margin-top: 8px !important;
+  padding: 0 !important;
+}
+#mobile-studio-panel #usd-layers-panel .usd-size-label {
+  font-size: 9px !important;
+  letter-spacing: 0.18em !important;
+  color: rgba(255, 255, 255, 0.45) !important;
+}
+#mobile-studio-panel #usd-layers-panel .usd-size-val {
+  font-size: 10.5px !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* "Use My Own" — promoted from buried text-link into a soft
+   pill-button so it sits at the same affordance level as the
+   per-row toggles. Still discreet (low-key border + transparent
+   fill), but tappable instead of needing tiny-text aim. */
+#mobile-studio-panel #usd-layers-panel .usd-upload {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 16px auto 4px !important;
+  padding: 10px 22px !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 999px !important;
+  color: rgba(255, 255, 255, 0.82) !important;
+  font-size: 10px !important;
+  letter-spacing: 0.20em !important;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease !important;
+}
+#mobile-studio-panel #usd-layers-panel .usd-upload:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #fff !important;
+}
+#mobile-studio-panel #usd-layers-panel .usd-upload:active {
+  transform: scale(0.97) !important;
+}
+
 /* Phone-landscape asset card: viewport is wide but only ~430 px
    tall, while the floating card's natural size is tuned for desktop
    / iPad height — the card ate 70 % of the viewport. Proportionally
@@ -4617,35 +5676,24 @@ body.mobile #mobile-studio-btn { display: flex; }
 }
 
 /* ============================================================
- * Phone LANDSCAPE adaptation — narrow phones (<768) in landscape
- * still trigger body.mobile, but the viewport is wide + short. The
- * default full-width bottom sheet looks oafish at 800 px wide and
- * eats most of the short viewport. Pull it into a centered card
- * floating above the capsule bottom-bar — same idiom as the bar
- * itself, scaled for landscape. Wider phones (Plus / Pro Max in
- * landscape, > 768 px) drop body.mobile entirely via JS re-detection
- * and get the desktop / iPad layout (lil-gui + sidebar / scene /
- * hand-panel visible). */
+ * Phone LANDSCAPE — short viewport tuning. Since the recent restyle
+ * the BASE #mobile-sheet rule already lays the panel out as a
+ * centred floating card (translateX(-50%), max-width 480, all-four
+ * rounded corners, frosted glass) so the old landscape override
+ * that duplicated most of that work is gone. What's left is the
+ * one thing that genuinely needs to differ in landscape: a smaller
+ * max-height + a slightly tighter horizontal cap so the card
+ * doesn't sprawl across a short / wide viewport. Wider phones
+ * (Plus / Pro Max landscape, > 768 px) drop body.mobile entirely
+ * via JS re-detection and get the desktop / iPad layout. */
 @media (orientation: landscape) and (max-width: 1024px) {
   body.mobile #mobile-sheet {
-    left: 50%;
-    right: auto;
-    transform: translateX(-50%) translateY(100%);
-    width: calc(100vw - 32px);
     max-width: 560px;
-    bottom: calc(86px + env(safe-area-inset-bottom, 0px));
-    border-radius: 20px;
     max-height: 60vh;
-    padding-bottom: 16px;
-    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55),
-                inset 0 1px 0 rgba(255, 255, 255, 0.05);
   }
-  body.mobile #mobile-sheet.open {
-    transform: translateX(-50%) translateY(0);
-  }
-  /* The JS drag handler sets `transform: translateY(Npx)` inline; in
-     landscape we need to keep the centering translate, so the drag
-     code (mobile-ui.js) reads the orientation and composes properly. */
+  /* JS drag handler always composes translateX(-50%) now (every
+     orientation centres horizontally), so no landscape-specific
+     transform override is needed. */
 }
 
 /* ============================================================

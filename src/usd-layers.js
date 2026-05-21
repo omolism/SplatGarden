@@ -252,6 +252,18 @@ export class UsdLayers {
           this._setVisible(row, this.params[row.visKey] === false);
           this._dismissHintOnFirstToggle?.();
         } else if (act === "shape") {
+          // Picking a subform pill (Circle / Sphere / Point …) is a
+          // strong signal of intent — the user wants to SEE that
+          // shape rendered. Auto-enable the layer if it was off so
+          // they don't have to flip both the toggle AND the pill
+          // (two-step interaction users repeatedly missed: they'd
+          // tap "Circle", nothing visible would change because
+          // Billboard was off, and they'd assume the pill was
+          // broken). Now one tap on any subform turns its layer on.
+          if (this.params[row.visKey] === false) {
+            this._setVisible(row, true);
+            this._dismissHintOnFirstToggle?.();
+          }
           this._setShape(row, e.currentTarget.dataset.val);
         } else if (act === "size") {
           this._setSize(row, Number(e.currentTarget.value));

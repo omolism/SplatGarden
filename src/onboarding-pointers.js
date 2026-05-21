@@ -24,13 +24,13 @@
 //              are derived from this so the arrow always points AT the
 //              target's nearest edge.
 
+// Desktop tour — TWO callouts. The "Scene layers / Drag-drop a .splat
+// to add" tip was retired: the Scene panel already shows its own static
+// hint footer with the same instruction, and the floating callout
+// duplicated that information into the user's eyeline at every load.
+// Tech Breakdown + Studio remain because their entry points (T key /
+// the lil-gui panel) aren't self-announcing the way the Scene panel is.
 const TIPS_DESKTOP = [
-  {
-    label: "Scene layers",
-    sub: "Drag-drop a .splat to add",
-    selector: "#scene-panel, #sidebar",
-    side: "right",
-  },
   {
     label: "3DGS / USD",
     sub: "Toggle layers + swap subforms",
@@ -51,12 +51,17 @@ const TIPS_DESKTOP = [
 // (3DGS / USD layer modes — the *core* of the project), so it gets
 // the first callout to draw the eye there before users notice the
 // bottom-bar tabs.
+// Touch tour — three pointers, all anchored to the bottom-bar now that
+// Studio moved into the centre slot. The Studio tip comes first so the
+// eye lands on the project's showcase action; Effects (left of centre)
+// and Tour (jump-to viewpoints + fly-through, leftmost) follow as the
+// secondary affordances.
 const TIPS_TOUCH = [
   {
     label: "3DGS / USD",
     sub: "Toggle layers · swap subforms",
-    selector: "#mobile-studio-btn",
-    side: "below",
+    selector: '#mobile-bottombar [data-tab="studio"]',
+    side: "above",
   },
   {
     label: "Effects",
@@ -65,9 +70,9 @@ const TIPS_TOUCH = [
     side: "above",
   },
   {
-    label: "Camera",
-    sub: "Play / replay the move",
-    selector: '#mobile-bottombar [data-tab="cam"]',
+    label: "Tour",
+    sub: "Viewpoints + camera fly-through",
+    selector: '#mobile-bottombar [data-tab="tour"]',
     side: "above",
   },
 ];

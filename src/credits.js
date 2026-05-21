@@ -13,7 +13,7 @@ const TEAM = [
   { name: "Yiyi Long",                role: "Team Member", url: "https://yiyilongart.wixsite.com/portfolio" },
   { name: "Yichen Shi",               role: "Team Member", url: "https://yichenshi.wixstudio.com/index" },
   { name: "Ben Jones",                role: "Team Member", url: "https://www.benjvisuals.com" },
-  { name: "Xinyi Liang",              role: "Team Member", url: "#" },
+  { name: "Xinyi Liang",              role: "Team Member", url: "https://www.artstation.com/xiaoduye817" },
 ];
 
 // Special Thanks — advisors, mentors, external teams. Distinct from the

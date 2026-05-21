@@ -38,11 +38,14 @@ const DESKTOP_SECTIONS = [
 
 // Touch / mobile variant — drops keyboard-only rows (WASD, hotkeys)
 // and maps each section to the surface the user actually has on phone:
-// gestures for camera motion, the bottom-bar tabs for daily-use panels,
-// the floating top-right Studio button for the 3DGS / USD layer modes,
-// and the hotspot dots in the scene for assets. Kept in sync with the
-// real layout — the previous "Top-right menu (≡)" copy was a stale
-// reference to the (since-removed) hamburger.
+// gestures for camera motion + the bottom-bar tabs as the canonical
+// surface for everything else. KEEP THIS IN SYNC with the bar layout
+// in mobile-ui.js → _buildBar(). Stale entries previously listed:
+//   • "Views" — renamed to "Tour" (and merged with the old Camera tab)
+//   • "Camera" — no longer a separate tab; merged into Tour
+//   • "Studio" — moved from a top-right floating button into the
+//     CENTRE slot of the bottom bar
+// Bar layout now: [Tour] [Effects] [Studio·centre] [Info] [Share]
 const TOUCH_SECTIONS = [
   {
     title: "Move the camera",
@@ -54,16 +57,16 @@ const TOUCH_SECTIONS = [
   {
     title: "Pick a viewpoint",
     rows: [
-      [`<span class="kh-mouse">tap</span>`,    "Numbered dots in scene"],
-      [`<span class="kh-mouse">Views</span>`,  "Bottom bar &middot; full list"],
+      [`<span class="kh-mouse">tap</span>`,   "Numbered dots in scene"],
+      [`<span class="kh-mouse">Tour</span>`,  "Bottom bar &middot; full list + fly-through"],
     ],
   },
   {
     title: "Customize",
     rows: [
+      [`<span class="kh-mouse">Studio</span>`,  "Centre tab &middot; 3DGS / USD modes"],
       [`<span class="kh-mouse">Effects</span>`, "Click FX &middot; post-FX &middot; Advanced"],
-      [`<span class="kh-mouse">Camera</span>`,  "Play the camera move"],
-      [`<span class="kh-mouse">Studio</span>`,  "Top-right &middot; 3DGS / USD modes"],
+      [`<span class="kh-mouse">Info</span>`,    "Stats &middot; pipeline &middot; credits"],
     ],
   },
   {

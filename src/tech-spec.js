@@ -134,9 +134,50 @@ export const TECH_SPECS = [
       {
         name:      "Landscape",
         location:  "Whole scene base",
-        toolchain: ["Unreal Engine (terrain authoring)", "AI texture stylization"],
-        output:    "Landscape mesh + AI-stylized ground textures",
-        note:      "Terrain authored directly in Unreal; ground textures passed through the AI Texture Stylization tool from L1 to land the painterly look in the final 3DGS.",
+        // World position resolved with the same +Z-forward → -Z-forward
+        // flip used for all other hotspots (see AssetHoverManager).
+        // X nudged a further -0.4 (1.051 → 0.651 → 0.251) so the dot
+        // sits squarely over the open landscape patch the user
+        // selected, well clear of the foreground foliage that was
+        // visually overlapping the marker.
+        worldPos:  [0.251, -0.827, 0.981],
+        toolchain: [
+          "AI Texture Stylization",
+          "Houdini COPNET",
+          "NormalMap-Online",
+          "Unreal Engine (terrain authoring)",
+        ],
+        output:    "Stylized terrain · painterly base colour + COPNET-authored height + tool-converted normal",
+        note:      "Three-stage texture pipeline for the ground. (1) The AI Texture Stylization tool from L1 applies a brush-stroke style from a chosen style reference onto the original ground tile, producing the painterly base colour. (2) The result is taken into a Houdini COPNET to fine-tune colour balance, paint in additional surface detail (rocks, scattered debris, mid-tone variation), and bake out a paired height map. (3) The stylized base colour is then run through cpetry.github.io/NormalMap-Online to derive the matching normal map. Final terrain is authored in Unreal Engine and dressed into the scene before the 3DGS capture stage.",
+        embed: {
+          src:   "https://player.vimeo.com/video/1194203694?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
+          label: "Final rendered landscape · in-scene",
+          title: "Shot4B_MontyVersion_4.53_1",
+          // Vimeo reports the player at 75 % padding-top (4:3) but the
+          // underlying clip is actually 16:9 — the 75 % padding was the
+          // Vimeo template default rather than a real source size,
+          // which produced the black letterbox bars top + bottom that
+          // the user flagged. Forcing the iframe to 16:9 tiles the
+          // video edge-to-edge inside the card.
+          aspectRatio: "16 / 9",
+        },
+        // Triptych: style reference (the overall stylized landscape look) /
+        // original ground tile / AI-stylized result. The renderCard()
+        // helper auto-renders the "Texture Stylization" triptych section
+        // when any of these three keys are set.
+        media: {
+          style:    "/textures/landscape/LandScape_Stylized.png",
+          original: "/textures/landscape/Ground_Original.png",
+          result:   "/textures/landscape/Ground_Stylized_BaseColor.png",
+          // Pipeline strip: the three downstream texture maps produced by
+          // stages (2) + (3) of the note above. renderCard() lays these
+          // out as a horizontal filmstrip below the triptych.
+          pipeline: [
+            { src: "/textures/landscape/Ground_Stylized_BaseColor.png", label: "Base Color · AI" },
+            { src: "/textures/landscape/Ground_Stylized_Height.png",    label: "Height · Houdini COPNET" },
+            { src: "/textures/landscape/Ground_Stylized_Normal.png",    label: "Normal · NormalMap-Online" },
+          ],
+        },
       },
     ],
   },

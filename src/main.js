@@ -79,10 +79,15 @@ function isHighEndMobile() {
   const dpr   = window.devicePixelRatio || 1;
   const mem   = navigator.deviceMemory || 0;
 
-  // iPad / iPadOS-in-desktop-UA. M1/M2 iPads and A14+ models all handle
-  // the 3M-splat asset comfortably; older ones are rare in the wild.
+  // iPad / iPadOS-in-desktop-UA. Per project direction "iPad === PC",
+  // EVERY iPad gets the un-optimized PC splat regardless of core
+  // count. Older iPads are rare in the wild and the budget cap path
+  // (SPLAT_MAX_TABLET, applied downstream) is enough of a safety net
+  // for anything genuinely starved for memory — we'd rather risk a
+  // slow first load on a 2017 iPad than ship the mobile-quality
+  // variant to a 2024 M4 iPad and undersell the showcase.
   if (/iPad/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) {
-    return cores >= 6;
+    return true;
   }
 
   // iPhone. The cleanest browser-observable cutoff is dpr === 3 (iPhone
@@ -150,6 +155,15 @@ const IS_TABLET = IS_TOUCH && ( IS_IPAD || window.innerWidth >= 768);
 // Back-compat name — legacy code paths read IS_MOBILE.
 const IS_MOBILE = IS_PHONE;
 document.body.classList.toggle("touch",  IS_TOUCH);
+// Sticky "is a phone-class device" flag — bound to the hardware (touch
+// + not iPad), so it survives orientation changes. Distinct from the
+// reactive `.phone` / `.mobile` classes below, which are RE-EVALUATED
+// on resize and flip off when an iPhone rotates into landscape and
+// crosses the 768-px width threshold (iPhone 14 PM landscape ≈ 932 px).
+// Use this when a UI fragment is meaningless on a phone regardless of
+// orientation — e.g. keyboard-shortcut hints inside Viewpoints, which
+// have no keyboard to drive them either way.
+document.body.classList.toggle("phone-device", IS_TOUCH && !IS_IPAD);
 // Phone / tablet / mobile classes are RE-EVALUATED on resize / rotation
 // so the same iPhone in portrait → phone UI / in landscape → tablet UI
 // (the user explicitly asked for phone landscape to "reference iPad's
@@ -1396,6 +1410,91 @@ async function loadSplat() {
   const ctTimeEl  = camTimeline.querySelector(".ct-time");
   const ctFrameEl = camTimeline.querySelector(".ct-frame");
   const ctFillEl  = camTimeline.querySelector(".ct-fill");
+  const ctBarEl   = camTimeline.querySelector(".ct-bar");
+
+  // -----------------------------------------------------------------
+  // Scrub interaction — drag the progress bar to seek through the
+  // authored fly-through (YouTube-style timeline scrubbing).
+  //
+  // The whole .cam-timeline carries pointer-events: none so users can
+  // keep orbiting / panning the scene while the move plays, but the
+  // bar itself opts back in (style.css: .ct-bar { pointer-events:
+  // auto }). Pointer capture on .ct-bar means a drag that started on
+  // the bar keeps routing to it even if the finger slides outside —
+  // so the user can drag past the bar's edges without losing grip.
+  //
+  // Behaviour:
+  //   • pointerdown — snap playhead to the tapped position, mark
+  //     state PAUSED for the duration of the drag (we don't want the
+  //     mixer auto-advancing while the user is in command)
+  //   • pointermove — keep updating time as the finger moves
+  //   • pointerup   — release pointer capture; if the user was PLAYING
+  //     before grabbing the bar, resume playback from the new time;
+  //     if they were PAUSED, stay paused at the new time
+  //   • clamp seek to [0, dur - 0.01s] so we never trigger the
+  //     mixer's "finished" event mid-drag (which would close the
+  //     timeline panel and break the interaction)
+  // -----------------------------------------------------------------
+  let _scrubActive    = false;
+  let _scrubPrevState = null;
+  const _scrubFwd     = new THREE.Vector3();
+
+  function _scrubTo(clientX) {
+    if (!camAction || !camMixer || !camAnimNode) return;
+    const rect = ctBarEl.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const u = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    const dur = camAction.getClip().duration;
+    // Stay just short of dur so update(0) can't trip the "finished"
+    // event during a scrub. Natural playback (release at end → mixer
+    // auto-advances past dur next tick) still fires the cleanup.
+    camAction.time = Math.min(u * dur, Math.max(0, dur - 0.01));
+    camMixer.update(0);
+    camAnimNode.updateWorldMatrix(true, false);
+    camAnimNode.getWorldPosition(camera.position);
+    camAnimNode.getWorldQuaternion(camera.quaternion);
+    _scrubFwd.set(0, 0, -1).applyQuaternion(camera.quaternion);
+    controls.target.copy(camera.position).add(_scrubFwd);
+    // Sync HUD inline so the timeline reads the new position even
+    // when we're paused (next __camMoveTick wouldn't repaint it).
+    const t   = camAction.time;
+    const frT = Math.floor(t   * CAM_FPS);
+    const frD = Math.floor(dur * CAM_FPS);
+    ctTimeEl.textContent  = `${t.toFixed(2)}s / ${dur.toFixed(2)}s`;
+    ctFrameEl.textContent = `F ${frT} / ${frD}`;
+    ctFillEl.style.width  = `${(t / dur) * 100}%`;
+  }
+
+  ctBarEl.addEventListener("pointerdown", (e) => {
+    if (!camAction) return;
+    _scrubActive    = true;
+    _scrubPrevState = camMoveState;
+    // Pause auto-advance while the user owns the playhead. We don't
+    // set state to "idle" because that hides the timeline + makes
+    // __camMoveTick bail early; "paused" keeps the camAnimNode sync
+    // path alive without progressing time.
+    if (camMoveState === "playing") camMoveState = "paused";
+    camTimeline.classList.add("scrubbing");
+    try { ctBarEl.setPointerCapture(e.pointerId); } catch {}
+    _scrubTo(e.clientX);
+    e.preventDefault();
+  });
+  ctBarEl.addEventListener("pointermove", (e) => {
+    if (_scrubActive) _scrubTo(e.clientX);
+  });
+  const endScrub = (e) => {
+    if (!_scrubActive) return;
+    _scrubActive = false;
+    try { ctBarEl.releasePointerCapture(e.pointerId); } catch {}
+    camTimeline.classList.remove("scrubbing");
+    // Restore prior playback intent: if the user was actively playing
+    // when they grabbed the bar, resume from the new seek position.
+    // If they were already paused (or scrubbed from a paused state),
+    // stay paused — they're inspecting a specific frame.
+    if (_scrubPrevState === "playing") camMoveState = "playing";
+  };
+  ctBarEl.addEventListener("pointerup",     endScrub);
+  ctBarEl.addEventListener("pointercancel", endScrub);
 
   // 4 equally-spaced phases across the clip duration:
   //   ¼ — Gaussian → Point         (begins immediately)
@@ -2238,6 +2337,15 @@ async function loadSplat() {
     return el;
   })();
   const handErrorEl = document.getElementById("hand-error");
+  // Retry button inside the error card — proxies straight to a fresh
+  // handToggle click so the user has a clear "try again" action without
+  // having to remember to re-click the toggle row above. Listener
+  // attached once at module init; the click() call below will run the
+  // same enable flow (loading → success / new error).
+  handErrorEl.querySelector(".he-retry")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    handToggle.click();
+  });
 
   // Reuse the raycaster set up above. ndc scratch vector to avoid alloc.
   const ndc = new THREE.Vector2();
