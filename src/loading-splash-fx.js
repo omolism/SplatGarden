@@ -25,12 +25,17 @@
 // cancels the rAF loop. Safe to call exit() more than once.
 // ---------------------------------------------------------------------------
 
-const COLS_DEFAULT = 96;   // horizontal sample density; vertical derived from image ratio
+const COLS_DEFAULT = 120;  // horizontal sample density; vertical derived from image ratio
 const DOT_RADIUS    = 1.5;
 const FLIGHT_MS     = 1100;
 const FLIGHT_STAGGER_MS = 1300;
 const DRIFT_AMP     = 3.5;  // px around target during the idle drift phase
 const EXIT_MS       = 850;
+// ----- Mouse interaction -----
+const MOUSE_RADIUS    = 140;  // particles within this many px feel the cursor
+const MOUSE_FORCE     = 4200; // peak repulsion in px²/s²; tuned so a brisk swipe parts the cloud cleanly
+const MOUSE_DAMP      = 6.0;  // velocity damping per second when no force is applied (springs back to rest)
+const MOUSE_SPRING    = 18.0; // return-to-target spring stiffness (per second²)
 
 export class LoadingSplashFx {
   constructor({ mountEl, imageUrl, cols = COLS_DEFAULT }) {
@@ -40,8 +45,18 @@ export class LoadingSplashFx {
     this.particles = [];
     this._raf  = 0;
     this._t0   = performance.now();
+    this._prevT = this._t0;
     this._exiting = false;
     this._exitT0  = 0;
+    // Mouse interaction state — particles within MOUSE_RADIUS of (mx, my)
+    // get pushed away with a force that falls off linearly to zero at
+    // the edge of the radius. When the cursor leaves the splash entirely
+    // (mouseLive=false) the spring + damping returns the cloud to its
+    // image-shaped rest pose. Initialised off-screen so the first frame
+    // before any pointermove doesn't apply phantom force.
+    this._mx = -9999;
+    this._my = -9999;
+    this._mouseLive = false;
     this._init();
   }
 
@@ -54,6 +69,20 @@ export class LoadingSplashFx {
     this._onResize = () => this._sizeCanvas();
     window.addEventListener("resize", this._onResize);
     this.ctx = this.canvas.getContext("2d");
+
+    // Track cursor for the repulsion field. We listen on the document
+    // (rather than the canvas) so the splash captures mouse movement
+    // even when the user's cursor is over the chrome text on top of
+    // the canvas — the particles respond regardless of what HTML layer
+    // the pointer is technically over.
+    this._onPointerMove = (e) => {
+      this._mx = e.clientX;
+      this._my = e.clientY;
+      this._mouseLive = true;
+    };
+    this._onPointerLeave = () => { this._mouseLive = false; };
+    document.addEventListener("pointermove", this._onPointerMove, { passive: true });
+    document.addEventListener("pointerleave", this._onPointerLeave);
 
     try {
       const img = await this._loadImage(this.imageUrl);
@@ -142,6 +171,11 @@ export class LoadingSplashFx {
 
         this.particles.push({
           x: sx_, y: sy_, tx, ty,
+          // Velocity in px/s — driven by the mouse-repulsion force +
+          // spring-return-to-target + damping. Zero at spawn; the
+          // flight phase moves x/y directly via lerp without using
+          // velocity, then physics takes over after settle.
+          vx: 0, vy: 0,
           // Single packed RGBA — cheaper than concatenating "rgba(...)"
           // per draw call. We re-pack to a string only on first paint
           // (memoised below in the tick loop).
@@ -150,9 +184,6 @@ export class LoadingSplashFx {
           duration:  FLIGHT_MS + Math.random() * 320,
           dphi:      Math.random() * Math.PI * 2,
           dspd:      0.00065 + Math.random() * 0.0005,
-          // Exit motion vector, set at exit() — pre-allocated to
-          // avoid garbage in the tick loop.
-          ex: 0, ey: 0,
         });
       }
     }
@@ -171,9 +202,22 @@ export class LoadingSplashFx {
 
     const tNow   = performance.now();
     const tLocal = tNow - this._t0;
+    // Per-frame delta in seconds, clamped to 50 ms to prevent giant
+    // physics jumps if a tab was backgrounded.
+    const dt = Math.min(0.05, (tNow - this._prevT) / 1000);
+    this._prevT = tNow;
+
     const exitU  = this._exiting
       ? Math.min(1, (tNow - this._exitT0) / EXIT_MS)
       : 0;
+
+    // Mouse pose for this frame — gated by mouseLive so a cursor that
+    // has left the document doesn't apply phantom force at -9999.
+    const mLive = this._mouseLive;
+    const mx    = this._mx;
+    const my    = this._my;
+    const mR    = MOUSE_RADIUS;
+    const mR2   = mR * mR;
 
     for (const p of this.particles) {
       // ---- Position --------------------------------------------------
@@ -183,14 +227,56 @@ export class LoadingSplashFx {
 
       let x, y;
       if (u < 1) {
+        // Flight phase — direct lerp from spawn to target. No physics
+        // yet so the assembly stays clean and predictable.
         x = p.x + (p.tx - p.x) * e;
         y = p.y + (p.ty - p.y) * e;
+        // Keep particle's stored position in sync so when flight ends,
+        // physics has the correct starting state.
+        p.x = x;
+        p.y = y;
       } else {
-        const dt = (tLocal - p.delay - p.duration);
-        const ox = Math.cos(p.dphi + dt * p.dspd)        * DRIFT_AMP;
-        const oy = Math.sin(p.dphi + dt * p.dspd * 1.3)  * DRIFT_AMP;
-        x = p.tx + ox;
-        y = p.ty + oy;
+        // Settled phase — spring toward (tx, ty) + damping + mouse
+        // repulsion. Drift sinusoid is added as a target offset so
+        // the cloud breathes even when the cursor isn't engaged.
+        const dtPhi = (tLocal - p.delay - p.duration);
+        const driftX = Math.cos(p.dphi + dtPhi * p.dspd)        * DRIFT_AMP;
+        const driftY = Math.sin(p.dphi + dtPhi * p.dspd * 1.3)  * DRIFT_AMP;
+        const targetX = p.tx + driftX;
+        const targetY = p.ty + driftY;
+
+        // Spring force toward (drifting) target.
+        let ax = (targetX - p.x) * MOUSE_SPRING;
+        let ay = (targetY - p.y) * MOUSE_SPRING;
+
+        // Cursor repulsion — falls off linearly to zero at the edge
+        // of MOUSE_RADIUS. Squared-distance fast-path avoids the
+        // sqrt for particles outside the radius.
+        if (mLive) {
+          const dx = p.x - mx;
+          const dy = p.y - my;
+          const d2 = dx * dx + dy * dy;
+          if (d2 < mR2 && d2 > 0.01) {
+            const d  = Math.sqrt(d2);
+            const k  = (1 - d / mR);            // 0 at edge, 1 at centre
+            const f  = MOUSE_FORCE * k * k;      // squared falloff = soft edge, hard core
+            ax += (dx / d) * f;
+            ay += (dy / d) * f;
+          }
+        }
+
+        // Damping — opposes velocity. Without this the spring would
+        // oscillate forever; with it the particle critically damps.
+        ax -= p.vx * MOUSE_DAMP;
+        ay -= p.vy * MOUSE_DAMP;
+
+        // Integrate (semi-implicit Euler).
+        p.vx += ax * dt;
+        p.vy += ay * dt;
+        p.x  += p.vx * dt;
+        p.y  += p.vy * dt;
+        x = p.x;
+        y = p.y;
       }
 
       // ---- Exit pulse — outward burst + fade -------------------------
@@ -233,6 +319,8 @@ export class LoadingSplashFx {
   _dispose() {
     cancelAnimationFrame(this._raf);
     window.removeEventListener("resize", this._onResize);
+    if (this._onPointerMove)  document.removeEventListener("pointermove",  this._onPointerMove);
+    if (this._onPointerLeave) document.removeEventListener("pointerleave", this._onPointerLeave);
     this.canvas?.remove();
     this.canvas = null;
     this.particles = [];

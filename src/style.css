@@ -423,18 +423,20 @@ html, body {
   letter-spacing: 0.02em;
 }
 /* Each hint row is a single physical row of content (icon + kbd shortcuts
-   + descriptors). At the panel's 240 px width the longer rows don't fit
-   on one line — they wrap. Without help the wrap point breaks the line
-   right after the icon, leaving the wrapped descriptors visually
-   disconnected from their key (reads as "incomplete display" — exactly
-   the screenshot the user just reported). Block + hanging indent fixes
-   it: the icon sits at the left edge on line 1, and any wrapped content
-   indents to align with the first kbd on the line above so the wrap
-   reads as a continuation, not a new sentence. */
+   + descriptors). At the panel's 240 px width the longer rows wrap.
+   Previously used `display: block` + `text-indent: -18px` hanging indent,
+   but that broke down when wrapping landed in the middle of a text
+   node between two <kbd> elements — characters at the wrap boundary
+   got clipped by the parent's overflow:hidden, producing "mov" /
+   "down/u" / "viewpoin" garbage. Flex-wrap with proper inline gap
+   handles the same case cleanly: every child (icon, kbd, text) gets
+   a real baseline + a real gap, and wrapped lines all start at the
+   parent padding-left (no negative-indent magic). */
 #sidebar .hint .hint-row {
-  display: block;
-  padding-left: 18px;
-  text-indent: -18px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px 6px;
   margin: 3px 0;
 }
 #sidebar .hint .hint-key {
