@@ -940,6 +940,9 @@ kbd {
   padding: 10px;
   display: flex;
   flex-direction: column;
+  gap: 8px;
+  width: 224px;
+  box-shadow: var(--shadow-soft);
   /* Shrink-in-place transition (no `transform` declared — would
      break backdrop-filter; see notes on #sidebar). */
   transition: width 0.28s cubic-bezier(.22, 1, .36, 1),
@@ -1003,10 +1006,6 @@ kbd {
 }
 #hand-panel #hand-min-toggle.sidebar-toggle:hover { background: rgba(255, 255, 255, 0.06); color: var(--text); }
 #hand-panel #hand-min-toggle.sidebar-toggle svg   { width: 14px; height: 14px; display: block; }
-  gap: 8px;
-  width: 224px;
-  box-shadow: var(--shadow-soft);
-}
 /* Hand Tracking toggle — restored to the 04ad9c1 snapshot per
    user request. Single bordered pill with the hand icon + label +
    a small mono "ON / OFF / ERR" badge on the right. No "snap to
