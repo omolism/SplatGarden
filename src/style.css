@@ -3619,7 +3619,10 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 }
 
 .ah-card .ah-section {
-  padding: 14px 18px;
+  /* Vertical rhythm trimmed (was 14px) — the section eyebrows + chip
+     rows had so much breathing room that on shorter viewports two of
+     them ate the screen, with no signal that more content sat below. */
+  padding: 10px 18px;
   border-bottom: 1px solid var(--hair);
 }
 .ah-card .ah-section:last-of-type { border-bottom: none; }
@@ -3630,7 +3633,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   letter-spacing: 0.20em;
   text-transform: uppercase;
   color: var(--text-dim);
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 /* Toolchain chip row */
@@ -6134,6 +6137,52 @@ body.mobile #mobile-studio-btn { display: none; }
   /* JS drag handler always composes translateX(-50%) now (every
      orientation centres horizontally), so no landscape-specific
      transform override is needed. */
+}
+
+/* ---- Phone landscape: sheets and studio panel anchor LEFT, capped ----
+ * Default mobile layout centres every sheet horizontally (translateX
+ * -50%). On landscape phones the bottombar pill is already at the right
+ * edge, so a centre-aligned sheet leaves a wedge of empty splat scene
+ * on the LEFT and visually competes with the dock on the RIGHT. Anchor
+ * sheets to the left edge instead: dock-right, sheet-left, splat in
+ * the middle — three clear zones, no overlap. Cap width so the sheet
+ * reads as an intentional drawer, not a stretched-too-wide slab.
+ *
+ * Also tightens vertical rhythm inside the sheets (header padding,
+ * section padding) since landscape viewports are short (~400 px). */
+@media (orientation: landscape) and (max-height: 520px) {
+  body.mobile #mobile-sheet {
+    /* Override the base translateX(-50%) — left:14 + transform Y-only
+       removes the centring so the sheet hugs the left edge. */
+    left: calc(14px + env(safe-area-inset-left, 0px));
+    right: auto;
+    max-width: 480px;
+    max-height: min(82vh, 480px);
+    transform: translateX(0) translateY(100vh);
+  }
+  body.mobile #mobile-sheet.open      { transform: translateX(0) translateY(0); }
+  body.mobile #mobile-sheet .ms-section { padding: 8px 14px; }
+  body.mobile #mobile-sheet .ms-row     { padding: 6px 0; }
+
+  #mobile-studio-panel {
+    /* Mirror the same left-anchor logic for the Studio drop-down. */
+    left: calc(14px + env(safe-area-inset-left, 0px));
+    right: auto;
+    transform: translateX(0) translateY(-8px);
+    max-width: 480px;
+    max-height: min(82vh, 480px);
+  }
+  #mobile-studio-panel.open {
+    transform: translateX(0) translateY(0);
+  }
+  #mobile-studio-panel .msp-head { padding: 10px 14px; }
+  #mobile-studio-panel .msp-body { padding: 4px 14px 12px; }
+
+  /* Asset hover card — same anchor-left treatment, on top of the
+     already-tightened width / right-gutter rules below. */
+  #asset-hover-card {
+    left: calc(14px + env(safe-area-inset-left, 0px)) !important;
+  }
 }
 
 /* ---- Phone landscape: anchor #mobile-bottombar to the right edge ----

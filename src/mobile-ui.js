@@ -249,11 +249,15 @@ class MobileStudioPanel {
     this.panel.id = "mobile-studio-panel";
     this.panel.setAttribute("hidden", "");
     this.panel.setAttribute("role", "dialog");
+    // No msp-sub here: the inner UsdLayers panel that gets re-parented
+    // into msp-body has its own "Toggle layers · stack freely" hint, so a
+    // second eyebrow line above would stack two near-identical strings
+    // ("TOGGLE LAYERS · SWAP SUBFORMS" / "TOGGLE LAYERS · STACK FREELY")
+    // — visible on landscape phone screenshots as the obvious redundancy.
     this.panel.innerHTML = `
       <header class="msp-head">
         <div class="msp-titles">
           <div class="msp-title">3DGS / USD</div>
-          <div class="msp-sub">Toggle layers · swap subforms</div>
         </div>
         <button class="msp-close" aria-label="Close">${ICONS.close}</button>
       </header>
