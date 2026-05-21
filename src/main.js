@@ -26,6 +26,7 @@ import { OnboardingPointers } from "./onboarding-pointers.js";
 import { MobileNav } from "./mobile-nav.js";
 import { LoadingSplashFx } from "./loading-splash-fx.js";
 import { HandLandmarksOverlay } from "./hand-landmarks-overlay.js";
+import { CinematicFlourish }   from "./cinematic-flourish.js";
 import { MobileUI } from "./mobile-ui.js";
 import { haptic }   from "./haptic.js";
 import { playSound, primeSound } from "./sounds.js";
@@ -474,6 +475,16 @@ if (loadingEl) {
     imageUrl: `${BASE}BeautyShot.png`,
   });
 }
+
+// End-of-cinematic title-card. Mounted once, played each time the FBX
+// camera-move mixer emits "finished" (Replay Intro included). Builds
+// its DOM lazily on first .play() so it doesn't sit dark in the tree.
+const _cinematicFlourish = new CinematicFlourish({
+  mountEl:  document.body,
+  title:    "SPLATGARDEN",
+  subtitle: "STUDIO · 2026",
+  credit:   "Houdini · SpeedTree · Unreal · COLMAP · Spark",
+});
 
 function hideLoading() {
   // Kick off the particle exit pulse BEFORE the splash fades out — the
@@ -1799,6 +1810,12 @@ async function loadSplat() {
           // syncs naturally without an explicit second update here.
           playCtrl.name("▶ Play Camera Move");
           statusEl.textContent = "Camera move complete";
+          // End-of-cinematic title-card flourish — 2.9 s sequence
+          // (fade-in + hold + fade-out) so the camera move feels
+          // authored to an ending instead of just stopping. Lives on
+          // top of everything via z-index 2000; self-cleans the DOM
+          // node when the sequence completes.
+          _cinematicFlourish?.play();
           // Tear down the intro overlay and, if this was the first-visit
           // auto-play, prompt the user with the Quick Guide + animated
           // pointers at T / K / Scene panel, then briefly pop the Quad
