@@ -20,52 +20,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # ---- Checkout + LFS (with cache) ---------------------------------
-      # Splat assets are LFS-tracked (~156 MB combined). The previous
-      # workflow set `lfs: true` on checkout, which downloaded the full
-      # 156 MB every single CI run. With 1 GB/month free LFS bandwidth
-      # that exhausted the quota after 6–7 pushes.
-      #
-      # New pattern: checkout WITHOUT LFS, then cache .git/lfs/objects
-      # keyed on the LFS file hashes. Cache-hit → 0 bytes of LFS bandwidth.
-      # Cache-miss (first run, or splat assets changed) → falls back to
-      # `git lfs pull` and the new objects populate the cache.
-      - name: Checkout (no LFS yet)
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          lfs: false
-
-      # Build a deterministic key from the LFS pointer SHAs. The SHA of an
-      # LFS-tracked file changes only when the file content changes, so a
-      # whitespace-only README edit doesn't bust the cache.
-      - name: Compute LFS cache key
-        id: lfs-key
-        run: |
-          git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
-          echo "key=lfs-${{ runner.os }}-$(sha256sum .lfs-assets-id | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
-
-      - name: Restore LFS object cache
-        id: lfs-cache
-        uses: actions/cache@v4
-        with:
-          path: .git/lfs/objects
-          key:  ${{ steps.lfs-key.outputs.key }}
-          restore-keys: |
-            lfs-${{ runner.os }}-
-
-      # `git lfs pull` is a no-op for objects already present in the cached
-      # .git/lfs/objects directory, so a cache-hit costs ~0 LFS bandwidth.
-      # On cache-miss it downloads only the missing objects.
-      - name: Pull LFS objects (cache-aware)
-        run: git lfs pull
-
-      # Checkout the binary contents from the LFS object store into the
-      # working tree so the build can read the actual splat files.
-      - name: Materialise LFS files in working tree
-        run: git lfs checkout
-
-      - name: Verify LFS contents
-        run: git lfs ls-files
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -78,9 +34,9 @@ jobs:
 
       - name: Build
         # VITE_BASE matches the repo name so absolute asset paths resolve
-        # under https://<user>.github.io/SplatGarden-WebViewer/.
+        # under https://<user>.github.io/SplatGarden/.
         env:
-          VITE_BASE: /SplatGarden-WebViewer/
+          VITE_BASE: /SplatGarden/
         run: npm run build
 
       - name: Upload artifact
