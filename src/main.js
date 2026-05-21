@@ -615,25 +615,18 @@ async function urlExists(url) {
 async function loadSplat() {
   setLoading("Fetching splat…");
 
-  // Asset selection:
-  //   • Desktop                         → SPLAT_URL (PC, full 3M splats)
-  //   • Touch + high-end (iPhone 13+ /  → SPLAT_URL (PC; chip can take it)
-  //     M-series iPad / Android flagship)
-  //   • Touch + everything else         → SPLAT_MOBILE_URL when present
-  //                                      (≈45% smaller), else falls back
-  //                                      to SPLAT_URL with maxSplats cap.
-  // The high-end check happens before the HEAD probe so we don't waste
-  // a round-trip on devices that won't use the mobile variant anyway.
-  const highEnd = isHighEndMobile();
-  let assetUrl  = SPLAT_URL;
-  let assetType = "splat";
-  if (IS_TOUCH && !highEnd && await urlExists(SPLAT_MOBILE_URL)) {
-    assetUrl  = SPLAT_MOBILE_URL;
-    assetType = splatTypeFromUrl(SPLAT_MOBILE_URL);
-    console.info("[Splat] Using mobile variant:", SPLAT_MOBILE_URL, "(", assetType, ")");
-  } else if (IS_TOUCH && highEnd) {
-    console.info("[Splat] High-end mobile detected — using PC asset:", SPLAT_URL);
-  }
+  // Quality-first asset selection — every device gets the full PC
+  // asset (SplatGarden_PC.splat, ~3 M splats). The old mobile-variant
+  // fork + maxSplats cap was removed per user request: the download
+  // time wasn't materially shorter on touch (both files travel the
+  // same connection, both are tens of MB), but the detail loss WAS
+  // perceptible, so the optimization was net-negative.
+  //
+  // SplatGarden_Mobile.splat still ships in public/ in case a future
+  // explicit-pick UI re-introduces the smaller variant for users on
+  // metered connections — but no code path selects it automatically.
+  const assetUrl  = SPLAT_URL;
+  const assetType = "splat";
 
   // Stream-fetch so the splash bar shows a real %. A 96 MB asset over a
   // 4G link takes 7+ seconds; the original indeterminate slide animation
@@ -685,17 +678,12 @@ async function loadSplat() {
     fileName: assetUrl.split("/").pop(),
     fileType: assetType,
   };
-  // GPU-side cap. Applied only when we're on touch + low-end + serving
-  // the FULL .splat (i.e. a non-flagship phone with no mobile variant
-  // available — the worst case). High-end touch devices opted into the
-  // PC asset deliberately, so we trust them at full resolution. Devices
-  // that picked up the mobile variant don't need capping (the file is
-  // already pre-sized). Desktop never gets capped.
-  const usingMobileVariant = assetUrl !== SPLAT_URL;
-  if (!usingMobileVariant && !highEnd) {
-    if (IS_PHONE       && SPLAT_MAX_PHONE  > 0) splatOpts.maxSplats = SPLAT_MAX_PHONE;
-    else if (IS_TABLET && SPLAT_MAX_TABLET > 0) splatOpts.maxSplats = SPLAT_MAX_TABLET;
-  }
+  // (maxSplats GPU cap removed alongside the mobile-variant fork —
+  //  per user direction "no reason to sacrifice detail for this
+  //  optimization". Every device now renders the full PC splat at
+  //  full resolution; the SPLAT_MAX_PHONE / SPLAT_MAX_TABLET constants
+  //  remain defined above as dormant config in case a future opt-in
+  //  re-introduces capping for memory-constrained devices.)
 
   const built = await createSplat(splatOpts);
   splat = built.splat;
@@ -1041,6 +1029,12 @@ async function loadSplat() {
         size:  Math.max(0.015, radius * 0.0018),
         depth: Math.max(0.03,  radius * 0.0035),
       });
+      // Lift the frustum cluster +1 unit on world-Y so the icons
+      // visibly orbit ABOVE the splat's gazebo silhouette rather than
+      // grazing it. Per user pick — the COLMAP poses originate from
+      // the capture rig's geometric centroid, which sits ~1 m too low
+      // for the showcase composition.
+      cameraFrustums.position.y += 1;
       cameraFrustums.visible = false;
       // Training cameras live in a SEPARATE scene rendered AFTER the
       // composer (same pattern as gpgpu particles), so they're not bloomed,
