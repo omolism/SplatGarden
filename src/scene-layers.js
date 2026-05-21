@@ -87,6 +87,11 @@ export class SceneLayers {
     layer.visible = !!on;
     if (layer.mesh) layer.mesh.visible = layer.visible;
     this._render();
+    // Bubble the change to any subscriber (main.js wires this to
+    // effects.setLayerVis so the 3DGS/USD shader-alpha follows the
+    // Scene-panel eye — without that bridge, hiding the primary
+    // here leaves the shader still rendering at alpha 1.0).
+    this.onVisibilityChange?.(id, layer.visible, layer.isPrimary);
   }
 
   // Replace the primary layer's mesh in-place (used by the existing

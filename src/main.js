@@ -375,6 +375,21 @@ const sceneLayers = new SceneLayers({
   scene,
   mountEl: document.getElementById("left-stack") || document.body,
 });
+// Bridge the Scene-panel primary-layer eye toggle to the 3DGS shader
+// visibility. mesh.visible = false alone wasn't fully hiding the splat
+// (the user reported "everything toggled off, splat still showing"),
+// because the 3DGS/USD panel's Splat toggle drives a SEPARATE shader-
+// alpha path via effects.setLayerVis. Without this bridge the two
+// systems were independent: hiding the primary in the Scene panel
+// left the shader at alpha 1.0, and the splat stayed visible.
+// `effects` is hoisted later in this file; the guard tolerates the
+// race where this callback fires before the bridge target is wired.
+sceneLayers.onVisibilityChange = (_id, on, isPrimary) => {
+  if (!isPrimary) return;
+  if (typeof effects !== "undefined" && effects?.setLayerVis) {
+    effects.setLayerVis("splat", on);
+  }
+};
 window.__sceneLayers = sceneLayers;
 _hudRefs.sceneLayers = sceneLayers;   // RENDER HUD sums splats across visible layers
 // Scene panel collapse — wired here (not earlier) because SceneLayers
@@ -2946,7 +2961,14 @@ async function loadAdditionalSplatLayers() {
   } catch { return; }
   if (!Array.isArray(list)) return;
 
-  const primaryFile = SPLAT_URL.replace(/^\//, "");
+  // Compare by BASENAME only — manifest entries are bare filenames
+  // ("SplatGarden_PC.splat") but SPLAT_URL is the full path
+  // ("/SplatGarden-WebViewer/SplatGarden_PC.splat" on Pages). The old
+  // `replace(/^\//, "")` left the BASE prefix intact, so the filter
+  // never matched on production and the primary splat was loaded a
+  // second time as a "secondary" — which is what produced the
+  // duplicate `SplatGarden_PC · 3.00M` row in the Scene panel.
+  const primaryFile = SPLAT_URL.split("/").pop();
   const secondaries = list.filter(f => typeof f === "string" && f && f !== primaryFile);
 
   for (const fname of secondaries) {
