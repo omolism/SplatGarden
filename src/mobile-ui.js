@@ -33,6 +33,7 @@
 import { renderCard as renderAssetCard } from "./asset-hover.js";
 import { haptic }    from "./haptic.js";
 import { playSound } from "./sounds.js";
+import { fitVimeoFrames } from "./vimeo-fit.js";
 
 // Lucide-style line icons. Stroke 1.7 reads crisp at the rendered ~22 px.
 const ICONS = {
@@ -710,6 +711,12 @@ export class MobileUI {
       // sheet's close so users get one consistent dismiss path.
       node.querySelector('[data-act="close"]')?.addEventListener("click", () => this.sheet.close());
       this.sheet.show("asset", it.name, node);
+      // Auto-fit any Vimeo iframes to their clip's actual ratio so
+      // there are no letterbox bars inside the bottom-sheet card.
+      // Must run AFTER the sheet attaches the node — the iframe needs
+      // to be in the live DOM before the Vimeo Player API can measure
+      // it.
+      fitVimeoFrames(node);
       this._setActive(null);
     };
     // Short tap AND long press open the same sheet. The long-press

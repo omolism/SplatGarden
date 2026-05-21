@@ -3757,6 +3757,14 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   font-family: var(--font-ui);
 }
 #onboarding-pointers[hidden] { display: none; }
+/* Hide onboarding pointers on phones — the bottom-bar tabs (Tour /
+   Effects / Studio / Info / Share) are already labelled, so the
+   floating callouts duplicate information AND overlap each other
+   horribly (three ≈ 320 px wide nowrap cards trying to anchor above
+   five ≈ 64 px wide bar tabs in the same row produce the stack the
+   user reported). Tablet + desktop keep the pointers — both have
+   wider viewports and panels without printed labels. */
+body.mobile #onboarding-pointers { display: none !important; }
 
 #onboarding-pointers .op-tip {
   /* Position + transform are set inline by JS (left/top = anchor point
@@ -5797,6 +5805,17 @@ body.touch .asset-hotspot .ahot-label { font-size: 12px; }
    the card for screen space. Dots themselves remain visible so the
    user can still see WHERE assets sit in 3D. */
 body.asset-card-pinned .asset-hotspot .ahot-label { opacity: 0; }
+/* When hand tracking is active, hide the floating asset labels —
+   they compete with the hand cursor for the user's visual attention
+   and make the scene feel chatty during gesture interaction. The
+   dots themselves stay visible so users still see WHERE assets are;
+   only the text pills next to each dot fade out. The transition
+   gives a soft handoff when the user toggles tracking on/off. */
+body:has(#hand-toggle.active) .asset-hotspot .ahot-label {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
 /* Touch hit-area + drag isolation. The 44 × 44 hit halo itself lives
    on the universal .asset-hotspot::before rule (was scoped to
    body.touch before the HIG audit — the wider hit zone helps every

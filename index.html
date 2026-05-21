@@ -141,6 +141,11 @@
       </footer>
     </div>
 
+    <!-- Vimeo Player API — used by src/vimeo-fit.js to detect each
+         embedded clip's actual aspect ratio at runtime and resize
+         its iframe container to match, eliminating Vimeo's internal
+         letterbox bars universally (no per-video config needed). -->
+    <script src="https://player.vimeo.com/api/player.js" async></script>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

@@ -12,7 +12,8 @@
 // entire panel slides in from the right.
 // ---------------------------------------------------------------------------
 
-import { initTickers } from "./ticker.js";
+import { initTickers }    from "./ticker.js";
+import { fitVimeoFrames } from "./vimeo-fit.js";
 
 export const TECH_SPECS = [
   // ============== Observer-first ordering ==============
@@ -510,6 +511,11 @@ export class TechSpec {
     // ticker self-marks as active on first call so subsequent open/close
     // cycles don't restart the animation.
     initTickers(this.el, { observe: false });
+    // Auto-fit every Vimeo iframe in the drawer to its clip's real
+    // dimensions — eliminates Vimeo's internal letterbox bars for any
+    // asset card that ships an embed. Idempotent so repeated opens
+    // don't re-measure.
+    fitVimeoFrames(this.el);
     this.onOpenChange?.(true);
   }
   close() {

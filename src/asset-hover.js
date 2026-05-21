@@ -13,6 +13,7 @@ import * as THREE from "three";
 import { renderCompare, wireCompareFrame } from "./tech-spec.js";
 import { haptic }    from "./haptic.js";
 import { playSound } from "./sounds.js";
+import { fitVimeoFrames } from "./vimeo-fit.js";
 
 const _v = new THREE.Vector3();
 
@@ -413,6 +414,10 @@ export class AssetHoverManager {
     // Wire any inline before/after compare widget that's now in the DOM —
     // the .ts-compare CSS already covers visuals; this binds the drag.
     this.card.querySelectorAll(".ts-compare .cmp-frame").forEach(wireCompareFrame);
+    // Auto-fit any Vimeo iframes to their clip's actual aspect ratio —
+    // removes Vimeo's internal letterbox bars per-video without
+    // requiring each embed entry to declare its ratio by hand.
+    fitVimeoFrames(this.card);
 
     // Position the card NEAR the hovered dot (right of it if there's
     // room, otherwise left), instead of pinned to the centre. The old
