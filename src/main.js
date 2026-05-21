@@ -432,11 +432,15 @@ const techOverlayScene = new THREE.Scene();
 // Touch defaults. Hand Tracking panel only hidden on PHONES (laptops
 // with touchscreens + iPads can still try the feature — touch detection
 // alone fired too aggressively and was hiding the panel for users with
-// working webcams). Heavy post-fx passes only stripped on phones too.
+// working webcams). Heavy post-fx passes only stripped on phones too —
+// the master Post-FX toggle stays ON (per user request: phones should
+// get the same colour-graded look as desktop). Only the two
+// expensive passes (Bloom + Underwater) default off; everything else
+// in the composer chain (tonemap, colour grade, vignette, grain) is
+// cheap and stays enabled.
 if (IS_PHONE) {
   const handPanel = document.getElementById("hand-panel");
   if (handPanel) handPanel.style.display = "none";
-  postfx.params.postEnable    = false;
   postfx.params.bloomEnable   = false;
   postfx.params.underwaterOn  = false;
   // gpParticleParams.enable already defaults to false, so particles stay
@@ -1809,17 +1813,19 @@ async function loadSplat() {
           // syncs naturally without an explicit second update here.
           playCtrl.name("▶ Play Camera Move");
           statusEl.textContent = "Camera move complete";
-          // End-of-cinematic title-card flourish — 2.9 s sequence
-          // (fade-in + hold + fade-out) so the camera move feels
-          // authored to an ending instead of just stopping. Lives on
-          // top of everything via z-index 2000; self-cleans the DOM
-          // node when the sequence completes.
-          _cinematicFlourish?.play();
-          // Tear down the intro overlay and, if this was the first-visit
-          // auto-play, prompt the user with the Quick Guide + animated
-          // pointers at T / K / Scene panel, then briefly pop the Quad
-          // USD-spec tooltip so the "billboard" concept gets introduced
-          // before the user is left to explore on their own.
+          // End-of-cinematic title-card flourish — 3.1 s sequence
+          // (700 ms fade-in + 1700 ms hold + 700 ms fade-out) so the
+          // camera move feels authored to an ending instead of just
+          // stopping. play() returns a promise that resolves AFTER
+          // the full sequence + cleanup, so we chain the first-visit
+          // onboarding UI (Quick Guide, pointers, USD tooltip) onto
+          // that promise — those used to fire at 250/600/1200 ms and
+          // visually competed with the flourish. Now they appear
+          // cleanly AFTER the SplatGarden card has disappeared.
+          const flourishDone = _cinematicFlourish?.play() ?? Promise.resolve();
+          // Tear down the intro overlay (fires immediately — the
+          // overlay's own fade-out is fast and doesn't fight the
+          // flourish since they live on different DOM trees).
           introOverlay?.hide();
           // Restore the Hand Tracking panel if the intro had hidden it
           // (don't unhide on phones, where it's permanently off via the
@@ -1831,20 +1837,27 @@ async function loadSplat() {
           }
           if (window.__autoPlayedIntro) {
             window.__autoPlayedIntro = false;
-            setTimeout(() => keyHints?.showFor(6500), 250);
-            setTimeout(() => onboardingPointers?.show(), 600);
-            setTimeout(() => {
-              // The lil-gui USD badge moved into the new UsdLayers panel,
-              // so the popover-wrap is hidden via .hide(). Skip the auto-
-              // pop when offsetParent is null (no rendered ancestor) — the
-              // billboard badge is now visible permanently inside the
-              // 3DGS/USD panel and doesn't need a one-shot reveal.
-              const quadWrap = document.querySelector('.usd-spec-wrap[data-proto="billboard"]');
-              if (quadWrap?._show && quadWrap.offsetParent !== null) {
-                quadWrap._show();
-                setTimeout(() => quadWrap._hide?.(), 5500);
-              }
-            }, 1200);
+            // Wait for the flourish to finish disappearing, then run
+            // the first-visit onboarding sequence with the same
+            // relative stagger the original 250/600/1200 ms timings
+            // produced (Quick Guide first, pointers a beat later,
+            // USD tooltip last).
+            flourishDone.then(() => {
+              setTimeout(() => keyHints?.showFor(6500), 120);
+              setTimeout(() => onboardingPointers?.show(), 460);
+              setTimeout(() => {
+                // The lil-gui USD badge moved into the new UsdLayers panel,
+                // so the popover-wrap is hidden via .hide(). Skip the auto-
+                // pop when offsetParent is null (no rendered ancestor) — the
+                // billboard badge is now visible permanently inside the
+                // 3DGS/USD panel and doesn't need a one-shot reveal.
+                const quadWrap = document.querySelector('.usd-spec-wrap[data-proto="billboard"]');
+                if (quadWrap?._show && quadWrap.offsetParent !== null) {
+                  quadWrap._show();
+                  setTimeout(() => quadWrap._hide?.(), 5500);
+                }
+              }, 1060);
+            });
           }
         });
 
