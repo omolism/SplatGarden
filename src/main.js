@@ -25,6 +25,7 @@ import { IntroOverlay } from "./intro-overlay.js";
 import { OnboardingPointers } from "./onboarding-pointers.js";
 import { MobileNav } from "./mobile-nav.js";
 import { LoadingSplashFx } from "./loading-splash-fx.js";
+import { HandLandmarksOverlay } from "./hand-landmarks-overlay.js";
 import { MobileUI } from "./mobile-ui.js";
 import { haptic }   from "./haptic.js";
 import { playSound, primeSound } from "./sounds.js";
@@ -2461,6 +2462,41 @@ async function loadSplat() {
     camera.lookAt(controls.target);
   }
 
+  // ----- Gesture HUD ---------------------------------------------------
+  // Small floating chip that tells the user WHICH camera action their
+  // current hand gesture is producing (ORBIT / ZOOM · PAN / TAP /
+  // PINCH). The label text is set by the gesture lifecycle hooks
+  // below; CSS handles the fade in/out. Without this, users see the
+  // scene moving but can't tell whether they're driving orbit, zoom,
+  // pan, or just a click.
+  const _gestureHudEl   = document.getElementById("hand-gesture-hud");
+  const _gestureLabelEl = _gestureHudEl?.querySelector(".hgh-label");
+  let   _gestureHudClearT = 0;
+  function setGestureHud(text) {
+    if (!_gestureHudEl || !_gestureLabelEl) return;
+    if (_gestureHudClearT) { clearTimeout(_gestureHudClearT); _gestureHudClearT = 0; }
+    _gestureLabelEl.textContent = text;
+    _gestureHudEl.removeAttribute("hidden");
+    // Force reflow before .show so the transition fires on rapid re-show.
+    void _gestureHudEl.offsetHeight;
+    _gestureHudEl.classList.add("show");
+  }
+  function hideGestureHud(holdMs = 0) {
+    if (!_gestureHudEl) return;
+    const fire = () => {
+      _gestureHudEl.classList.remove("show");
+      // Defer hidden attr so the CSS opacity transition has a frame
+      // to run before display:none takes effect.
+      setTimeout(() => {
+        if (!_gestureHudEl.classList.contains("show")) {
+          _gestureHudEl.setAttribute("hidden", "");
+        }
+      }, 240);
+    };
+    if (holdMs > 0) _gestureHudClearT = setTimeout(fire, holdMs);
+    else fire();
+  }
+
   function startTwoPinch(p1, p2) {
     twoPinchActive = true;
     const dx = p1.x - p2.x, dy = p1.y - p2.y;
@@ -2470,6 +2506,7 @@ async function loadSplat() {
     twoCamPos0.copy(camera.position);
     twoTarget0.copy(controls.target);
     controls.enabled = false;
+    setGestureHud("ZOOM · PAN");
   }
 
   function updateTwoPinch(p1, p2) {
@@ -2506,6 +2543,7 @@ async function loadSplat() {
   function endTwoPinch() {
     twoPinchActive = false;
     controls.enabled = true;
+    hideGestureHud();
   }
 
   function startOnePinch(p) {
@@ -2519,6 +2557,9 @@ async function loadSplat() {
     // pattern as mouse press. Subsequent pinch-moves push velocity (handled
     // in updateOnePinch).
     if (velocityField) velocityField.inject(ux, uy, 0, 0, 1.5, 0.07);
+    // Initial label — flips to ORBIT once the user crosses the
+    // drag-threshold (handled inline in updateOnePinch).
+    setGestureHud("PINCH");
   }
 
   let handBrushing = false;
@@ -2563,6 +2604,8 @@ async function loadSplat() {
       if (dx*dx + dy*dy > PINCH_DRAG_THRESHOLD_PX ** 2) {
         onePinchMoved = true;
         controls.enabled = false;
+        // Drag threshold crossed → this is now an ORBIT, not a tap.
+        setGestureHud(brushOn ? "PAINT" : "ORBIT");
       }
     }
     if (onePinchMoved) {
@@ -2577,17 +2620,35 @@ async function loadSplat() {
       effects.releaseBrush();
       if (window.__brushParams?.effector) effects.setMaskCenter(null);
       handBrushing = false;
+      hideGestureHud();
     } else if (!onePinchMoved) {
       // Quick tap → click → dissolve (no brush)
       const local = screenToLocalHit(p.x, p.y);
       if (local) {
         effects.triggerAt(local);
       }
+      // Tap was effective — flash "TAP" briefly so the user sees the
+      // click registered, then fade out.
+      setGestureHud("TAP");
+      hideGestureHud(550);
+    } else {
+      hideGestureHud();
     }
     onePinchActive = false;
     onePinchMoved  = false;
     controls.enabled = true;
   }
+
+  // Landmark + skeleton visualization layer over the webcam preview —
+  // gives users live feedback that the tracker has locked on their hand,
+  // pinches light up in accent colour, and a yellow dashed line plus
+  // pixel distance appears between palms when BOTH hands are pinching
+  // (the gesture that drives 2-hand zoom / pan). Mounted into the same
+  // wrapper that holds <video>; sized + redraws via its own rAF loop.
+  const handPreviewWrap = handVideo?.parentElement || null;
+  const handOverlay = handPreviewWrap
+    ? new HandLandmarksOverlay({ mountEl: handPreviewWrap, videoEl: handVideo })
+    : null;
 
   const hand = new HandController({
     canvas,
@@ -2597,6 +2658,10 @@ async function loadSplat() {
     statusEl:  handHintEl,
     mode:      "single",
     onHandsUpdate: (hands) => {
+      // Pipe the snapshot to the overlay FIRST so the visualization stays
+      // in lockstep with the gesture interpretation below.
+      handOverlay?.update(hands);
+
       const pinching = hands.filter(h => h.present && h.pinching);
       const lastP    = pinching[pinching.length - 1]?.cursor;
 

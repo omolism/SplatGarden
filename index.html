@@ -59,6 +59,16 @@
       <div id="hand-cursor"></div>
       <div id="hand-cursor-2"></div>
 
+      <!-- Gesture HUD — small floating pill that surfaces the CURRENT
+           interpreted gesture (ORBIT / ZOOM · PAN / TAP) while a
+           hand-tracking interaction is active. Updated from main.js
+           gesture handlers; hidden by default. Lets users know which
+           action their gesture is producing without having to look at
+           the small webcam preview. -->
+      <div id="hand-gesture-hud" hidden>
+        <span class="hgh-label"></span>
+      </div>
+
       <!-- Drag-and-drop splat loader (highlights when a file is dragged over) -->
       <div id="drop-zone">
         <div class="drop-ring">

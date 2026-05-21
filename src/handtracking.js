@@ -293,6 +293,11 @@ export class HandController {
 
   _updateHand(h, lm, tMs, rect) {
     h.lastSeenAt = tMs;
+    // Stash the full 21-landmark array so the visualization layer
+    // (hand-landmarks-overlay.js) can draw the skeleton dots + bones
+    // over the webcam preview. lm entries are { x, y, z } in
+    // normalized image space (0..1, top-left origin).
+    h.landmarks = lm;
     const fx = h._euroX.filter(lm[PALM_CENTER].x, tMs);
     const fy = h._euroY.filter(lm[PALM_CENTER].y, tMs);
     h.target.x = (1 - fx) * rect.width  + rect.left;
@@ -321,6 +326,7 @@ export class HandController {
     h.present = false;
     h.pinching = false;
     h._wasPinch = false;
+    h.landmarks = null;        // drop stashed pose so overlay stops drawing
     h._euroX.reset();
     h._euroY.reset();
     if (h.cursorEl) {
@@ -330,12 +336,17 @@ export class HandController {
   }
 
   _emitHandsUpdate() {
-    // Build a stable shape every frame for the consumer
+    // Build a stable shape every frame for the consumer. `landmarks`
+    // is the raw MediaPipe 21-point array (or null when the hand is
+    // out of frame) — consumed by hand-landmarks-overlay.js to draw
+    // the skeleton over the webcam preview. Passed by REFERENCE for
+    // zero per-frame allocation; downstream code must not mutate.
     const snapshot = this.hands.map((h, idx) => ({
       idx,
-      present:  h.present,
-      pinching: h.pinching,
-      cursor:   { x: h.cursor.x, y: h.cursor.y },
+      present:   h.present,
+      pinching:  h.pinching,
+      cursor:    { x: h.cursor.x, y: h.cursor.y },
+      landmarks: h.landmarks,
     }));
     this.onHandsUpdate(snapshot);
   }
