@@ -15,7 +15,12 @@
 import { initTickers }    from "./ticker.js";
 import { fitVimeoFrames } from "./vimeo-fit.js";
 
-export const TECH_SPECS = [
+// Same BASE_URL trick the splat / FBX / HDRI / colmap loaders use —
+// resolves to "/" on local dev and "/SplatGarden-WebViewer/" on the
+// GitHub Pages deploy. Without this prefix, the texture `<img src>`
+// values would point at the domain root on production and 404 — the
+// "images still aren't showing" symptom the user just flagged.
+const BASE = import.meta.env.BASE_URL;
   // ============== Observer-first ordering ==============
   // Overview — one-screen anchor: what is this, in one sentence.
   // L3 3DGS  — what the viewer is actually LOOKING AT (rendering primitive
@@ -134,18 +139,20 @@ export const TECH_SPECS = [
         // Triptych: style reference (the overall stylized landscape look) /
         // original ground tile / AI-stylized result. The renderCard()
         // helper auto-renders the "Texture Stylization" triptych section
-        // when any of these three keys are set.
+        // when any of these three keys are set. Paths prefixed with BASE
+        // so they resolve correctly on GitHub Pages (`/SplatGarden-
+        // WebViewer/textures/...`) as well as on local dev (`/textures/...`).
         media: {
-          style:    "/textures/landscape/LandScape_Stylized.png",
-          original: "/textures/landscape/Ground_Original.png",
-          result:   "/textures/landscape/Ground_Stylized_BaseColor.png",
+          style:    `${BASE}textures/landscape/LandScape_Stylized.png`,
+          original: `${BASE}textures/landscape/Ground_Original.png`,
+          result:   `${BASE}textures/landscape/Ground_Stylized_BaseColor.png`,
           // Pipeline strip: the three downstream texture maps produced by
           // stages (2) + (3) of the note above. renderCard() lays these
           // out as a horizontal filmstrip below the triptych.
           pipeline: [
-            { src: "/textures/landscape/Ground_Stylized_BaseColor.png", label: "Base Color · AI" },
-            { src: "/textures/landscape/Ground_Stylized_Height.png",    label: "Height · Houdini COPNET" },
-            { src: "/textures/landscape/Ground_Stylized_Normal.png",    label: "Normal · NormalMap-Online" },
+            { src: `${BASE}textures/landscape/Ground_Stylized_BaseColor.png`, label: "Base Color · AI" },
+            { src: `${BASE}textures/landscape/Ground_Stylized_Height.png`,    label: "Height · Houdini COPNET" },
+            { src: `${BASE}textures/landscape/Ground_Stylized_Normal.png`,    label: "Normal · NormalMap-Online" },
           ],
         },
       },
