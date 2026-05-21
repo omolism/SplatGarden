@@ -549,10 +549,33 @@ body.phone-device #scene-panel .hint { display: none; }
     top: 12px;
   }
   /* Quick Guide — narrower so it stops spanning the whole
-     viewport in landscape. */
+     viewport in landscape. The default 2-column section grid
+     (`.kh-body { grid-template-columns: repeat(2, 1fr) }`) + the
+     110-px-wide key column inside each `.kh-row` left only ≈ 2 px
+     for the label text at 280 px card width — the descriptors
+     ("Numbered viewpoints", "Pipeline drawer", "This guide")
+     escaped the card visually. In landscape we collapse the
+     section grid to a single column AND shrink the key column,
+     so the rows fit cleanly without spillover. */
   body.phone-device #key-hints {
     max-width: 280px !important;
     bottom: 12px !important;
+  }
+  body.phone-device #key-hints .kh-body {
+    grid-template-columns: 1fr !important;
+    gap: 10px 0 !important;
+    padding: 10px 12px 12px !important;
+  }
+  body.phone-device #key-hints .kh-row {
+    grid-template-columns: 78px 1fr !important;
+    font-size: 10.5px !important;
+  }
+  body.phone-device #key-hints .kh-sec-title {
+    font-size: 8.5px !important;
+    margin-bottom: 5px !important;
+  }
+  body.phone-device #key-hints .kh-list {
+    gap: 3px !important;
   }
   /* USD annotation card text — slightly smaller in landscape
      so the narrower card still fits the intro + 2×2 grid

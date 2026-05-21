@@ -324,14 +324,22 @@ const _wakeFromIdle = () => {
 canvas.addEventListener("pointerdown", _wakeFromIdle);
 canvas.addEventListener("wheel",       _wakeFromIdle, { passive: true });
 window.addEventListener("keydown",     _wakeFromIdle);
-// Per-frame idle check is wired in the animation loop further down —
-// `_maybeEnterIdle()` (defined alongside camMoveState) flips
-// autoRotate on once the idle window has elapsed AND the cinematic
-// isn't playing AND no scrub is active.
-window.__idleSleepCheck = function _maybeEnterIdle(camMoveState, scrubActive) {
+// Per-frame idle check is wired in the animation loop further down.
+// IMPORTANT — this runs from the top-level `renderer.setAnimationLoop`
+// callback, so it can NOT read `camMoveState` / `_scrubActive`: those
+// are `let`-declared INSIDE `loadSplat()` (line ~1392 / ~1497) and
+// referencing them from this scope throws a per-frame ReferenceError
+// that kills the render pipeline (the cause of the "splat went black"
+// regression). Instead we use `controls.enabled` as the proxy — it's
+// already toggled false during the cinematic (camMoveStartLerps) and
+// restored to true on finish, so it correctly gates rotation against
+// camera-move playback. Scrub interactions live on the timeline DOM
+// (outside the canvas) so they don't bump `_lastInputTime`; that's a
+// minor edge case — releasing a scrub may let idle auto-rotate kick
+// in quickly. Acceptable.
+window.__idleSleepCheck = function _maybeEnterIdle() {
   if (controls.autoRotate) return;
-  if (camMoveState !== "idle") return;     // cinematic running
-  if (scrubActive) return;                 // user holding the timeline
+  if (!controls.enabled) return;           // cinematic / programmatic tween in progress
   if ((performance.now() - _lastInputTime) < _IDLE_AFTER_MS) return;
   controls.autoRotate = true;
 };
@@ -2973,10 +2981,11 @@ renderer.setAnimationLoop(() => {
   if (window.__camMoveTick) window.__camMoveTick(dt);
 
   // Idle ambient drift — flip OrbitControls.autoRotate on once the
-  // user has been inactive for 6 s (and the cinematic isn't running
-  // and they're not mid-scrub). The drift speed is set on the
-  // controls at construction time; this just gates the trigger.
-  window.__idleSleepCheck?.(camMoveState, _scrubActive);
+  // user has been inactive for 6 s. The check itself uses
+  // controls.enabled as a cinematic-running proxy (no out-of-scope
+  // reads — `camMoveState` / `_scrubActive` live inside loadSplat()
+  // and aren't visible from this top-level animation-loop callback).
+  window.__idleSleepCheck?.();
 
   controls.update();
   // Tick the Echo-Trails bell-curve ramp (no-op when idle).
