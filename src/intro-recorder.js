@@ -54,6 +54,23 @@ function pickMime() {
   return "video/webm";
 }
 
+// Fixed export resolutions. Phone gets 9:16 portrait, everything else
+// (iPad / laptop / desktop) gets 16:9 landscape — clean standard aspects
+// for sharing / social / video editing, not whatever the live viewport
+// happens to be.
+const EXPORT_LANDSCAPE = { w: 1920, h: 1080 };
+const EXPORT_PORTRAIT  = { w: 1080, h: 1920 };
+
+// Phone detection mirrors the IS_PHONE rule in main.js (touch + narrow
+// viewport), evaluated at export time so a tablet rotated mid-session
+// still gets the right aspect.
+function detectPhone() {
+  try {
+    const isTouch = matchMedia("(hover: none) and (pointer: coarse)").matches;
+    return isTouch && window.innerWidth < 768;
+  } catch { return false; }
+}
+
 export class IntroRecorder {
   constructor({ canvas, fps = 60, bitrate = 16_000_000 } = {}) {
     this.srcCanvas = canvas;
@@ -71,6 +88,10 @@ export class IntroRecorder {
     this.recorder  = null;
     this.chunks    = [];
     this._rafId    = 0;
+    // Output dimensions are fixed per export (set in start()); using a
+    // sane default here so any code that reads them before start works.
+    this.outW = EXPORT_LANDSCAPE.w;
+    this.outH = EXPORT_LANDSCAPE.h;
   }
 
   static isSupported() { return typeof MediaRecorder !== "undefined" && pickMime() !== null; }
@@ -86,7 +107,14 @@ export class IntroRecorder {
       console.warn("[IntroRecorder] MediaRecorder not supported in this browser.");
       return;
     }
-    this._syncSize();
+    // Pick a fixed output aspect — phones get portrait 9:16, anything else
+    // (iPad / web) gets landscape 16:9. Evaluated per-start so a mid-session
+    // device rotation still produces the expected file.
+    const target = detectPhone() ? EXPORT_PORTRAIT : EXPORT_LANDSCAPE;
+    this.outW = target.w;
+    this.outH = target.h;
+    this.dst.width  = this.outW;
+    this.dst.height = this.outH;
     this.chunks = [];
     this.stream = this.dst.captureStream(this.fps);
 
@@ -103,20 +131,31 @@ export class IntroRecorder {
     this._tick();
   }
 
-  _syncSize() {
-    if (this.dst.width  !== this.srcCanvas.width
-     || this.dst.height !== this.srcCanvas.height) {
-      this.dst.width  = this.srcCanvas.width;
-      this.dst.height = this.srcCanvas.height;
-    }
-  }
-
+  // Compose the live WebGL canvas into the fixed-aspect output. We use
+  // "cover" fit (scale source to fully fill dst, center-crop the
+  // overhang) rather than "contain" (letterbox) because a recording with
+  // black bars looks worse than a slight edge crop on a cinematic that's
+  // composed roughly around the subject.
   _tick = () => {
     if (!this.recording) return;
-    this._syncSize();
-    // 1) WebGL canvas → 2D canvas
-    this.ctx.drawImage(this.srcCanvas, 0, 0);
-    // 2) Overlay only while the cinematic is playing — once stopped we
+    const ctx = this.ctx;
+    // Black fill so any edge that ends up uncovered (defensive — cover
+    // shouldn't leave gaps) doesn't show transparency artifacts.
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, this.outW, this.outH);
+
+    const srcW = this.srcCanvas.width;
+    const srcH = this.srcCanvas.height;
+    if (srcW > 0 && srcH > 0) {
+      const scale = Math.max(this.outW / srcW, this.outH / srcH);
+      const drawW = srcW * scale;
+      const drawH = srcH * scale;
+      const dx = (this.outW - drawW) / 2;
+      const dy = (this.outH - drawH) / 2;
+      ctx.drawImage(this.srcCanvas, dx, dy, drawW, drawH);
+    }
+
+    // Overlay only while the cinematic is playing — once stopped we
     // still keep recording for the lens-fade tail, but the overlay should
     // be gone (matches what the live user sees).
     if (this.playing) this._drawOverlay();
@@ -125,14 +164,19 @@ export class IntroRecorder {
 
   // ---------------------------------------------------------------------
   // Overlay drawing — replicates the DOM intro-overlay in canvas 2D so
-  // the recorded video matches the live appearance.
+  // the recorded video matches the live appearance. Dimensions are
+  // computed against the fixed export resolution (no devicePixelRatio
+  // multiplier) so a 1920x1080 export and a 1080x1920 export each render
+  // type at a size that reads correctly for the target frame.
   // ---------------------------------------------------------------------
   _drawOverlay() {
     const ctx = this.ctx;
-    const w   = this.dst.width;
-    const h   = this.dst.height;
-    const dpr = window.devicePixelRatio || 1;
+    const w   = this.outW;
+    const h   = this.outH;
     const t   = this.tNorm;
+    // Use the shorter axis as the reference for typography so portrait
+    // and landscape exports use comparable text scale.
+    const ref = Math.min(w, h);
 
     // -------- HERO (centered title + sub) --------
     let heroAlpha = 0;
@@ -144,30 +188,29 @@ export class IntroRecorder {
 
     if (heroAlpha > 0.001) {
       ctx.save();
-      ctx.globalAlpha = heroAlpha;
-      ctx.shadowColor    = "rgba(0,0,0,0.75)";
-      ctx.shadowBlur     = 30 * dpr;
-      ctx.shadowOffsetY  = 2 * dpr;
-      ctx.textBaseline   = "alphabetic";
+      ctx.globalAlpha   = heroAlpha;
+      ctx.shadowColor   = "rgba(0,0,0,0.75)";
+      ctx.shadowBlur    = Math.round(ref * 0.025);
+      ctx.shadowOffsetY = 2;
+      ctx.textBaseline  = "alphabetic";
 
-      const vwPx     = w / dpr;
-      const titleSize = Math.max(56, Math.min(104, vwPx * 0.09));
+      const titleSize = Math.round(ref * 0.085);
       const cx        = w / 2;
       const cy        = h * 0.38;
 
       // Hero title
       ctx.textAlign = "center";
       ctx.fillStyle = "#ffffff";
-      ctx.font      = `300 ${titleSize * dpr}px Inter, "SF Pro Text", "Segoe UI", sans-serif`;
+      ctx.font      = `300 ${titleSize}px Inter, "SF Pro Text", "Segoe UI", sans-serif`;
       ctx.fillText(HERO.text, cx, cy);
 
       // Sub (uppercase, wide tracking)
-      const subSize = Math.max(11, Math.min(14, vwPx * 0.011));
-      ctx.shadowBlur = 16 * dpr;
+      const subSize = Math.max(11, Math.round(ref * 0.013));
+      ctx.shadowBlur = Math.round(ref * 0.015);
       ctx.fillStyle  = "rgba(255,255,255,0.78)";
-      ctx.font       = `400 ${subSize * dpr}px "JetBrains Mono", monospace`;
+      ctx.font       = `400 ${subSize}px "JetBrains Mono", monospace`;
       this._fillTracked(ctx, HERO.sub.toUpperCase(),
-        cx, cy + titleSize * dpr * 0.55 + 14 * dpr, 0.36, "center");
+        cx, cy + titleSize * 0.55 + 14, 0.36, "center");
 
       ctx.restore();
     }
@@ -188,29 +231,26 @@ export class IntroRecorder {
 
     if (activeIdx >= 0 && phaseAlpha > 0.001) {
       const p = PHASES[activeIdx];
-      const vwPx = w / dpr;
-      const vhPx = h / dpr;
 
-      const baseX  = vwPx * 0.04 * dpr;
-      const baseY  = (vhPx - vhPx * 0.08) * dpr;     // 8vh from bottom
-      const eyebrowSize = 11 * dpr;
-      const phaseTextSize = Math.max(22, Math.min(38, vwPx * 0.03));
-      const innerGap = 8 * dpr;
-      // Block height accounts for eyebrow + gap + phase text baseline
-      const blockH = eyebrowSize + innerGap + phaseTextSize * dpr * 1.15;
+      const baseX = Math.round(w * 0.06);
+      const baseY = Math.round(h - h * 0.10);     // 10% from bottom
+      const eyebrowSize   = Math.max(11, Math.round(ref * 0.014));
+      const phaseTextSize = Math.max(22, Math.round(ref * 0.030));
+      const innerGap = Math.round(ref * 0.012);
+      const blockH = eyebrowSize + innerGap + phaseTextSize * 1.15;
       const blockTop = baseY - blockH;
 
       ctx.save();
       ctx.globalAlpha   = phaseAlpha;
       ctx.shadowColor   = "rgba(0,0,0,0.80)";
-      ctx.shadowBlur    = 20 * dpr;
-      ctx.shadowOffsetY = 2 * dpr;
+      ctx.shadowBlur    = Math.round(ref * 0.018);
+      ctx.shadowOffsetY = 2;
 
       // Vertical bar on left edge of the block
       ctx.fillStyle = "rgba(255,255,255,0.85)";
-      ctx.fillRect(baseX, blockTop, 2 * dpr, blockH);
+      ctx.fillRect(baseX, blockTop, 2, blockH);
 
-      const textX = baseX + 14 * dpr;
+      const textX = baseX + 14;
       // Eyebrow
       ctx.fillStyle    = "rgba(255,255,255,0.82)";
       ctx.font         = `500 ${eyebrowSize}px "JetBrains Mono", monospace`;
@@ -219,16 +259,16 @@ export class IntroRecorder {
 
       // Phase text
       ctx.fillStyle    = "#ffffff";
-      ctx.font         = `300 ${phaseTextSize * dpr}px Inter, sans-serif`;
+      ctx.font         = `300 ${phaseTextSize}px Inter, sans-serif`;
       ctx.textBaseline = "alphabetic";
-      ctx.fillText(p.text, textX, blockTop + eyebrowSize + innerGap + phaseTextSize * dpr);
+      ctx.fillText(p.text, textX, blockTop + eyebrowSize + innerGap + phaseTextSize);
 
       ctx.restore();
     }
 
     // -------- Bottom progress bar --------
     ctx.save();
-    const barH = 2 * dpr;
+    const barH = 2;
     ctx.fillStyle = "rgba(255,255,255,0.10)";
     ctx.fillRect(0, h - barH, w, barH);
 
