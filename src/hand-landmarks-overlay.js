@@ -49,12 +49,17 @@ const BONES = [
 // a stick figure.
 const PALM_FILL = [0, 5, 9, 13, 17];
 
-const COLOR_BONE_BASE   = "rgba(255, 255, 255, 0.55)";
-const COLOR_BONE_ACCENT = "rgba(120, 230, 255, 0.95)";   // pinch highlight (thumb-index)
-const COLOR_DOT_BASE    = "rgba(255, 255, 255, 0.92)";
-const COLOR_DOT_PINCH   = "#7ee6ff";
-const COLOR_PALM_FILL   = "rgba(255, 255, 255, 0.05)";
-const COLOR_TWO_HAND    = "rgba(255, 230, 120, 0.85)";   // yellow link line for "both hands pinching"
+// Strict monochrome — SplatGarden is a single-hue grayscale design
+// (see the top-of-file note in style.css). Active / pinch states are
+// expressed via BRIGHTNESS shifts (alpha + glow) rather than hue
+// shifts, so the overlay reads as part of the same UI vocabulary as
+// the rest of the panels.
+const COLOR_BONE_BASE   = "rgba(255, 255, 255, 0.45)";
+const COLOR_BONE_ACCENT = "rgba(255, 255, 255, 0.95)";   // pinch highlight (thumb-index) — brighter, not coloured
+const COLOR_DOT_BASE    = "rgba(255, 255, 255, 0.85)";
+const COLOR_DOT_PINCH   = "rgba(255, 255, 255, 1.0)";     // pure white + larger glow
+const COLOR_PALM_FILL   = "rgba(255, 255, 255, 0.04)";
+const COLOR_TWO_HAND    = "rgba(255, 255, 255, 0.55)";   // grayscale dashed link, not yellow
 const COLOR_GLOW        = "rgba(255, 255, 255, 0.35)";
 
 export class HandLandmarksOverlay {

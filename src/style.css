@@ -1074,8 +1074,10 @@ kbd {
 /* Gesture HUD — small floating chip near the top of the viewport that
    surfaces the currently-interpreted gesture (ORBIT / ZOOM·PAN / TAP /
    PINCH / PAINT). Hidden by default; toggled via .show by the gesture
-   handlers in main.js. Tinted accent so it reads as "active feedback"
-   distinct from the chrome panels. */
+   handlers in main.js. Uses the project's standard panel design tokens
+   (var(--panel) / var(--hair) / var(--text)) so it reads as part of
+   the same monochrome glass UI family as everything else, not an
+   alien tinted callout. */
 #hand-gesture-hud {
   position: fixed;
   top: 28px;
@@ -1085,13 +1087,11 @@ kbd {
   pointer-events: none;
   padding: 8px 18px;
   border-radius: 999px;
-  background: rgba(15, 20, 28, 0.78);
-  border: 1px solid rgba(120, 230, 255, 0.35);
-  box-shadow:
-    0 8px 28px rgba(0, 0, 0, 0.45),
-    0 0 18px rgba(120, 230, 255, 0.18);
-  backdrop-filter: blur(14px) saturate(160%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  background: var(--panel-strong);
+  border: 1px solid var(--hair-strong);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
   opacity: 0;
   transition: opacity 0.22s ease, transform 0.22s cubic-bezier(.16, 1, .3, 1);
   font-family: var(--font-mono);
@@ -1102,8 +1102,8 @@ kbd {
   transform: translateX(-50%) translateY(0);
 }
 #hand-gesture-hud .hgh-label {
-  color: #c8f1ff;
-  font-size: 11.5px;
+  color: var(--text);
+  font-size: 10.5px;
   font-weight: 500;
   letter-spacing: 0.22em;
   text-transform: uppercase;
