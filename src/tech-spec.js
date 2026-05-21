@@ -123,13 +123,13 @@ export const TECH_SPECS = [
           src:   "https://player.vimeo.com/video/1194203694?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
           label: "Final rendered landscape · in-scene",
           title: "Shot4B_MontyVersion_4.53_1",
-          // Vimeo reports the player at 75 % padding-top (4:3) but the
-          // underlying clip is actually 16:9 — the 75 % padding was the
-          // Vimeo template default rather than a real source size,
-          // which produced the black letterbox bars top + bottom that
-          // the user flagged. Forcing the iframe to 16:9 tiles the
-          // video edge-to-edge inside the card.
-          aspectRatio: "16 / 9",
+          // True ultrawide — Vimeo's own embed markup ships at
+          // `width="2048" height="452"`, which is ≈ 4.53 : 1 (about
+          // 36:8, beyond 21:9 cinemascope). Neither the 4:3 default
+          // nor 16:9 fits without bars. This explicit value is the
+          // first-paint hint; vimeo-fit.js then confirms / refines
+          // it once the Player API reports actual dimensions.
+          aspectRatio: "2048 / 452",
         },
         // Triptych: style reference (the overall stylized landscape look) /
         // original ground tile / AI-stylized result. The renderCard()
