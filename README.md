@@ -1,9 +1,9 @@
 # SplatGarden
 
-A 3D Gaussian Splatting web viewer for an asset-pipeline showcase. A Houdini / SpeedTree / Unreal Engine garden, captured at a multi-camera rig, reconstructed with COLMAP, trained in parallel by Postshot and Lichtfeld Studio, and rendered in the browser via Spark on Three.js + WebGL 2.
+A 3D Gaussian Splatting web viewer for an asset-pipeline showcase. A Houdini / Unreal Engine garden, captured at a multi-camera rig, reconstructed with COLMAP, trained in parallel by Postshot and Lichtfeld Studio, and rendered in the browser via Spark on Three.js + WebGL 2.
 
 ```
-SpeedTree · Houdini · Unreal Engine
+Houdini · Unreal Engine
                 │
                 ▼
        Multi-camera capture
@@ -38,18 +38,14 @@ On first load the viewer auto-plays the camera move and overlays a title sequenc
 |---|---|
 | `public/manifest.json` | List of splats to auto-load on startup. The first entry is the primary layer. |
 | `public/SplatGarden_PC.splat` | Default scene — gazebo / garden trained from the Unreal capture (3M splats). |
-| `public/SplatGarden_Mobile.splat` | ~45 %-smaller variant served to low-end phones (high-end phones + every iPad still get the PC asset). |
 | `public/Shot4B_GS-FX_Camera_V01.fbx` | Authored camera trajectory (24 fps, 600 frames). The viewer plays frames 100–500 (≈ 16.67 s) as the intro. |
 | `public/colmap/images.bin` | 990 training-camera poses reconstructed by COLMAP. |
 | `public/Skybox.hdr` | Equirectangular HDR environment (4.4 MB). |
 | `public/textures/landscape/` | Ground-tile pipeline frames — original / AI-stylized base colour / Houdini COPNET height / NormalMap-Online normal. Surfaced inside the Landscape asset hover card. |
 
-Splats are tracked through Git LFS (see `.gitattributes`). Asset selection at runtime:
+Splats are tracked through Git LFS (see `.gitattributes`). The CI workflow caches the LFS object store between runs so subsequent builds don't re-pay the ~96 MB bandwidth cost.
 
-- **Desktop** → `SplatGarden_PC.splat`
-- **iPad** (any model) → `SplatGarden_PC.splat` — iPad === PC by project direction
-- **High-end phone** (iPhone 12+ / Android flagship) → `SplatGarden_PC.splat`
-- **Everything else touch** → `SplatGarden_Mobile.splat` when present, else PC with a `maxSplats` cap
+Every device — desktop, iPad, phone — loads `SplatGarden_PC.splat` at full quality. The older Mobile-variant fork (and its `maxSplats` cap fallback) was removed: the download wasn't materially shorter on touch, but the detail loss was perceptible, so the optimization was net-negative.
 
 ---
 
@@ -252,7 +248,6 @@ MediaPipe HandLandmarker (`tasks-vision 0.10.35`).
 public/
   manifest.json                       # list of splats to auto-load on startup
   SplatGarden_PC.splat                # default 3DGS scene (3M splats)
-  SplatGarden_Mobile.splat            # ≈ 45 % smaller variant for low-end phones
   Shot4B_GS-FX_Camera_V01.fbx         # camera move (frames 100-500 played)
   Skybox.hdr
   colmap/
