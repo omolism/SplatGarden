@@ -4920,6 +4920,16 @@ body.mobile #mobile-bottombar { display: flex; }
   flex: 0 1 auto;
   min-height: 0;
   -webkit-overflow-scrolling: touch;
+  /* Tab-switch crossfade: BottomSheet.show() adds `.swapping` for
+     ~130 ms while it swaps innerHTML between tabs (Tour → Effects →
+     Info). Without this, the content hard-snaps and reads as
+     "panel cleared then refilled". With it, the sheet feels like a
+     single surface that morphs between tabs. */
+  transition: opacity 0.13s ease;
+  opacity: 1;
+}
+#mobile-sheet .ms-body.swapping {
+  opacity: 0;
 }
 
 /* ---- Reusable sheet primitives (Portfolite-y: softer borders, larger

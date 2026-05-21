@@ -163,9 +163,28 @@ class BottomSheet {
   }
 
   show(key, title, contentNode) {
+    const wasOpen = this.open;
     this.activeKey = key;
     this.titleEl.textContent = title;
-    this.bodyEl.replaceChildren(contentNode);
+
+    if (wasOpen) {
+      // Tab-switch crossfade — the sheet is already on-screen and the
+      // user just tapped a different bottom-bar slot (Tour → Effects →
+      // Info). Hard-swapping innerHTML reads as "panel cleared then
+      // refilled". Adding `.swapping` triggers a 130 ms opacity fade
+      // on `.ms-body`, we swap the content at the trough, then remove
+      // the class so the new content fades back up. End-to-end the
+      // sheet reads as a single continuous surface that morphs between
+      // tabs (Strategic analysis #8).
+      this.bodyEl.classList.add("swapping");
+      setTimeout(() => {
+        this.bodyEl.replaceChildren(contentNode);
+        this.bodyEl.classList.remove("swapping");
+      }, 130);
+    } else {
+      this.bodyEl.replaceChildren(contentNode);
+    }
+
     this.open = true;
     this.el.style.transform = "";
     this.el.classList.add("open");
