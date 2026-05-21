@@ -1029,12 +1029,11 @@ async function loadSplat() {
         size:  Math.max(0.015, radius * 0.0018),
         depth: Math.max(0.03,  radius * 0.0035),
       });
-      // Lift the frustum cluster +1 unit on world-Y so the icons
+      // Lift the frustum cluster +0.6 unit on world-Y so the icons
       // visibly orbit ABOVE the splat's gazebo silhouette rather than
-      // grazing it. Per user pick — the COLMAP poses originate from
-      // the capture rig's geometric centroid, which sits ~1 m too low
-      // for the showcase composition.
-      cameraFrustums.position.y += 1;
+      // grazing it. Per user pick — was +1 initially, nudged down 0.4
+      // because that read too high relative to the gazebo cornice.
+      cameraFrustums.position.y += 0.6;
       cameraFrustums.visible = false;
       // Training cameras live in a SEPARATE scene rendered AFTER the
       // composer (same pattern as gpgpu particles), so they're not bloomed,
