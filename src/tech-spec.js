@@ -12,6 +12,8 @@
 // entire panel slides in from the right.
 // ---------------------------------------------------------------------------
 
+import { initTickers } from "./ticker.js";
+
 export const TECH_SPECS = [
   // ============== Observer-first ordering ==============
   // Overview — one-screen anchor: what is this, in one sentence.
@@ -32,7 +34,12 @@ export const TECH_SPECS = [
       {
         name:      "SplatGarden",
         ref:       "Houdini × SpeedTree × Unreal · captured at a multi-cam rig · 3DGS-trained · rendered live in your browser",
-        output:    "≈ 3 M splats · 990 capture frames · 16.67 s authored flythrough",
+        // Embedded `.ticker` spans roll their values from 0 → target the
+        // first time the drawer opens (IntersectionObserver in
+        // ticker.js fires the animation when each span scrolls into
+        // view). Static text + commas remain literal so only the
+        // numbers animate.
+        output:    "≈ <span class=\"ticker\" data-target=\"3000000\" data-format=\"compact\">0</span> splats · <span class=\"ticker\" data-target=\"990\">0</span> capture frames · <span class=\"ticker\" data-target=\"16.67\" data-decimals=\"2\">0</span>s authored flythrough",
         note:      "A Unreal-authored garden, captured at a multi-camera rig, reconstructed with COLMAP, trained in parallel by Postshot and Lichtfeld Studio, optimised with Houdini GSOP, and rendered in real time via Spark on Three.js + WebGL 2. The breakdown below walks the pipeline backwards — first the rendering primitive you're looking at right now, then the assets that produced it, then the R&D layer that authored those assets.",
       },
     ],
@@ -441,7 +448,7 @@ export class TechSpec {
         </div>
         <footer class="ts-footer">
           <span class="ts-foot-k">Total</span>
-          <span class="ts-foot-v">${TECH_SPECS.reduce((n, s) => n + s.items.length, 0)} entries · ${TECH_SPECS.length} sections</span>
+          <span class="ts-foot-v"><span class="ticker" data-target="${TECH_SPECS.reduce((n, s) => n + s.items.length, 0)}">0</span> entries · <span class="ticker" data-target="${TECH_SPECS.length}">0</span> sections</span>
         </footer>
       </aside>
     `;
@@ -492,6 +499,14 @@ export class TechSpec {
   openOverlay() {
     this.open = true;
     this.el.classList.add("show");
+    // Fire the rolling-digit tickers in the Overview output line + footer
+    // counts. We pass observe:false (skip IntersectionObserver) because
+    // the drawer's slide-in transform + internal overflow scroll can
+    // confuse the observer's intersection geometry — the safer + more
+    // reliable behaviour here is "drawer opens → all tickers fire". Each
+    // ticker self-marks as active on first call so subsequent open/close
+    // cycles don't restart the animation.
+    initTickers(this.el, { observe: false });
     this.onOpenChange?.(true);
   }
   close() {
