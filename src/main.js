@@ -2408,15 +2408,6 @@ async function loadSplat() {
     return el;
   })();
   const handErrorEl = document.getElementById("hand-error");
-  // Retry button inside the error card — proxies straight to a fresh
-  // handToggle click so the user has a clear "try again" action without
-  // having to remember to re-click the toggle row above. Listener
-  // attached once at module init; the click() call below will run the
-  // same enable flow (loading → success / new error).
-  handErrorEl.querySelector(".he-retry")?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    handToggle.click();
-  });
 
   // Reuse the raycaster set up above. ndc scratch vector to avoid alloc.
   const ndc = new THREE.Vector2();

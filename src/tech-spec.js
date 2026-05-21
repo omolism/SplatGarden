@@ -169,12 +169,12 @@ export const TECH_SPECS = [
         output:    "Animated vine growth · flowers driven by Motion Graphics, stems by WPO",
         note:      "Vine growth render. The bloom heads use Unreal's Motion Graphics system for keyframed flowering; the stems run a custom material whose World Position Offset (WPO) drives the procedural growth path along the gazebo's framework.",
         embed: {
-          src:   "https://player.vimeo.com/video/1191203718?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
+          src:   "https://player.vimeo.com/video/1194222092?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
           label: "Vine growth · Unreal MG + WPO shader",
-          title: "Shot4B_Interaction",
-          // Source clip is taller than 16:9 — match Vimeo's reported
-          // 66.73% padding-top (height/width ≈ 0.6673, roughly 3:2).
-          aspectRatio: "1000 / 667",
+          title: "Shot4B_VineAnimation",
+          // New clip ships at 4:3 (Vimeo player markup uses padding-top:
+          // 75% — height/width = 0.75). Older 3:2 ratio replaced.
+          aspectRatio: "4 / 3",
         },
       },
       {

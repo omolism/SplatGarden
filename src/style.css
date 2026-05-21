@@ -1007,81 +1007,46 @@ kbd {
   width: 224px;
   box-shadow: var(--shadow-soft);
 }
-/* Hand Tracking toggle — reverted to the simpler bordered-pill
-   visual the user pointed to. Single rounded pill with the hand
-   icon + label + a small mono "ON / OFF / ERR" badge on the right.
-   No left-edge accent bar, no iOS-knob switch, no halo glow — the
-   older treatment had a clearer visual identity and matched the
-   rest of the side panels' typography weight. The COLLAPSE
-   FUNCTION is preserved separately on #hand-min-toggle below
-   (the chevron is hidden on .hand-head's default state and only
-   appears when the panel is collapsed, so the visual when
-   expanded matches the user's reference screenshot). */
+/* Hand Tracking toggle — restored to the 04ad9c1 snapshot per
+   user request. Single bordered pill with the hand icon + label +
+   a small mono "ON / OFF / ERR" badge on the right. No "snap to
+   white" active state, no iOS knob, no halo glow — the older
+   treatment had a clearer visual identity. The .hand-head chevron
+   header above this toggle is visible by default (collapse rule
+   removed) so the user can fold the panel back down. */
 #hand-toggle {
   display: flex;
   align-items: center;
   gap: 10px;
   background: transparent;
   border: 1px solid var(--hair-strong);
-  border-radius: 10px;
-  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
   cursor: pointer;
   color: var(--text);
   font-family: var(--font-ui);
   font-size: 12px;
   font-weight: 500;
   letter-spacing: 0.01em;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.12s, border-color 0.12s;
 }
-#hand-toggle:hover {
-  background: var(--hover-strong);
-  border-color: rgba(255, 255, 255, 0.22);
-}
-#hand-toggle .icon {
-  font-size: 14px;
-  filter: grayscale(1) brightness(2);
-}
-#hand-toggle .label {
-  flex: 1;
-  text-align: left;
-}
+#hand-toggle:hover { background: var(--hover-strong); border-color: rgba(255, 255, 255, 0.22); }
+#hand-toggle .icon { font-size: 14px; filter: grayscale(1) brightness(2); }
+#hand-toggle .label { flex: 1; text-align: left; }
 #hand-toggle .state {
   font-family: var(--font-mono);
   font-size: 9.5px;
-  letter-spacing: 0.10em;
+  letter-spacing: 0.08em;
   color: var(--text-dim);
-  padding: 3px 8px;
-  border-radius: 4px;
+  padding: 2px 7px;
+  border-radius: 3px;
   background: rgba(255, 255, 255, 0.05);
-  transition: color 0.15s ease, background 0.15s ease;
 }
-#hand-toggle.active {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.20);
-}
-#hand-toggle.active .state {
-  color: #0e1014;
-  background: #fff;
-}
-#hand-toggle.loading .state {
-  color: var(--text-mid);
-}
-#hand-toggle.error {
-  border-color: rgba(255, 100, 100, 0.30);
-}
-#hand-toggle.error .state {
-  color: #ff8a8a;
-  background: rgba(255, 100, 100, 0.10);
-}
-/* Collapse chevron — kept FUNCTIONAL but visually subtle. Hidden
-   when the panel is expanded (matches the user's reference: the
-   toggle pill IS the visible header). Only reappears when the
-   panel is in .hand-minimized state so the user can restore it.
-   Same chevron button (#hand-min-toggle) — driven by setupCollap-
-   siblePanel() in main.js. */
-#hand-panel:not(.hand-minimized) .hand-head {
-  display: none;
-}
+#hand-toggle.active        { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.20); }
+#hand-toggle.active .state { color: var(--text); background: rgba(255, 255, 255, 0.12); }
+#hand-toggle.loading .state{ color: var(--text-mid); }
+#hand-toggle.error         { border-color: rgba(255, 100, 100, 0.30); }
+#hand-toggle.error .state  { color: #ff8a8a; background: rgba(255, 100, 100, 0.10); }
 
 #hand-preview-wrap {
   display: none;
@@ -1119,102 +1084,38 @@ kbd {
   letter-spacing: 0.04em;
 }
 
-/* Hand tracking error card — refined glass card. Replaces the old
-   flat red-tinted box with: a warning icon mark, a quietly-coloured
-   title (coral instead of pure red), a muted body, and a clear
-   primary Retry button next to a tertiary "How to enable" link.
-   The icon + title sit in a header row, the body wraps naturally
-   below, and actions are pushed to the footer so the structure
-   reads as a proper alert dialog rather than a stack of red lines. */
+/* Hand tracking error card — restored to the 04ad9c1 snapshot per
+   user request. Simple red-tinted box, coral title, muted hint,
+   small dashed-underline docs link. No warning icon, no Retry pill,
+   no flex-row action footer. */
 #hand-error {
   display: none;
-  position: relative;
-  background:
-    radial-gradient(120% 90% at 100% 0%, rgba(255, 120, 120, 0.10), transparent 70%),
-    rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 120, 120, 0.18);
-  border-radius: 14px;
-  padding: 12px 14px 12px 44px;   /* left padding leaves room for icon */
-  font-size: 11.5px;
+  background: rgba(255, 100, 100, 0.06);
+  border: 1px solid rgba(255, 100, 100, 0.20);
+  border-radius: var(--radius-sm);
+  padding: 9px 11px;
+  font-size: 11px;
   line-height: 1.55;
   color: var(--text);
-  box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.04) inset,
-    0 6px 18px rgba(0, 0, 0, 0.22);
 }
 #hand-error:not([hidden]) { display: block; }
-/* Triangle warning glyph — absolute-positioned in the left gutter so
-   the title + body align vertically without needing flex math.
-   Coral fill keeps with the soft red palette of the card. */
-#hand-error .he-icon {
-  position: absolute;
-  left: 12px;
-  top: 12px;
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #ffb0b0;
-  background: rgba(255, 120, 120, 0.10);
-  border: 1px solid rgba(255, 120, 120, 0.20);
-}
-#hand-error .he-icon svg { width: 13px; height: 13px; display: block; }
 #hand-error .title {
-  color: #ffb8b8;
+  color: #ffb0b0;
   font-weight: 500;
   margin-bottom: 4px;
   letter-spacing: 0.01em;
-  font-size: 12.5px;
 }
-#hand-error .hint {
-  color: rgba(255, 255, 255, 0.65);
-  font-size: 11px;
-  line-height: 1.5;
-}
-/* Action footer — Retry primary + How-to link tertiary, separated
-   by automatic flex spacing so the link sits on the right edge. */
-#hand-error .he-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 12px;
-}
-#hand-error .he-retry {
-  flex: 0 0 auto;
-  background: #fff;
-  color: #0e1014;
-  border: 0;
-  border-radius: 999px;
-  padding: 7px 16px;
-  font-family: var(--font-ui);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.20) inset,
-              0 4px 12px rgba(255, 255, 255, 0.12);
-}
-#hand-error .he-retry:hover {
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.20) inset,
-              0 6px 16px rgba(255, 255, 255, 0.18);
-}
-#hand-error .he-retry:active { transform: scale(0.97); }
+#hand-error .hint { color: var(--text-mid); }
 #hand-error .docs {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  color: rgba(255, 255, 255, 0.58);
+  display: inline-block;
+  margin-top: 6px;
+  color: var(--text);
   text-decoration: none;
-  font-size: 10.5px;
-  letter-spacing: 0.02em;
-  transition: color 0.15s ease;
-  border-bottom: 0;
+  font-size: 10px;
+  border-bottom: 1px dashed var(--hair-strong);
+  padding-bottom: 1px;
 }
-#hand-error .docs:hover { color: var(--text); }
+#hand-error .docs:hover { color: var(--text); border-color: var(--text); }
 
 /* ============ Hand virtual cursor ============ */
 /* Drag-and-drop splat upload overlay */
