@@ -2148,30 +2148,9 @@ kbd {
   .cinematic-flourish .cf-credit { font-size: 10px; }
 }
 
-/* Refik-Anadol-inspired particle reveal layer — BeautyShot pixels
-   downsampled into ~6000 coloured dots that fly in from the screen
-   edges and settle into the image, then drift gently while the splat
-   downloads. Sits behind the splash text via z-index 0 + the text
-   layers being pulled to z-index 1 below. Driven by src/
-   loading-splash-fx.js; mounted by main.js right before loadSplat()
-   so the wait is filled with on-theme motion ("splats ARE point
-   clouds — here's a point-cloud version of the project hero").
-   `mix-blend-mode: screen` keeps the dots bright over the deep-black
-   splash background without baking them on top of the title text. */
-#loading .loading-fx-canvas {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  mix-blend-mode: screen;
-  opacity: 0.95;
-}
-/* Pull every splash content layer above z-index 0 so the canvas stays
-   behind without negative z-index tricks (which sometimes drop
-   elements below the page background depending on stacking context). */
-#loading > .ld-corner,
-#loading > .ld-stage,
-#loading > .ld-foot { position: relative; z-index: 1; }
+/* (Loading-splash particle canvas + its z-index pinning removed —
+   see commit history. Splash now relies on the static editorial
+   layout defined in index.html with no overlay canvas.) */
 
 /* Corner annotations */
 #loading .ld-corner {

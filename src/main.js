@@ -24,7 +24,6 @@ import { Credits } from "./credits.js";
 import { IntroOverlay } from "./intro-overlay.js";
 import { OnboardingPointers } from "./onboarding-pointers.js";
 import { MobileNav } from "./mobile-nav.js";
-import { LoadingSplashFx } from "./loading-splash-fx.js";
 import { HandLandmarksOverlay } from "./hand-landmarks-overlay.js";
 import { CinematicFlourish }   from "./cinematic-flourish.js";
 import { MobileUI } from "./mobile-ui.js";
@@ -466,19 +465,10 @@ window.addEventListener("resize", onResize);
 function setLoading(msg) {
   if (loadingText) loadingText.textContent = msg;
 }
-// ----- Loading-splash particle reveal --------------------------------------
-// Mount the Refik-inspired particle FX BEFORE we kick off the splat
-// download so the first frames the user sees aren't a static splash —
-// BeautyShot.png pixels fly in from screen edges and settle into the
-// hero image, then drift gently while the asset transfers in the
-// background. Self-cleans on hideLoading() via fx.exit().
-let _loadingFx = null;
-if (loadingEl) {
-  _loadingFx = new LoadingSplashFx({
-    mountEl:  loadingEl,
-    imageUrl: `${BASE}BeautyShot.png`,
-  });
-}
+// (Loading-splash particle FX removed — the Canvas2D implementation
+//  didn't reach the bar the user wanted. Splash now reverts to the
+//  static editorial layout in index.html until a better motion
+//  treatment is shipped.)
 
 // End-of-cinematic title card. Mounted once, played each time the FBX
 // camera-move mixer emits "finished" (Replay Intro included). Builds
@@ -490,12 +480,6 @@ if (loadingEl) {
 const _cinematicFlourish = new CinematicFlourish({ mountEl: document.body });
 
 function hideLoading() {
-  // Kick off the particle exit pulse BEFORE the splash fades out — the
-  // outward burst takes ~850 ms which roughly matches the splash's own
-  // 500 ms opacity transition; the canvas finishes a fraction later
-  // and removes itself, so the splat's first frame doesn't have to
-  // composite over a residual particle layer.
-  _loadingFx?.exit();
   loadingEl?.classList.add("hidden");
   // Trigger the choreographed entrance — staggered fade-in for the
   // major UI surfaces (lil-gui, sidebar, toolbar, hotspots). CSS in
