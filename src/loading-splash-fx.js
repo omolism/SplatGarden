@@ -36,6 +36,11 @@ const MOUSE_RADIUS    = 140;  // particles within this many px feel the cursor
 const MOUSE_FORCE     = 4200; // peak repulsion in px²/s²; tuned so a brisk swipe parts the cloud cleanly
 const MOUSE_DAMP      = 6.0;  // velocity damping per second when no force is applied (springs back to rest)
 const MOUSE_SPRING    = 18.0; // return-to-target spring stiffness (per second²)
+// ----- Connection lines (installation / data-art aesthetic) -----
+const LINK_DIST      = 28;   // max px between particle centres to draw a connecting thread
+const LINK_DIST_SQ   = LINK_DIST * LINK_DIST;
+const LINK_GRID_CELL = LINK_DIST;  // cell size equals link radius so each particle only checks its own + 8 neighbour cells
+const LINK_MAX_ALPHA = 0.16; // peak alpha for the closest pairs; fades linearly to 0 at LINK_DIST
 
 export class LoadingSplashFx {
   constructor({ mountEl, imageUrl, cols = COLS_DEFAULT }) {
@@ -193,12 +198,13 @@ export class LoadingSplashFx {
     const dpr = this._dpr;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    this.ctx.clearRect(0, 0, vw, vh);
+    const ctx = this.ctx;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, vw, vh);
     // Additive blend so overlapping pixels brighten — gives the cloud a
     // luminous feel matching Anadol's particle pieces. We lose true
     // colour fidelity at the cost of mood; acceptable for a loading FX.
-    this.ctx.globalCompositeOperation = "lighter";
+    ctx.globalCompositeOperation = "lighter";
 
     const tNow   = performance.now();
     const tLocal = tNow - this._t0;
@@ -213,11 +219,27 @@ export class LoadingSplashFx {
 
     // Mouse pose for this frame — gated by mouseLive so a cursor that
     // has left the document doesn't apply phantom force at -9999.
-    const mLive = this._mouseLive;
+    const mLive = this._mouseLive && !this._exiting;
     const mx    = this._mx;
     const my    = this._my;
     const mR    = MOUSE_RADIUS;
     const mR2   = mR * mR;
+
+    // -------- Pass 1 · physics + spatial grid build --------
+    // We need to know every particle's draw position BEFORE drawing
+    // any lines, so we run physics in one pass, stash (drawX, drawY,
+    // drawA) on each particle, AND bucket each into a spatial grid
+    // for cheap O(N) line lookups below.
+    const gridCols = Math.max(1, Math.ceil(vw / LINK_GRID_CELL));
+    const gridRows = Math.max(1, Math.ceil(vh / LINK_GRID_CELL));
+    // Reuse the grid array across frames; clear in-place (cheaper than
+    // allocating a new array of ~7000 cells every frame).
+    if (!this._grid || this._grid.length !== gridCols * gridRows) {
+      this._grid = new Array(gridCols * gridRows);
+      this._gridCols = gridCols;
+    }
+    const grid = this._grid;
+    for (let i = 0; i < grid.length; i++) grid[i] = null;
 
     for (const p of this.particles) {
       // ---- Position --------------------------------------------------
@@ -294,11 +316,107 @@ export class LoadingSplashFx {
         alpha = p.a * (1 - exitU);
       }
 
-      if (alpha <= 0.01) continue;
-      this.ctx.fillStyle = `rgba(${p.r},${p.g},${p.b},${alpha.toFixed(3)})`;
-      this.ctx.beginPath();
-      this.ctx.arc(x, y, DOT_RADIUS, 0, Math.PI * 2);
-      this.ctx.fill();
+      // Stash draw state on the particle for the next two passes.
+      p._dx = x;
+      p._dy = y;
+      p._da = alpha;
+
+      // Bucket into spatial grid for line lookup. Only invisible /
+      // out-of-viewport particles can skip insertion.
+      if (alpha > 0.05 && x >= 0 && x < vw && y >= 0 && y < vh) {
+        const gx = Math.min(gridCols - 1, (x / LINK_GRID_CELL) | 0);
+        const gy = Math.min(gridRows - 1, (y / LINK_GRID_CELL) | 0);
+        const key = gy * gridCols + gx;
+        if (!grid[key]) grid[key] = [];
+        grid[key].push(p);
+      }
+    }
+
+    // -------- Pass 2 · connection lines (cursor-localised) --------
+    // Only draw lines for particles within a generous radius of the
+    // cursor — the cursor becomes a "magnifying glass" that reveals
+    // the cloud's underlying graph structure. Without this, drawing
+    // N×k lines per frame (k ≈ 8 neighbours) for 10k particles tanks
+    // the frame budget; with it we cap line count at ≈ a few hundred
+    // and the visual reads as "the user is pulling structure out of
+    // the data" — a stronger interactive metaphor than always-on
+    // mesh anyway. When the cursor is off-screen the cloud is just
+    // dots; on hover, threads light up.
+    if (mLive) {
+      // Lines mode is non-additive so overlapping lines don't blow out
+      // to white — keep the cloud's network reading as gentle threads.
+      ctx.globalCompositeOperation = "source-over";
+      ctx.lineWidth = 0.55;
+      // Search the grid cells covering a 2× cursor radius (so we
+      // catch line-pairs whose midpoint is within the cursor zone).
+      const searchR  = mR;
+      const gxLo = Math.max(0,           ((mx - searchR) / LINK_GRID_CELL) | 0);
+      const gxHi = Math.min(gridCols - 1, ((mx + searchR) / LINK_GRID_CELL) | 0);
+      const gyLo = Math.max(0,           ((my - searchR) / LINK_GRID_CELL) | 0);
+      const gyHi = Math.min(gridRows - 1, ((my + searchR) / LINK_GRID_CELL) | 0);
+      const searchR2 = searchR * searchR;
+      // Collect the unique set of particles to consider as "p1" — only
+      // those within the cursor radius. Then for each p1 we check
+      // its own cell + 4 forward neighbours (right, down-left, down,
+      // down-right) to avoid drawing each pair twice.
+      const NB_OFFSETS = [[0, 0], [1, 0], [-1, 1], [0, 1], [1, 1]];
+      ctx.beginPath();
+      let pairCount = 0;
+      for (let gy = gyLo; gy <= gyHi; gy++) {
+        for (let gx = gxLo; gx <= gxHi; gx++) {
+          const cell = grid[gy * gridCols + gx];
+          if (!cell) continue;
+          for (let i = 0; i < cell.length; i++) {
+            const p1 = cell[i];
+            // Cursor-distance gate (squared).
+            const cdx = p1._dx - mx, cdy = p1._dy - my;
+            if (cdx * cdx + cdy * cdy > searchR2) continue;
+            for (let nb = 0; nb < NB_OFFSETS.length; nb++) {
+              const dgx = NB_OFFSETS[nb][0];
+              const dgy = NB_OFFSETS[nb][1];
+              const nx  = gx + dgx;
+              const ny  = gy + dgy;
+              if (nx < 0 || nx >= gridCols || ny < 0 || ny >= gridRows) continue;
+              const nbCell = grid[ny * gridCols + nx];
+              if (!nbCell) continue;
+              // For same-cell, only check j > i (avoid double-draw).
+              const jStart = (dgx === 0 && dgy === 0) ? i + 1 : 0;
+              for (let j = jStart; j < nbCell.length; j++) {
+                const p2 = nbCell[j];
+                const dx = p1._dx - p2._dx;
+                const dy = p1._dy - p2._dy;
+                const d2 = dx * dx + dy * dy;
+                if (d2 > LINK_DIST_SQ) continue;
+                // Single-path batched stroke — collect all line segments
+                // into one beginPath/stroke call. Loses per-line alpha
+                // gradient but the visual is dominated by the dot
+                // density + the cursor proximity gate anyway.
+                ctx.moveTo(p1._dx, p1._dy);
+                ctx.lineTo(p2._dx, p2._dy);
+                pairCount++;
+              }
+            }
+          }
+        }
+      }
+      // Stroke once for the whole batch — orders of magnitude cheaper
+      // than per-line stroke calls. Alpha tied loosely to how many
+      // lines we drew so a dense local cluster doesn't read as a
+      // bright blob.
+      const baseAlpha = LINK_MAX_ALPHA;
+      ctx.strokeStyle = `rgba(255,255,255,${baseAlpha.toFixed(3)})`;
+      ctx.stroke();
+      // Restore additive blend for the dot pass.
+      ctx.globalCompositeOperation = "lighter";
+    }
+
+    // -------- Pass 3 · dots --------
+    for (const p of this.particles) {
+      if (p._da <= 0.01) continue;
+      ctx.fillStyle = `rgba(${p.r},${p.g},${p.b},${p._da.toFixed(3)})`;
+      ctx.beginPath();
+      ctx.arc(p._dx, p._dy, DOT_RADIUS, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     // Exit complete — clean up.
