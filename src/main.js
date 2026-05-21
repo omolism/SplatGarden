@@ -22,6 +22,7 @@ import { KeyHints } from "./key-hints.js";
 import { ViewpointTuner } from "./viewpoint-tuner.js";
 import { Credits } from "./credits.js";
 import { IntroOverlay } from "./intro-overlay.js";
+import { IntroRecorder } from "./intro-recorder.js";
 import { OnboardingPointers } from "./onboarding-pointers.js";
 import { MobileNav } from "./mobile-nav.js";
 import { HandLandmarksOverlay } from "./hand-landmarks-overlay.js";
@@ -597,6 +598,12 @@ _aboutBtn?.addEventListener("click", () => {
 });
 window.__credits = credits;
 const introOverlay = new IntroOverlay({ mountEl: document.body });
+// IntroRecorder composites the WebGL canvas + a 2D replica of the intro
+// overlay text every frame, captures the stream, and writes a .webm.
+// Driven from __camMoveTick (state) and from the Export Intro Video button
+// in the Camera Movement folder (lifecycle).
+const introRecorder = new IntroRecorder({ canvas });
+window.__introRecorder = introRecorder;
 window.__introOverlay = introOverlay;
 const onboardingPointers = new OnboardingPointers({ mountEl: document.body });
 window.__onboardingPointers = onboardingPointers;
@@ -2244,7 +2251,63 @@ async function loadSplat() {
     statusEl.textContent = "Camera move stopped";
   }
 
-  const camMoveParams = { play: () => playPauseCameraMove(), stop: () => stopCameraMove() };
+  // Export Intro Video — arm the title overlay, start MediaRecorder, play
+  // the cinematic, then stop + download once the lens-outro fade completes.
+  // Holds the user's __autoPlayedIntro state so manual play sessions before
+  // / after the export are not affected.
+  async function exportIntroVideo() {
+    if (!IntroRecorder.isSupported()) {
+      statusEl.textContent = "Video export not supported in this browser";
+      return;
+    }
+    if (introRecorder.recording) return;
+    if (!camMixer) {
+      statusEl.textContent = "Loading camera move…";
+      await loadCameraMove();
+      if (!camMixer) return;
+    }
+    if (camMoveState !== "idle") stopCameraMove();
+
+    const restoreAuto = window.__autoPlayedIntro;
+    window.__autoPlayedIntro = true;
+    introOverlay.show();
+
+    introRecorder.start();
+    statusEl.textContent = "Recording intro…";
+    exportCtrl.name("● Recording intro…");
+    exportCtrl.disable?.();
+    playCtrl.disable?.();
+    stopCtrl.disable?.();
+
+    const onFinish = () => {
+      camMixer.removeEventListener("finished", onFinish);
+      // Hold a tick past the lens-outro fade so the final frames record
+      // the gentle settle-to-neutral, then write the file.
+      setTimeout(async () => {
+        const blob = await introRecorder.stop();
+        if (blob) {
+          introRecorder.download(blob);
+          statusEl.textContent = "Intro video saved";
+        } else {
+          statusEl.textContent = "Recording failed";
+        }
+        window.__autoPlayedIntro = restoreAuto;
+        exportCtrl.name("⬇ Export Intro Video");
+        exportCtrl.enable?.();
+        playCtrl.enable?.();
+        stopCtrl.enable?.();
+      }, INTRO_LENS_FADE_MS + 250);
+    };
+    camMixer.addEventListener("finished", onFinish);
+
+    playPauseCameraMove();
+  }
+
+  const camMoveParams = {
+    play:   () => playPauseCameraMove(),
+    stop:   () => stopCameraMove(),
+    export: () => exportIntroVideo(),
+  };
   // Expose so the mobile bottom-bar's Camera sheet can drive playback
   // without having to reach into this closure.
   window.__camMovePlayPause = () => playPauseCameraMove();
@@ -2253,6 +2316,8 @@ async function loadSplat() {
   playCtrl.domElement.title = "Play / pause the pre-authored camera move (Shot4B_GS-FX_Camera_V01.fbx).";
   const stopCtrl = fOverlay.add(camMoveParams, "stop").name("■ Stop Camera Move");
   stopCtrl.domElement.title = "Reset the camera move to the beginning and return control to the user.";
+  const exportCtrl = fOverlay.add(camMoveParams, "export").name("⬇ Export Intro Video");
+  exportCtrl.domElement.title = "Record the full intro cinematic (camera move + overlay) and save as .webm.";
   // Replay Intro — lives here (not in Tech Spec) because it's a
   // camera-move action conceptually: re-fire the intro cinematic,
   // including the title-sequence overlay + onboarding pointers.
@@ -2323,8 +2388,12 @@ async function loadSplat() {
     // Drive the intro-title overlay only when the first-visit auto-play
     // armed it; manual user-triggered playback skips the title sequence
     // so it doesn't get in the way.
+    const tNorm = dur > 0 ? t / dur : 0;
+    introRecorder.setIntroState(
+      tNorm,
+      !!(window.__autoPlayedIntro && camMoveState === "playing"),
+    );
     if (window.__autoPlayedIntro && introOverlay) {
-      const tNorm = dur > 0 ? t / dur : 0;
       introOverlay.update(tNorm, camMoveState === "playing");
       // Training Cameras fade — coincide with the POSE phase but with
       // soft edges so the iconography appears as the CAPTURE line is
