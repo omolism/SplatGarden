@@ -172,9 +172,12 @@ export const TECH_SPECS = [
           src:   "https://player.vimeo.com/video/1194222092?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
           label: "Vine growth · Unreal MG + WPO shader",
           title: "Shot4B_VineAnimation",
-          // New clip ships at 4:3 (Vimeo player markup uses padding-top:
-          // 75% — height/width = 0.75). Older 3:2 ratio replaced.
-          aspectRatio: "4 / 3",
+          // The Vimeo embed markup ships at padding-top:75% (4:3) but
+          // the underlying clip is rendered at 16:9 — same Vimeo
+          // template-default trap the Landscape clip hit. Forcing the
+          // iframe to 16:9 makes the gazebo content tile edge-to-edge
+          // inside the card with no top/bottom black letterbox bars.
+          aspectRatio: "16 / 9",
         },
       },
       {

@@ -81,7 +81,7 @@ Eye-icon visibility toggles, subform pills, and inline size sliders for the thre
 
 A `⤓ Use My Own` button in the panel header opens a drop overlay that replaces the primary splat. Tapping any subform pill (Circle / Sphere / Point) **auto-enables that layer** if it was off — one-tap interaction rather than the old "flip toggle, then pick subform" two-step. Manually toggling a layer also pops a museum-style **annotation card** with the layer's USD schema and a short plain-English description (see *USD layer annotation card* under Asset hotspots).
 
-On phones the Studio panel reorganises into an **AR-compact grid**: each layer becomes a single horizontal row (`[toggle] · Name · [right-aligned subform pills]`) with the size slider on a second row spanning the full panel width — so all three sliders share the same start + end X, satisfying the "三个滑动条都要对齐" alignment rule.
+On phones the Studio panel reorganises into an **AR-compact grid**: each layer becomes a single horizontal row (`[toggle] · Name · [right-aligned subform pills]`) with the size slider on a second row spanning the full panel width — so all three sliders share the same start + end X for a single common alignment lane across rows.
 
 ### Scene panel (top-left)
 Multi-splat layer list. Every `.splat` in `public/manifest.json` shows up as a row with an eye-icon toggle and splat count. The first loaded splat is the primary — effects, voxel, quad, and annotation bindings stay attached to it. Drag any `.splat / .ply / .spz / .ksplat` onto the viewport, or use `+ Add`, to append a secondary layer. Header `−` collapses the list, leaving the title visible.
