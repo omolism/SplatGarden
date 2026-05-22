@@ -99,18 +99,23 @@ export class About {
             `).join("")}
           </ul>
         </section>
-
-        <section class="ab-cta-sec">
-          <button class="ab-cta" data-act="open-tech-spec" type="button">
-            <span class="ab-cta-label">Read the full Tech Spec</span>
-            <span class="ab-cta-arrow" aria-hidden="true">→</span>
-          </button>
-          <button class="ab-cta" data-act="open-credits" type="button">
-            <span class="ab-cta-label">Team &middot; Credits &middot; Software</span>
-            <span class="ab-cta-arrow" aria-hidden="true">→</span>
-          </button>
-        </section>
       </div>
+
+      <!-- CTAs live OUTSIDE .ab-body so they pin to the bottom of the
+           panel via flex layout. On short viewports the scrollable body
+           may not show everything at once, but the two action buttons
+           stay visible without scrolling — they're the only path
+           forward from this surface. -->
+      <section class="ab-cta-sec">
+        <button class="ab-cta" data-act="open-tech-spec" type="button">
+          <span class="ab-cta-label">Read the full Tech Spec</span>
+          <span class="ab-cta-arrow" aria-hidden="true">→</span>
+        </button>
+        <button class="ab-cta" data-act="open-credits" type="button">
+          <span class="ab-cta-label">Team &middot; Credits &middot; Software</span>
+          <span class="ab-cta-arrow" aria-hidden="true">→</span>
+        </button>
+      </section>
     `;
     mountEl.appendChild(this.el);
 

@@ -6775,10 +6775,19 @@ body:has(#about-panel.show) #mobile-bottombar {
 }
 
 #about-panel .ab-cta-sec {
+  /* Now sits OUTSIDE .ab-body so it pins to the bottom of the flex
+     column panel — content above scrolls, CTAs always visible. The
+     top border replaces the section divider that used to live on
+     .ab-pillars-sec's bottom edge; opaque-ish background ensures the
+     scroll content underneath doesn't bleed through if a scrollbar
+     overlay paints behind it. */
   padding: 14px 22px 18px;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--hair);
+  background: var(--panel-strong);
 }
 #about-panel .ab-cta {
   display: flex;
@@ -6839,10 +6848,18 @@ body:has(#about-panel.show) #mobile-bottombar {
     bottom: auto;
     width:  auto;
     transform: translate(0, 0) scale(0.96);
-    max-height: calc(100dvh
-      - 58px - 92px
-      - env(safe-area-inset-top, 0px)
-      - env(safe-area-inset-bottom, 0px));
+    /* Cap to whichever is SMALLER: the geometric calc that clears the
+       bottombar, OR ~62dvh. The 62dvh cap is the one that matters on
+       short phones (iPhone SE / 13 Mini class) — without it the panel
+       was filling ~74 % of the viewport because content overflowed the
+       calc max-height and pinned the panel at its ceiling. With the
+       cap, the panel feels like a half-screen sheet across all phone
+       sizes; content that doesn't fit scrolls in .ab-body while the
+       CTAs stay sticky at the bottom (see .ab-cta-sec rules above). */
+    max-height: min(
+      calc(100dvh - 58px - 92px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)),
+      62dvh
+    );
   }
   #about-panel.show {
     transform: translate(0, 0) scale(1);
