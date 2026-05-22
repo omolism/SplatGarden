@@ -119,17 +119,23 @@ export class About {
 
     this.el.querySelector('[data-act="open-tech-spec"]')
       ?.addEventListener("click", () => {
-        // Don't close About — open Tech Spec on top of it so the user
-        // can pop back via Esc / Tech Spec close button without losing
-        // the project context.
+        // CLOSE About before opening Tech Spec — the original stacked-
+        // modal idea (About stays open behind Tech Spec) read as two
+        // competing panels with no clear focus, especially on phone
+        // portrait where the new top-anchored About + centred Tech Spec
+        // visibly overlapped. Single panel at a time = clear focus +
+        // simple back-out (X returns to the scene; trigger re-opens
+        // About in one tap).
+        this.close();
         if (typeof this.onOpenTechSpec === "function") this.onOpenTechSpec();
         else if (window.__techSpec?.openOverlay) window.__techSpec.openOverlay();
       });
 
     this.el.querySelector('[data-act="open-credits"]')
       ?.addEventListener("click", () => {
-        // Same pattern as Tech Spec — open Credits on top of About so
-        // the navigation tree stays legible (About → Credits → back).
+        // Same as Tech Spec — close About, then open Credits. No more
+        // stacked-modal overlap visible in the screenshots.
+        this.close();
         if (typeof this.onOpenCredits === "function") this.onOpenCredits();
         else if (window.__credits?.setOpen) window.__credits.setOpen(true);
       });
