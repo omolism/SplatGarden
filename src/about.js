@@ -36,12 +36,11 @@ const PILLARS = [
   },
 ];
 
-const GITHUB_URL = "https://github.com/omolism/SplatGarden";
-
 export class About {
-  constructor({ mountEl = document.body, onOpenTechSpec = null } = {}) {
+  constructor({ mountEl = document.body, onOpenTechSpec = null, onOpenCredits = null } = {}) {
     this.open = false;
     this.onOpenTechSpec = onOpenTechSpec;
+    this.onOpenCredits  = onOpenCredits;
 
     // --- Trigger button (top-centre floating pill) ---
     this.btn = document.createElement("button");
@@ -106,10 +105,10 @@ export class About {
             <span class="ab-cta-label">Read the full Tech Spec</span>
             <span class="ab-cta-arrow" aria-hidden="true">→</span>
           </button>
-          <a class="ab-cta ab-cta-ext" href="${GITHUB_URL}" target="_blank" rel="noopener noreferrer">
-            <span class="ab-cta-label">View source on GitHub</span>
-            <span class="ab-cta-arrow" aria-hidden="true">↗</span>
-          </a>
+          <button class="ab-cta" data-act="open-credits" type="button">
+            <span class="ab-cta-label">Team &middot; Credits &middot; Software</span>
+            <span class="ab-cta-arrow" aria-hidden="true">→</span>
+          </button>
         </section>
       </div>
     `;
@@ -125,6 +124,14 @@ export class About {
         // the project context.
         if (typeof this.onOpenTechSpec === "function") this.onOpenTechSpec();
         else if (window.__techSpec?.openOverlay) window.__techSpec.openOverlay();
+      });
+
+    this.el.querySelector('[data-act="open-credits"]')
+      ?.addEventListener("click", () => {
+        // Same pattern as Tech Spec — open Credits on top of About so
+        // the navigation tree stays legible (About → Credits → back).
+        if (typeof this.onOpenCredits === "function") this.onOpenCredits();
+        else if (window.__credits?.setOpen) window.__credits.setOpen(true);
       });
 
     // Esc closes; outside-tap closes. Both run in capture so they fire

@@ -604,6 +604,7 @@ window.__credits = credits;
 const about = new About({
   mountEl: document.body,
   onOpenTechSpec: () => window.__techSpec?.openOverlay?.(),
+  onOpenCredits:  () => credits?.setOpen?.(true),
 });
 window.__about = about;
 const introOverlay = new IntroOverlay({ mountEl: document.body });
