@@ -1454,11 +1454,23 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   background: transparent;
   border: 1px solid var(--hair-strong);
   border-radius: 4px;
-  width: 26px;
-  height: 26px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  /* Explicit padding: 0 overrides the user-agent default (`1px 6px`
+     on <button>) — that default crashed the box width with
+     border-box sizing and forced the × off-centre. */
+  padding: 0;
   color: var(--text-mid);
-  font-size: 16px;
+  font-size: 18px;
+  font-family: var(--font-ui);
   line-height: 1;
+  /* flex centring so the × glyph (whose font-metric centre is offset)
+     sits geometrically centred in the box. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: background 0.12s, border-color 0.12s, color 0.12s;
 }
@@ -3573,20 +3585,30 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   position: absolute;
   top: 10px;
   right: 10px;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   background: transparent;
   border: 1px solid var(--hair-strong);
   border-radius: 4px;
+  box-sizing: border-box;
   color: var(--text-mid);
-  font-size: 15px;
+  font-size: 18px;
+  font-family: var(--font-ui);
   line-height: 1;
+  /* Explicit padding:0 to override the UA <button> default that would
+     otherwise squash the box width under border-box sizing. */
+  padding: 0;
   cursor: pointer;
+  /* Hidden by default — the `.pinned .ah-close` rule below flips
+     display:inline-flex when the card is pinned. flex centring keeps
+     the × glyph geometrically centred in the box. */
   display: none;
+  align-items: center;
+  justify-content: center;
   z-index: 1;
   transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
-#asset-hover-card.pinned .ah-close { display: block; }
+#asset-hover-card.pinned .ah-close { display: inline-flex; }
 .ah-card .ah-close:hover {
   background: var(--hover-strong);
   border-color: rgba(255, 255, 255, 0.22);
@@ -3916,14 +3938,26 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   color: var(--text);
 }
 #credits .cr-close {
+  /* Fixed 28x28 box + flex centring + explicit padding:0 (overrides the
+     UA <button> default `1px 6px` that was crashing the box width).
+     flex-shrink: 0 stops the flex parent (.cr-head) from squashing
+     the button — without it the button shrank to ~14px wide. */
   background: transparent;
   border: 0;
+  box-sizing: border-box;
+  flex-shrink: 0;
   color: var(--text-dim);
   font-size: 20px;
+  font-family: var(--font-ui);
   line-height: 1;
   cursor: pointer;
-  padding: 4px 8px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: background 0.15s ease, color 0.15s ease;
 }
 #credits .cr-close:hover { color: var(--text); background: rgba(255, 255, 255, 0.08); }
@@ -6672,11 +6706,17 @@ body:has(#about-panel.show) #mobile-bottombar {
 #about-panel .ab-close {
   background: transparent;
   border: 0;
+  box-sizing: border-box;
+  flex-shrink: 0;
   color: var(--text-dim);
   font-size: 22px;
+  font-family: var(--font-ui);
   line-height: 1;
   cursor: pointer;
   width: 28px; height: 28px;
+  /* Explicit padding:0 to override the UA <button> default (1px 6px),
+     same fix as the other close buttons in the project. */
+  padding: 0;
   border-radius: 6px;
   display: flex;
   align-items: center;
