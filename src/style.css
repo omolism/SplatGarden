@@ -6782,9 +6782,35 @@ body.intro-playing #about-trigger { opacity: 0; pointer-events: none; }
     /* Smaller pulse ring on mobile so it doesn't bleed into the URL bar. */
   }
   #about-trigger .ab-trig-label { letter-spacing: 0.02em; }
+
+  /* Anchor the panel to the TOP, directly under the trigger pill, rather
+     than centring it. On short phones (iPhone SE 568 / 13 Mini 667), a
+     centred panel with max-height: 100dvh − 60 − safe-areas grew tall
+     enough that its bottom edge bled into the floating #mobile-bottombar
+     pill at the bottom (78 px tall + 14 px offset + safe-area-bottom).
+     Top-anchoring + capping the height to leave explicit room for the
+     bottombar fixes the overlap on small phones AND visually connects
+     the panel to its trigger (the panel reads as "expanding out of the
+     pill" rather than teleporting to centre).
+
+     Math:
+       top offset    = 58 + safe-top   (clears trigger pill, ~40 tall at 14+safe-top)
+       bottom budget = 92 + safe-bot   (bottombar 64 + 14 offset + 14 gap)
+     max-height = 100dvh - top offset - bottom budget. */
   #about-panel {
-    width: calc(100vw - 24px);
-    max-height: calc(100dvh - 60px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    top:    calc(58px + env(safe-area-inset-top, 0px));
+    left:   12px;
+    right:  12px;
+    bottom: auto;
+    width:  auto;
+    transform: translate(0, 0) scale(0.96);
+    max-height: calc(100dvh
+      - 58px - 92px
+      - env(safe-area-inset-top, 0px)
+      - env(safe-area-inset-bottom, 0px));
+  }
+  #about-panel.show {
+    transform: translate(0, 0) scale(1);
   }
   #about-panel .ab-hero        { padding: 18px 18px 12px; }
   #about-panel .ab-pillars-sec { padding: 14px 18px 14px; }
