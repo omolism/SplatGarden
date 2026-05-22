@@ -6151,37 +6151,58 @@ body.mobile #mobile-studio-btn { display: none; }
  * Also tightens vertical rhythm inside the sheets (header padding,
  * section padding) since landscape viewports are short (~400 px). */
 @media (orientation: landscape) and (max-height: 520px) {
+  /* Anchor sheets TOP-LEFT instead of bottom-centred. Reasoning:
+     - The bottombar pill is now on the RIGHT edge, so a bottom-anchored
+       sheet no longer needs to clear it; bottom-anchored just pushes the
+       top of the sheet UP past the URL bar / notch on short viewports.
+     - iOS Safari in landscape eats ~50 px at the top with the URL bar
+       and another ~21 px with the notch / dynamic island
+       (env(safe-area-inset-top)). Anchoring to TOP + safe-area-inset
+       guarantees the sheet header is always visible no matter how the
+       browser chrome resizes.
+     - dvh (dynamic viewport height) responds correctly to Safari URL-bar
+       collapse/expand; plain vh doesn't, and would over-size the sheet
+       when the URL bar is visible.
+     - max-width tightened 480 → 400 so the card occupies ≤ 50 % of a
+       typical 800 px landscape phone. "User interaction first, don't
+       block most of the screen."
+     - Slide-in changes from bottom→up to left→right; matches the
+       left-anchor mental model. */
   body.mobile #mobile-sheet {
-    /* Override the base translateX(-50%) — left:14 + transform Y-only
-       removes the centring so the sheet hugs the left edge. */
-    left: calc(14px + env(safe-area-inset-left, 0px));
-    right: auto;
-    max-width: 480px;
-    max-height: min(82vh, 480px);
-    transform: translateX(0) translateY(100vh);
+    left:   calc(14px + env(safe-area-inset-left, 0px));
+    right:  auto;
+    top:    calc(14px + env(safe-area-inset-top, 0px));
+    bottom: auto;
+    max-width:  400px;
+    max-height: calc(100dvh - 28px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    transform: translateX(calc(-100% - 28px)) translateY(0);
   }
   body.mobile #mobile-sheet.open      { transform: translateX(0) translateY(0); }
   body.mobile #mobile-sheet .ms-section { padding: 8px 14px; }
   body.mobile #mobile-sheet .ms-row     { padding: 6px 0; }
 
   #mobile-studio-panel {
-    /* Mirror the same left-anchor logic for the Studio drop-down. */
-    left: calc(14px + env(safe-area-inset-left, 0px));
-    right: auto;
-    transform: translateX(0) translateY(-8px);
-    max-width: 480px;
-    max-height: min(82vh, 480px);
+    left:   calc(14px + env(safe-area-inset-left, 0px));
+    right:  auto;
+    top:    calc(14px + env(safe-area-inset-top, 0px));
+    bottom: auto;
+    max-width:  400px;
+    max-height: calc(100dvh - 28px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+    transform: translateX(calc(-100% - 28px));
   }
   #mobile-studio-panel.open {
-    transform: translateX(0) translateY(0);
+    transform: translateX(0);
   }
   #mobile-studio-panel .msp-head { padding: 10px 14px; }
   #mobile-studio-panel .msp-body { padding: 4px 14px 12px; }
 
-  /* Asset hover card — same anchor-left treatment, on top of the
-     already-tightened width / right-gutter rules below. */
+  /* Asset hover card — left-anchored + safe-area-top, capped to the
+     usable height between safe areas. */
   #asset-hover-card {
-    left: calc(14px + env(safe-area-inset-left, 0px)) !important;
+    left:   calc(14px + env(safe-area-inset-left, 0px)) !important;
+    top:    calc(14px + env(safe-area-inset-top, 0px))  !important;
+    max-height: calc(100dvh - 28px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important;
+    width:      min(400px, 56vw);
   }
 }
 

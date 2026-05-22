@@ -140,12 +140,14 @@ class BottomSheet {
     this.handleEl.addEventListener("pointermove", (e) => {
       if (this._dragStart == null) return;
       this._dragY = Math.max(0, e.clientY - this._dragStart);
-      // The sheet is centred horizontally in EVERY orientation now
-      // (translateX(-50%) is on the base #mobile-sheet rule because
-      // the sheet is a centred floating CARD, not a full-width slab
-      // bolted to the bottom edge). Compose translateY with the
-      // centring translateX so the finger-follow drag doesn't snap
-      // the card off-centre.
+      // Landscape phone uses a left-anchored layout (translateX(0) when
+      // open), not the centred translateX(-50%) of every other layout.
+      // Bail on drag-to-dismiss there — the X button is the close
+      // affordance, and overlaying a centred translateX during the
+      // drag would visually jump the sheet across the screen. Portrait
+      // / tablet keep the original finger-follow behaviour.
+      const isLandscapePhone = matchMedia("(orientation: landscape) and (max-height: 520px)").matches;
+      if (isLandscapePhone) return;
       this.el.style.transform = `translateX(-50%) translateY(${this._dragY}px)`;
     });
     const endDrag = () => {
