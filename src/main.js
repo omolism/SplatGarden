@@ -21,6 +21,7 @@ import { SceneLayers } from "./scene-layers.js";
 import { KeyHints } from "./key-hints.js";
 import { ViewpointTuner } from "./viewpoint-tuner.js";
 import { Credits } from "./credits.js";
+import { About } from "./about.js";
 import { IntroOverlay } from "./intro-overlay.js";
 import { IntroRecorder } from "./intro-recorder.js";
 import { MobileNav } from "./mobile-nav.js";
@@ -596,6 +597,15 @@ _aboutBtn?.addEventListener("click", () => {
   } catch {}
 });
 window.__credits = credits;
+// About — top-centre floating CTA + dedicated project-narrative panel.
+// Separate from Credits (Credits keeps team/thanks/software). Mounted
+// here so the trigger pill is visible from the moment the page loads
+// (the cinematic intro hides it via body.intro-playing CSS rule).
+const about = new About({
+  mountEl: document.body,
+  onOpenTechSpec: () => window.__techSpec?.openOverlay?.(),
+});
+window.__about = about;
 const introOverlay = new IntroOverlay({ mountEl: document.body });
 // IntroRecorder composites the WebGL canvas + a 2D replica of the intro
 // overlay text every frame, captures the stream, and writes a .webm.
