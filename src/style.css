@@ -6795,15 +6795,30 @@ body.intro-playing #about-trigger { opacity: 0; pointer-events: none; }
   }
 }
 
-/* Landscape phone: trigger sits next to the LED-edge sheet/dock layout;
-   panel anchors top-left like the other sheets so it doesn't overlap
-   the right-edge bottombar pill. */
+/* Landscape phone: trigger anchors TOP-LEFT (matching where the About
+   panel itself opens), not top-centre. Reasoning:
+   - The URL bar already eats the top-centre real estate on iOS Safari
+     landscape; a centred trigger reads as competing with the URL.
+   - The right edge is held by the dock pill; centring the trigger
+     visually splits attention with the dock.
+   - About panel itself anchors top-left in this viewport, so the
+     trigger and its disclosure should live in the same zone — the
+     panel reads as "expanding out of the trigger" rather than
+     teleporting across the screen.
+   iPad / phone-portrait / desktop keep the centred trigger — those
+   viewports don't have the same horizontal tension. */
 @media (orientation: landscape) and (max-height: 520px) {
   #about-trigger {
-    /* Push left to clear the right dock + give the centred sheet room. */
-    top: calc(10px + env(safe-area-inset-top, 0px));
+    top:  calc(10px + env(safe-area-inset-top, 0px));
+    left: calc(14px + env(safe-area-inset-left, 0px));
+    transform: none;
     font-size: 10.5px;
     padding: 6px 12px 6px 10px;
+  }
+  /* The base :active rule recomposes translateX(-50%) scale(0.97);
+     override that to keep the trigger left-anchored during the press. */
+  #about-trigger:active {
+    transform: scale(0.97);
   }
   #about-panel {
     top:  calc(14px + env(safe-area-inset-top, 0px));

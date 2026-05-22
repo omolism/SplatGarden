@@ -165,15 +165,16 @@
 
       <!-- Bottom toolbar -->
       <footer id="toolbar">
-        <!-- "About" pill — opens the Credits / project-context panel.
-             The brand text used to be a static label; now it's a clickable
-             affordance so visitors have a discoverable "what is this?"
-             entry point without drilling into lil-gui's Tech Spec folder.
-             Wired in main.js (search for "about-btn"). -->
+        <!-- "Credits" pill — opens the Credits panel (team / thanks /
+             software / hardware footer). The project-narrative "About this
+             project" surface is reached via the prominent top-centre
+             trigger now, so the bottom pill is dedicated to attribution
+             only. Click handler still lives in main.js under the
+             #about-btn id so the wiring doesn't need a rename. -->
         <button id="about-btn" class="brand" type="button"
-                title="About this project — credits, software, tech stack"
-                aria-label="About this project">
-          SplatGarden <span class="brand-about-mark">·</span> <span class="brand-about-label">About</span>
+                title="Credits — team, software, hardware acknowledgements"
+                aria-label="Credits">
+          SplatGarden <span class="brand-about-mark">·</span> <span class="brand-about-label">Credits</span>
         </button>
         <div id="status">--</div>
       </footer>
