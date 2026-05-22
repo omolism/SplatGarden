@@ -2395,6 +2395,20 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   #loading .ld-pillars { gap: 22px; }
 }
 
+/* Narrow phones (SE / 13 Mini class, ≤ 480 px wide) — the corner
+   annotations' combined horizontal width exceeds the available viewport
+   even with the tighter padding above:
+       bottom-left  "RUNTIME · SPARK · THREE.JS · WEBGL 2"  ≈ 210 px
+       bottom-right "SCENE · SPLATGARDEN"                   ≈ 110 px
+       sum 320 > (320 - 48 padding) on iPhone SE → 48 px horizontal overlap.
+   The corners are editorial chrome — the central title + desc + pillars
+   + progress bar already carry the brand identity during the short
+   load window. Hide all four on narrow phones to remove the layout
+   fragility entirely; they reappear on > 480 px viewports. */
+@media (max-width: 480px) {
+  #loading .ld-corner { display: none; }
+}
+
 /* ============ lil-gui — monochrome glass override ============ */
 .lil-gui {
   --background-color:        rgba(18, 18, 20, 0.55) !important;
@@ -6588,6 +6602,27 @@ body.touch .lil-gui.root .children {
    doesn't compete with the intro overlay. Re-appears once the intro
    finishes (body.intro-playing is removed in main.js). */
 body.intro-playing #about-trigger { opacity: 0; pointer-events: none; }
+
+/* When the About panel is open, hide the trigger pill: the panel's own
+   header ("ABOUT THIS PROJECT") sits ~8 px below the trigger ("About
+   this project") on phone portrait, and the near-identical text in
+   nearly the same place reads as two overlapping headers. Hiding the
+   trigger while the panel is open lets the panel's header own the
+   identity slot. Trigger fades back in when the panel closes. */
+body:has(#about-panel.show) #about-trigger {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Also dim the mobile bottombar while the About panel is open so its
+   five tab labels don't compete with the panel's bottom CTAs. The bar
+   stays clickable (so the user can navigate to Tour / Effects / etc.
+   directly without closing About first) but recedes visually. */
+body:has(#about-panel.show) #mobile-bottombar {
+  opacity: 0.5;
+  filter: saturate(0.6);
+  transition: opacity 0.22s ease, filter 0.22s ease;
+}
 
 /* --- Panel — floats centered, fades + scales in. */
 #about-panel {
