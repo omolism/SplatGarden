@@ -250,14 +250,82 @@ export const TECH_SPECS = [
         // just to the right of the statue silhouette, on the open
         // gazebo column rather than over the statue itself.
         worldPos:  [-0.18, -0.561, 3.774],
-        toolchain: ["Houdini (3DGS SIM)", "Unreal Engine 5 (set dress)"],
-        output:    "3DGS centerpiece · Houdini-simulated splat dynamics",
-        note:      "The garden's central architecture. Built in Houdini as a 3DGS simulation — splat positions are driven by a sim graph, then baked and dressed into the Unreal scene before capture.",
-        embed: {
-          src:   "https://player.vimeo.com/video/1193797863?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
-          label: "Houdini 3DGS simulation",
-          title: "Shot4B_GS-FX_V08",
-        },
+        // Keywords updated to surface the full Houdini sim stack —
+        // particle + pyro + VEX scripting + Axiom solver + the
+        // Gaussian Splat ops (GSOPs) + Lichtfeld Studio capture.
+        toolchain: [
+          "Houdini",
+          "Particle Simulation",
+          "Pyro Simulation",
+          "VEX",
+          "Axiom",
+          "Gaussian Splat",
+          "GSOPs",
+          "Lichtfeld Studio",
+        ],
+        output:    "3DGS centerpiece · particle + pyro driven splat dynamics",
+        note:      "The garden's central architecture. Authored in Houdini as a 3DGS simulation — particle + pyro sims drive splat dynamics via VEX expressions and the Axiom solver, then the resulting Gaussian Splat is dressed into the Unreal scene before the Lichtfeld Studio capture stage.",
+        // Step-style process cards — three numbered sections:
+        //   01 Final Render — hero playback of the simulated gazebo
+        //   02 Breakdown — multi-panel walkthrough of the Houdini graph
+        //   03 Key Process — grouped bullets on the technical setup
+        //     (Simulation Mask + Velocity from Pyro)
+        // Replaces the previous single `embed` field. Both videos are
+        // user-provided Vimeo URLs; aspectRatio is the first-paint
+        // hint, vimeo-fit.js refines once the Player API reports back.
+        processCards: [
+          {
+            eyebrow:     "01 — FINAL RENDER",
+            title:       "Gazebo · 3DGS Simulation",
+            description: "Particle + pyro simulation drives splat dynamics in Houdini, baked and dressed into the Unreal scene for the Lichtfeld Studio capture.",
+            rows: [
+              { layout: "single", items: [{
+                iframeSrc:   "https://player.vimeo.com/video/1194895698?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
+                caption:     "Final render — particle FX on the gazebo",
+                alt:         "Gazebo final render with particle and pyro simulation",
+                aspectRatio: "16 / 9",
+              }]},
+            ],
+          },
+          {
+            eyebrow:     "02 — BREAKDOWN",
+            title:       "Simulation Pipeline",
+            description: "Three-panel breakdown — mask source on the gazebo geometry, color transfer onto the Gaussian Splat, emission group creation from those masks.",
+            rows: [
+              { layout: "single", items: [{
+                iframeSrc:   "https://player.vimeo.com/video/1194895699?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
+                caption:     "Mask source · color transfer · emission group",
+                alt:         "Gazebo simulation breakdown — Houdini graph walkthrough",
+                aspectRatio: "16 / 9",
+              }]},
+            ],
+          },
+          {
+            eyebrow:     "03 — KEY PROCESS",
+            title:       "Houdini Simulation Setup",
+            description: "How the gazebo's flower-growth FX is built up step by step in Houdini.",
+            // Grouped bullets — each subheading carries its own
+            // bullet list. Schema lives on processCards as `groups`;
+            // inline `**bold**` is parsed by escapeHtmlInlineBold
+            // so individual node / plugin names stand out within
+            // the bullet prose.
+            groups: [
+              {
+                heading: "Simulation Mask",
+                items: [
+                  "Apply **Attribute Transfer node** — transfer color attribute (@Cd) from the source to the main object (the gazebo).",
+                  "Group points based on masks to limit the area of particle emission.",
+                ],
+              },
+              {
+                heading: "Velocity from Pyro",
+                items: [
+                  "Use pyro simulations from **Axiom** plugin on multiple pyro sources to drive particles velocity.",
+                ],
+              },
+            ],
+          },
+        ],
       },
       {
         name:      "Statue",

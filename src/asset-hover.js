@@ -23,6 +23,22 @@ export function escapeHtml(s) {
   }[c]));
 }
 
+/**
+ * Escape HTML but PRESERVE `**bold**` inline markdown — used for bullet
+ * values where emphasis carries meaning (e.g., "Apply **Attribute Transfer
+ * node** to transfer color"). Escapes everything else (angle brackets,
+ * quotes, ampersands) so user-authored content can't inject markup. The
+ * order matters: escape FIRST, then convert the escaped asterisk pairs
+ * into <strong> tags — that way the user can write `**` literally without
+ * worrying about HTML at all.
+ */
+export function escapeHtmlInlineBold(s) {
+  return escapeHtml(s).replace(
+    /\*\*([^*]+)\*\*/g,
+    "<strong>$1</strong>",
+  );
+}
+
 export function renderSimVideo(v) {
   if (!v) return "";
   const flags = [
@@ -221,16 +237,44 @@ function renderProcessCard(card) {
          ${card.points.map(p => {
            if (!p || !p.value) return "";
            const k = p.key ? `<strong>${escapeHtml(p.key)}:</strong> ` : "";
-           return `<li>${k}${escapeHtml(p.value)}</li>`;
+           return `<li>${k}${escapeHtmlInlineBold(p.value)}</li>`;
          }).join("")}
        </ul>`
+    : "";
+
+  // Grouped points — used by Gazebo's "Key Process" step where
+  // multiple sub-topics (Simulation Mask · Velocity from Pyro · ...)
+  // each carry their own bullet list. The flat `points` field above
+  // can't express the hierarchy. Schema:
+  //   groups: [{ heading: "Topic", items: ["bullet", { key, value }] }]
+  // Each item can be a string OR { key, value } object (same shape as
+  // `points`). Inline **bold** is supported in both string items and
+  // object values via escapeHtmlInlineBold.
+  const groups = Array.isArray(card.groups) && card.groups.length
+    ? card.groups.map(g => {
+        if (!g) return "";
+        const heading = g.heading
+          ? `<div class="ah-pc-group-heading">${escapeHtml(g.heading)}</div>`
+          : "";
+        const items = Array.isArray(g.items) ? g.items : [];
+        const lis = items.map(it => {
+          if (typeof it === "string") return `<li>${escapeHtmlInlineBold(it)}</li>`;
+          if (it && it.value) {
+            const k = it.key ? `<strong>${escapeHtml(it.key)}:</strong> ` : "";
+            return `<li>${k}${escapeHtmlInlineBold(it.value)}</li>`;
+          }
+          return "";
+        }).join("");
+        const ul = lis ? `<ul class="ah-pc-group-points">${lis}</ul>` : "";
+        return `<div class="ah-pc-group">${heading}${ul}</div>`;
+      }).join("")
     : "";
 
   const note = card.note
     ? `<div class="ah-pc-note">${escapeHtml(card.note)}</div>`
     : "";
 
-  return `<section class="${sectionClass}">${header}${rows}${points}${note}</section>`;
+  return `<section class="${sectionClass}">${header}${rows}${points}${groups}${note}</section>`;
 }
 
 export function renderProcessCards(cards) {
