@@ -7507,6 +7507,425 @@ body:has(#about-panel.show) #mobile-bottombar {
   border-radius: 3px;
 }
 
+/* ============================================================
+   POSTER MODE
+   ============================================================
+   Sister presentation to Studio Mode — single VAT-animated asset
+   framed by a sci-fi infographic HUD. Activated via body.mode-poster.
+   The accent color is the ONLY chromatic addition to the project's
+   otherwise-monochrome palette; scoped to .mode-poster so the rest
+   of the project (Studio Mode) keeps its white-on-glass identity.
+   ============================================================ */
+:root {
+  --poster-accent:      #6dffb3;
+  --poster-accent-dim:  rgba(109, 255, 179, 0.55);
+  --poster-accent-soft: rgba(109, 255, 179, 0.18);
+  --poster-bg:          #050706;
+  --poster-line:        rgba(109, 255, 179, 0.22);
+  --poster-line-soft:   rgba(109, 255, 179, 0.10);
+}
+
+/* ----- Mode toggle (segmented control, top-right) ----- */
+#poster-toggle {
+  position: fixed;
+  top: max(env(safe-area-inset-top, 0px), 14px);
+  right: 14px;
+  z-index: 1300;
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 2px;
+  background: var(--panel-strong);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid var(--hair-strong);
+  border-radius: 999px;
+  pointer-events: auto;
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  user-select: none;
+}
+#poster-toggle .pt-seg {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 6px 11px;
+  color: var(--text-mid);
+  cursor: pointer;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.16s ease, color 0.16s ease;
+  font-family: inherit;
+  font-size: inherit;
+  letter-spacing: inherit;
+  text-transform: uppercase;
+}
+#poster-toggle .pt-seg:hover { color: var(--text); }
+#poster-toggle .pt-seg.active {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+#poster-toggle .pt-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  transition: background 0.16s ease, box-shadow 0.16s ease;
+}
+#poster-toggle .pt-seg.active .pt-dot {
+  background: var(--text);
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
+}
+/* In poster mode, the active POSTER segment dot glows with the accent
+   so the toggle reads as a mode indicator, not just a UI control. */
+body.mode-poster #poster-toggle .pt-seg[data-mode="poster"].active .pt-dot {
+  background: var(--poster-accent);
+  box-shadow: 0 0 8px var(--poster-accent);
+}
+
+/* ----- Mode-aware Studio chrome visibility -----
+   When the user is in Poster Mode, hide every Studio-Mode-only
+   surface so the poster gets the full viewport. Hover-card hotspots,
+   lil-gui, sidebar, scene-layers panel, USD annotations, viewpoint
+   tuner, mobile bottombar, mobile sheet, key hints, intro overlay,
+   onboarding pointers, hand panel — all suppressed. The poster
+   toggle + HUD itself stay visible; about + credits panels stay
+   reachable from the toggle row if the user wants attribution. */
+body.mode-poster .lil-gui.root,
+body.mode-poster #sidebar,
+body.mode-poster #scene-panel,
+body.mode-poster #hand-panel,
+body.mode-poster #toolbar,
+body.mode-poster #annotation-layer,
+body.mode-poster .asset-hotspot,
+body.mode-poster #asset-hover-card,
+body.mode-poster #tech-spec,
+body.mode-poster #usd-annotations,
+body.mode-poster #key-hints,
+body.mode-poster #onboarding-pointers,
+body.mode-poster #mobile-bottombar,
+body.mode-poster #mobile-sheet,
+body.mode-poster #mobile-nav-btn,
+body.mode-poster #mobile-toast,
+body.mode-poster #mobile-studio-btn,
+body.mode-poster #intro-overlay,
+body.mode-poster #status,
+body.mode-poster #about-btn,
+body.mode-poster .cam-timeline {
+  display: none !important;
+}
+/* Inversely — the HUD only renders when mode IS poster. Hidden by
+   default; the .show class is added by PosterHUD.setVisible(true). */
+#poster-hud { display: none; }
+#poster-hud.show { display: block; }
+
+/* Subtle vignette + scanline atmosphere on the canvas in poster mode.
+   Achieves the "scan view" feel without per-frame shader cost. */
+body.mode-poster #viewport {
+  background: radial-gradient(
+    ellipse at center,
+    #08110d 0%,
+    #050706 60%,
+    #000000 100%
+  );
+}
+
+/* ============================================================
+   POSTER HUD — DOM overlay
+   ============================================================
+   Layout uses CSS grid on desktop (≥901px) for precise zoning;
+   collapses to a flex stack on tablets and phones. The 3D canvas
+   sits BELOW the HUD via z-index; the HUD has pointer-events:none
+   so canvas drags still work, with selective re-enable on any
+   interactive widget (none yet — Phase 6).
+   ============================================================ */
+#poster-hud {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  pointer-events: none;
+  font-family: var(--font-mono);
+  color: var(--poster-accent);
+  letter-spacing: 0.04em;
+  font-feature-settings: "tnum", "lnum";
+  /* Desktop grid: 12-column layout. Each zone occupies named
+     coordinates so they stay anchored across resize. */
+  display: grid;
+  grid-template-columns: 280px 1fr 1fr 280px;
+  grid-template-rows:
+    auto                  /* top row — banners */
+    1fr                   /* mid row — side panels around the canvas */
+    auto                  /* bottom row — bio signal + waveforms */
+    auto;                 /* footer row */
+  grid-template-areas:
+    "tl  tl  tr  tr"
+    "sl  ..  ..  sr"
+    "bl  bm  bm  br"
+    "ft  ft  ft  ft";
+  padding: 20px 22px;
+  gap: 14px;
+}
+
+#poster-hud .ph-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#poster-hud .ph-top-left    { grid-area: tl; align-self: start; }
+#poster-hud .ph-top-right   { grid-area: tr; align-self: start; justify-self: end; text-align: right; }
+#poster-hud .ph-side-left   { grid-area: sl; align-self: center; }
+#poster-hud .ph-side-right  { grid-area: sr; align-self: center; align-items: flex-end; text-align: right; }
+#poster-hud .ph-bottom-left { grid-area: bl; align-self: end; }
+#poster-hud .ph-bottom-mid  { grid-area: bm; align-self: end; }
+#poster-hud .ph-bottom-right{ grid-area: br; align-self: end; align-items: flex-end; }
+#poster-hud .ph-footer      { grid-area: ft; flex-direction: row; justify-content: space-between; align-items: center; gap: 12px; }
+
+/* ── Banner blocks (SCAN MODE / BIO SIGNAL) — the angular header
+      strip with eyebrow + subline. Distinctive sci-fi shape: a
+      half-bracket using border-left + border-top + slanted corner. */
+#poster-hud .ph-banner {
+  position: relative;
+  padding: 6px 14px 6px 8px;
+  background: linear-gradient(
+    90deg,
+    var(--poster-accent-soft) 0%,
+    transparent 100%
+  );
+  border-left: 2px solid var(--poster-accent);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%);
+}
+#poster-hud .ph-banner-line {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.10em;
+  color: var(--poster-accent);
+  text-shadow: 0 0 8px var(--poster-accent-dim);
+  text-transform: uppercase;
+}
+#poster-hud .ph-banner-sub {
+  font-size: 9.5px;
+  color: var(--poster-accent-dim);
+  margin-top: 1px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+}
+#poster-hud .ph-banner-sm .ph-banner-line { font-size: 13px; }
+#poster-hud .ph-banner-sm .ph-banner-sub  { font-size: 8.5px; }
+
+/* ── Eyebrows — small uppercase labels above each panel. */
+#poster-hud .ph-eyebrow {
+  font-size: 8.5px;
+  color: var(--poster-accent-dim);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--poster-line-soft);
+}
+
+/* ── Data table — tabular numeric data. */
+#poster-hud .ph-table {
+  border-collapse: collapse;
+  font-size: 9.5px;
+  color: var(--poster-accent);
+  margin-top: 4px;
+}
+#poster-hud .ph-table th,
+#poster-hud .ph-table td {
+  padding: 2px 10px 2px 0;
+  text-align: left;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+#poster-hud .ph-table thead th {
+  color: var(--poster-accent-dim);
+  font-size: 8px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--poster-line);
+  padding-bottom: 4px;
+}
+#poster-hud .ph-table tbody td:first-child { color: var(--poster-accent); }
+#poster-hud .ph-table tbody td             { color: rgba(255, 255, 255, 0.78); }
+
+/* ── Bar histograms — horizontal strip of vertical bars. */
+#poster-hud .ph-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 36px;
+  padding-top: 6px;
+  border-top: 1px solid var(--poster-line-soft);
+}
+#poster-hud .ph-bars span {
+  flex: 1;
+  background: var(--poster-accent);
+  opacity: 0.65;
+  min-width: 2px;
+}
+#poster-hud .ph-bars-tall { height: 60px; }
+
+/* ── Readout grid (top-right and side-right panels). */
+#poster-hud .ph-readout-grid,
+#poster-hud .ph-readout-stack {
+  display: grid;
+  gap: 3px 12px;
+  font-size: 10px;
+  margin-top: 6px;
+}
+#poster-hud .ph-readout-grid  { grid-template-columns: auto 1fr; }
+#poster-hud .ph-readout-stack { grid-template-columns: 1fr; }
+#poster-hud .ph-readout-grid > div,
+#poster-hud .ph-readout-stack > div {
+  display: contents;
+}
+#poster-hud .ph-readout-grid .k,
+#poster-hud .ph-readout-stack .k {
+  font-size: 8.5px;
+  color: var(--poster-accent-dim);
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+}
+#poster-hud .ph-readout-grid .v,
+#poster-hud .ph-readout-stack .v {
+  color: var(--poster-accent);
+  font-feature-settings: "tnum";
+  text-align: right;
+}
+
+/* ── Sparkline SVG charts. */
+#poster-hud .ph-sparkline svg {
+  width: 100%;
+  height: 24px;
+  display: block;
+}
+/* ── Radar dial with sweeping needle. */
+#poster-hud .ph-radar { margin-top: 4px; }
+#poster-hud .ph-radar svg { width: 60px; height: 60px; }
+#poster-hud .ph-radar-sweep {
+  transform-origin: 30px 30px;
+  animation: poster-radar-sweep 4s linear infinite;
+}
+@keyframes poster-radar-sweep {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ── Compass dial. */
+#poster-hud .ph-compass svg { width: 56px; height: 56px; }
+#poster-hud .ph-compass-needle {
+  transform-origin: 30px 30px;
+  transition: transform 0.22s ease;
+}
+
+/* ── BIO SIGNAL prose + coords. */
+#poster-hud .ph-coord {
+  font-size: 11px;
+  color: var(--poster-accent);
+  letter-spacing: 0.06em;
+  margin-top: 6px;
+}
+#poster-hud .ph-prose {
+  font-size: 9.5px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.72);
+  margin-top: 6px;
+  max-width: 280px;
+  letter-spacing: 0.02em;
+}
+
+/* ── Spectrogram (bottom-mid waveform). */
+#poster-hud .ph-spectrogram svg {
+  width: 100%;
+  height: 40px;
+  display: block;
+}
+
+/* ── Footer mark. */
+#poster-hud .ph-footer {
+  font-size: 9px;
+  color: var(--poster-accent-dim);
+  letter-spacing: 0.12em;
+  padding-top: 8px;
+  border-top: 1px solid var(--poster-line-soft);
+}
+#poster-hud .ph-mark { color: var(--poster-accent); }
+#poster-hud .ph-meta { color: rgba(255, 255, 255, 0.5); }
+
+/* ============================================================
+   POSTER HUD — Responsive (iPad portrait + phone)
+   ============================================================
+   On narrow viewports the 4-column grid collapses to a 2-column
+   stack so the data tables and waveforms don't shrink illegibly
+   over the centred 3D asset. Side panels move BELOW the canvas
+   area on phone portrait. The asset always stays centred via
+   the canvas underneath.
+   ============================================================ */
+@media (max-width: 900px) {
+  #poster-hud {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto auto auto auto auto;
+    grid-template-areas:
+      "tl  tr"
+      "sl  sr"
+      "bl  br"
+      "bm  bm"
+      "ft  ft";
+    padding: 16px 16px;
+    gap: 10px;
+  }
+  #poster-hud .ph-banner-line { font-size: 14px; }
+  #poster-hud .ph-table { font-size: 9px; }
+  #poster-hud .ph-prose { font-size: 9px; max-width: none; }
+}
+@media (max-width: 480px) {
+  #poster-hud {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "tl"
+      "tr"
+      "bl"
+      "bm"
+      "br"
+      "sl"
+      "sr"
+      "ft";
+    padding: 12px 12px max(12px, env(safe-area-inset-bottom, 0px));
+    gap: 10px;
+  }
+  #poster-hud .ph-top-right,
+  #poster-hud .ph-side-right,
+  #poster-hud .ph-bottom-right {
+    align-self: start;
+    justify-self: start;
+    text-align: left;
+    align-items: flex-start;
+  }
+  #poster-hud .ph-readout-grid .v,
+  #poster-hud .ph-readout-stack .v {
+    text-align: left;
+  }
+  #poster-hud .ph-banner-line { font-size: 13px; }
+  #poster-hud .ph-banner-sub  { font-size: 8px; }
+  /* Toggle position on phone — slightly tighter to clear the URL bar. */
+  #poster-toggle {
+    top: max(env(safe-area-inset-top, 0px), 10px);
+    right: 10px;
+    font-size: 9px;
+  }
+  #poster-toggle .pt-seg { padding: 5px 9px; }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  /* Phone landscape — short viewport. Hide the bottom-mid waveform
+     to keep the 3D asset visible above the fold; the rest of the
+     HUD still reads as a frame. */
+  #poster-hud { padding: 10px 14px; gap: 8px; }
+  #poster-hud .ph-bottom-mid { display: none; }
+  #poster-hud .ph-prose { font-size: 8.5px; }
+}
+
 #about-panel .ab-hero {
   padding: 22px 22px 14px;
   border-bottom: 1px solid var(--hair);

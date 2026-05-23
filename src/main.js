@@ -32,6 +32,12 @@ import { HandLandmarksOverlay } from "./hand-landmarks-overlay.js";
 import { MobileUI } from "./mobile-ui.js";
 import { haptic }   from "./haptic.js";
 import { playSound, primeSound } from "./sounds.js";
+// Poster Mode — alternate top-level presentation. Sister mode to the
+// default Studio Mode. The three imports below are self-contained;
+// poster lives entirely in src/poster/ and only hooks the render loop.
+import { PosterMode }     from "./poster/poster-mode.js";
+import { PosterHUD }      from "./poster/poster-hud.js";
+import { PosterToggle, readInitialMode } from "./poster/poster-toggle.js";
 
 // Web Audio AudioContext can only start after a user gesture (modern
 // browser autoplay policy). We attach a one-shot primer on the FIRST
@@ -684,8 +690,42 @@ function onResize() {
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   postfx.setSize(w, h);
+  // PosterMode owns its own camera; keep its aspect in sync too so
+  // switching modes doesn't show a stretched frame on the first frame.
+  posterMode?.resize(w, h);
 }
 window.addEventListener("resize", onResize);
+
+// ---------------------------------------------------------------------------
+// Poster Mode — sister presentation to Studio Mode.
+// Initialised here so the renderer + camera + window dimensions are
+// already settled. The HUD mounts onto document.body (positioned
+// absolute, pointer-events:none) so it floats above the canvas without
+// interfering with hover-card / drawer / lil-gui layering.
+// ---------------------------------------------------------------------------
+const posterMode = new PosterMode({ renderer, mountEl: document.body });
+const posterHUD  = new PosterHUD({ mountEl: document.body });
+posterMode.setHUD(posterHUD);
+posterMode.resize(window.innerWidth, window.innerHeight);
+
+const initialMode = readInitialMode();
+// Apply initial body class before the toggle UI lands so first paint
+// in poster mode starts with the right CSS reactivity.
+document.body.classList.toggle("mode-poster", initialMode === "poster");
+document.body.classList.toggle("mode-studio", initialMode === "studio");
+posterMode.setActive(initialMode === "poster");
+
+const posterToggle = new PosterToggle({
+  mountEl: document.body,
+  initialMode,
+  onChange: (mode) => {
+    document.body.classList.toggle("mode-poster", mode === "poster");
+    document.body.classList.toggle("mode-studio", mode === "studio");
+    posterMode.setActive(mode === "poster");
+  },
+});
+window.__posterMode = posterMode;
+window.__posterToggle = posterToggle;
 
 // ---------------------------------------------------------------------------
 // Load splat
@@ -3557,6 +3597,18 @@ let fpsLastMs = 0;
 
 renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
+
+  // Poster Mode owns the frame when active — its own scene + camera
+  // render, no splat / FX / postfx work needed. Returning here skips
+  // the entire Studio Mode pipeline (annotations, voxelizer, effects,
+  // postfx pass, tech overlay scene, HUD ticks). Saves a lot of GPU
+  // on machines that would otherwise be running the 3M-splat scene
+  // behind a hidden surface.
+  if (posterMode.isActive()) {
+    posterMode.update(dt);
+    return;
+  }
+
   profiler.beginFrame();
   profiler.begin("logic");
 
