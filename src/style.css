@@ -4481,6 +4481,13 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
     padding: 12px 12px 14px;
     gap: 14px;
   }
+  /* Tech-spec section header — 26px UPPERCASE dominates inside a
+     460px drawer. Bring the big title down so it doesn't overwhelm
+     the per-item content below. */
+  #tech-spec .ts-sec-name {
+    font-size: 22px;
+    letter-spacing: 0.05em;
+  }
 }
 
 /* Phone LANDSCAPE — short viewport. Goal: keep the rich content
@@ -4504,6 +4511,33 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
     font-size: 11px;
     line-height: 1.5;
     margin-bottom: 12px;
+  }
+  /* Tech Breakdown drawer also tightens its outer chrome on short
+     landscape viewports — header, section header, section padding
+     all trim so the rich content per item lands above the fold
+     quicker. Drawer width on phone landscape is governed by the
+     base min(460px, 92vw) which is fine at ~614px on a 667px
+     viewport (not overridden by phone-portrait's 96vw rule since
+     orientation: landscape disables that media query). */
+  #tech-spec .ts-header {
+    padding: 10px 14px 8px;
+  }
+  #tech-spec .ts-sub {
+    padding: 6px 14px;
+  }
+  #tech-spec .ts-sec {
+    padding: 12px 16px 10px;
+  }
+  #tech-spec .ts-sec-name {
+    font-size: 20px;
+    letter-spacing: 0.04em;
+    line-height: 1.1;
+  }
+  #tech-spec .ts-sec-desc {
+    padding: 6px 0 10px;
+  }
+  #tech-spec .ts-item-note {
+    margin: 10px 0 0;
   }
 }
 
@@ -4555,6 +4589,72 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
     font-size: 11.5px;
     line-height: 1.55;
     margin-bottom: 7px;
+  }
+  /* Tech Breakdown drawer panel — gain ~12px of content area on phones
+     (drawer was 92vw = 345px on a 375px iPhone; now 96vw = 360px).
+     Modest gain but it lets pair rows inside ts-rich breathe without
+     stacking. The remaining 4vw left margin keeps the drawer visually
+     distinct from the splat scene behind it. */
+  #tech-spec .ts-panel {
+    width: 96vw;
+  }
+  /* Section header — 26px UPPERCASE is too dominant inside a 360px
+     drawer. Scale down so the section title cues the section without
+     overwhelming the per-item content that follows it. */
+  #tech-spec .ts-sec-name {
+    font-size: 19px;
+    letter-spacing: 0.04em;
+    line-height: 1.15;
+  }
+  #tech-spec .ts-sec-num {
+    font-size: 11px;
+    min-width: 24px;
+    margin-top: 6px;
+  }
+  #tech-spec .ts-sec-count {
+    font-size: 8.5px;
+  }
+  /* Section outer padding tighter on phone — recovers ~12px of content
+     width vs the default 16/18. */
+  #tech-spec .ts-sec {
+    padding: 14px 14px 12px;
+  }
+  /* Section description prose smaller — matches the new section name
+     scale + the narrower content width. */
+  #tech-spec .ts-sec-desc {
+    font-size: 11.5px;
+    padding: 6px 0 12px;
+  }
+  /* Item-level inner padding stays put; only the section outer needs
+     tuning. Item name reduced a half-step to harmonise with the
+     smaller section title above it. */
+  #tech-spec .ts-item-name {
+    font-size: 14.5px;
+  }
+  #tech-spec .ts-item-sub {
+    font-size: 10px;
+  }
+  #tech-spec .ts-item-note {
+    font-size: 11.5px;
+    margin: 12px 0 0;
+  }
+  /* ts-rich already gets tighter margin/gap from the rule above;
+     reduce its inset padding too so pair cells inside don't lose
+     width to chrome. Effective content area after this: roughly
+     360 (drawer) - 28 (.ts-sec) - 28 (.ts-rich) = 304px. */
+  .ts-rich {
+    padding: 11px 11px 13px;
+    border-radius: 8px;
+  }
+  /* Drawer header trim for phone — the "TECH BREAKDOWN" title is
+     authoritative but the surrounding chrome (sub-line, close button)
+     eats vertical space. Tighten without losing legibility. */
+  #tech-spec .ts-header {
+    padding: 12px 14px 10px;
+  }
+  #tech-spec .ts-sub {
+    padding: 8px 14px;
+    font-size: 9.5px;
   }
 }
 
