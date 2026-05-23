@@ -14,6 +14,18 @@
 
 import { initTickers }    from "./ticker.js";
 import { fitVimeoFrames } from "./vimeo-fit.js";
+// The rich-block renderers live in asset-hover.js so the asset hover card
+// and the Tech Breakdown drawer share one source of truth for processCards
+// / keyPoints / embed markup. Circular import is safe here — both modules
+// only call across the boundary at runtime (inside renderCard / renderItem),
+// not at module-evaluation time. Keeping the helpers co-located with the
+// hover card avoids a third "card-blocks" module just to break the cycle.
+import {
+  renderProcessCards,
+  renderKeyPoints,
+  renderEmbed,
+  renderSimVideo,
+} from "./asset-hover.js";
 
 // Same BASE_URL trick the splat / FBX / HDRI / colmap loaders use —
 // resolves to "/" on local dev and "/SplatGarden-WebViewer/" on the
@@ -94,11 +106,11 @@ export const TECH_SPECS = [
     group:     "layer",
     layerNum:  2,
     desc:      "Per-object authoring + Unreal scene assembly — everything that goes into the dressed scene before the camera turns on.",
-    toolchain: ["Houdini", "SpeedTree", "VAT bake", "Python · OSC", "Unreal Engine", "Perforce"],
+    toolchain: ["Houdini", "SpeedTree", "VAT bake", "Python · OSC", "Unreal Engine 5", "Perforce"],
     items: [
       {
         name: "Scene assembly",
-        ref:  "Unreal Engine — every asset set-dressed into one scene",
+        ref:  "Unreal Engine 5 — every asset set-dressed into one scene",
         note: "Perforce-backed version control across artists. All set-dressed assets land here before the capture stage.",
       },
       // Landscape promoted from the end of this list to the second slot
@@ -122,10 +134,10 @@ export const TECH_SPECS = [
           "AI Texture Stylization",
           "Houdini COPNET",
           "NormalMap-Online",
-          "Unreal Engine (terrain authoring)",
+          "Unreal Engine 5 (terrain authoring)",
         ],
         output:    "Stylized terrain · painterly base colour + COPNET-authored height + tool-converted normal",
-        note:      "Three-stage texture pipeline for the ground. (1) The AI Texture Stylization tool from L1 applies a brush-stroke style from a chosen style reference onto the original ground tile, producing the painterly base colour. (2) The result is taken into a Houdini COPNET to fine-tune colour balance, paint in additional surface detail (rocks, scattered debris, mid-tone variation), and bake out a paired height map. (3) The stylized base colour is then run through cpetry.github.io/NormalMap-Online to derive the matching normal map. Final terrain is authored in Unreal Engine and dressed into the scene before the 3DGS capture stage.",
+        note:      "Three-stage texture pipeline for the ground. (1) The AI Texture Stylization tool from L1 applies a brush-stroke style from a chosen style reference onto the original ground tile, producing the painterly base colour. (2) The result is taken into a Houdini COPNET to fine-tune colour balance, paint in additional surface detail (rocks, scattered debris, mid-tone variation), and bake out a paired height map. (3) The stylized base colour is then run through cpetry.github.io/NormalMap-Online to derive the matching normal map. Final terrain is authored in Unreal Engine 5 and dressed into the scene before the 3DGS capture stage.",
         embed: {
           src:   "https://player.vimeo.com/video/1194203694?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
           label: "Final rendered landscape · in-scene",
@@ -161,8 +173,12 @@ export const TECH_SPECS = [
       {
         name:      "Gazebo",
         location:  "Centerpiece",
-        worldPos:  [-0.58, -0.561, 3.774],
-        toolchain: ["Houdini (3DGS SIM)", "Unreal Engine (set dress)"],
+        // X shifted -0.58 → -0.18 (net +0.4: +1 from the first nudge,
+        // then −0.6 from the follow-up correction) — final pose sits
+        // just to the right of the statue silhouette, on the open
+        // gazebo column rather than over the statue itself.
+        worldPos:  [-0.18, -0.561, 3.774],
+        toolchain: ["Houdini (3DGS SIM)", "Unreal Engine 5 (set dress)"],
         output:    "3DGS centerpiece · Houdini-simulated splat dynamics",
         note:      "The garden's central architecture. Built in Houdini as a 3DGS simulation — splat positions are driven by a sim graph, then baked and dressed into the Unreal scene before capture.",
         embed: {
@@ -172,10 +188,34 @@ export const TECH_SPECS = [
         },
       },
       {
+        name:      "Statue",
+        location:  "Inside the gazebo",
+        // Inherits the OLD Gazebo coordinates per user direction — the
+        // statue physically sits where the Gazebo hotspot used to be.
+        worldPos:  [-0.58, -0.561, 3.774],
+        toolchain: [
+          "Houdini",
+          "Particle Simulation",
+          "Pyro Simulation",
+          "VEX",
+          "Axiom",
+          "Gaussian Splat",
+          "GSOPs",
+          "VAT (Vertex Animation Texture)",
+          "Unreal Engine 5",
+        ],
+        output:    "Animated statue · 3DGS dynamics + VAT-baked playback in UE5",
+        note:      "Animated statue authored end-to-end in Houdini: particle and pyro simulation drive the dynamics, with VEX expressions and the Axiom solver shaping the motion. The resulting Gaussian-Splat output is cleaned through GSOPs, baked to a Vertex Animation Texture, and shipped to Unreal Engine 5 for GPU-cheap real-time playback. Left-hand pinch in the MediaPipe session scrubs the VAT live during the shoot.",
+        // Embeds intentionally omitted for now — the Final Result · VAT
+        // and Houdini · 3DGS slots from the mock-up are reserved but
+        // waiting on dedicated Statue-only renders. The renderer
+        // gracefully skips the embed section when the field is absent.
+      },
+      {
         name:      "Vine",
         location:  "Near gazebo",
         worldPos:  [-0.89, -0.926, 3.258],
-        toolchain: ["Unreal Engine — Motion Graphics", "Unreal Engine — WPO shader"],
+        toolchain: ["Unreal Engine 5 — Motion Graphics", "Unreal Engine 5 — WPO shader"],
         output:    "Animated vine growth · flowers driven by Motion Graphics, stems by WPO",
         note:      "Vine growth render. The bloom heads use Unreal's Motion Graphics system for keyframed flowering; the stems run a custom material whose World Position Offset (WPO) drives the procedural growth path along the gazebo's framework.",
         embed: {
@@ -194,7 +234,7 @@ export const TECH_SPECS = [
         name:      "Daffodil",
         location:  "Near gazebo",
         worldPos:  [0.08, -0.773, 2.226],
-        toolchain: ["Houdini", "VAT bake", "Unreal Engine (set dress)", "Python · OSC · MediaPipe", "AI texture stylization"],
+        toolchain: ["Houdini", "VAT bake", "Unreal Engine 5 (set dress)", "Python · OSC · MediaPipe", "AI texture stylization"],
         output:    "Mesh + VAT animation · interactively driven in Unreal",
         note:      "Animated procedurally in Houdini and VAT-baked, then set-dressed in Unreal. Inside the Unreal session, Python · OSC · MediaPipe drives the rig live (hand gesture → OSC → blueprint). Diffuse texture passes through the AI Texture Stylization tool from L1.",
         embed: {
@@ -216,38 +256,144 @@ export const TECH_SPECS = [
         toolchain: [
           "Houdini (procedural tool + GUI)",
           "VAT (vertex animation texture bake)",
-          "Unreal Engine (PCG scatter)",
+          "Unreal Engine 5 (PCG scatter)",
           "Sequencer + Movie Render Queue",
-          "SubsurfaceTwoSidedFoliage shader",
         ],
-        note:      "Stylised grape-hyacinth cluster authored end-to-end in Houdini — a procedural tool with a per-part GUI (artist-tunable stalk count, bloom density, petal twist, etc.). The animation is baked to a Vertex Animation Texture for GPU-cheap playback in Unreal. Layout in-engine is driven by PCG so density follows the planter splines, and the hero render is captured through Sequencer + Movie Render Queue at film quality. Foliage shading uses Unreal's SubsurfaceTwoSidedFoliage model so backlit petals translucently glow without doubling the geometry. The two reels below show, in order: the Houdini tool with the GUI exposed, then the final stylised render that ships in-engine.",
-        // Two embeds — the Houdini tool breakdown (artist-facing GUI for
-        // every parameter) and the final Unreal-rendered hero shot. These
-        // are intentionally separate: one shows the AUTHORING pipeline,
-        // the other shows the SHIPPED render. Don't collapse them.
-        embed: [
+        // Step-style processCards — three numbered sections (01/02/03)
+        // matching the user's design reference. Sections 01 + 02 reuse
+        // the existing Vimeo embeds (1193813472 Houdini tool + 1187001709
+        // VAT/PCG render — kept since no replacement was provided);
+        // section 03 uses new texture images shipped in
+        // public/textures/grapehyacinth/.
+        processCards: [
           {
-            src:   "https://player.vimeo.com/video/1193813472?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
-            label: "Houdini tool · per-part GUI",
-            title: "Grape Hyacinth — Houdini Procedural Tool",
+            eyebrow:     "01 — PROCEDURAL TOOL",
+            title:       "Houdini Tool — Procedural Grape Hyacinth",
+            description: "A fully procedural setup that grows the flower from parameters. The distribution of florets along the primary stem follows the golden angle of 137.5°, consistent with the phyllotaxis observed in natural inflorescence structures.",
+            rows: [
+              { layout: "single", items: [{
+                iframeSrc: "https://player.vimeo.com/video/1193813472?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
+                caption: "Network & viewport — showcase",
+                alt: "Houdini procedural grape-hyacinth tool — network + viewport",
+              }]},
+            ],
           },
           {
-            src:   "https://player.vimeo.com/video/1187001709?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
-            label: "Stylised render · VAT + PCG + MRQ",
-            title: "Grape Hyacinth — Shot 4B Transition",
+            eyebrow:     "02 — ANIMATION",
+            title:       "Vertex Animation Texture (VAT)",
+            description: "A grape hyacinth animation produced through a VAT pipeline — baking vertex motion into textures for smooth real-time playback.",
+            rows: [
+              { layout: "single", items: [{
+                iframeSrc: "https://player.vimeo.com/video/1187001709?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
+                caption: "Preliminary VAT Animation",
+                alt: "Grape hyacinth VAT animation — preliminary playback",
+              }]},
+            ],
+          },
+          {
+            eyebrow:     "03 — TEXTURING",
+            title:       "AI Style Texture",
+            description: "Texture variations explored with AI to push stylization looks while keeping the procedural base intact. Drag each slider to wipe between the procedural base and the AI-stylized output.",
+            // Two A/B compare-slider widgets on ONE row, side-by-side
+            // (1:1 frames, square Substance texture sources). The
+            // compare row accepts an items array — 1 item = full
+            // width, ≥2 = grid. On phones the grid collapses back to
+            // a single column so each slider stays large enough to
+            // drag comfortably (see .ah-pc-compare-grid @media in
+            // style.css).
+            rows: [
+              {
+                layout: "compare",
+                items: [
+                  {
+                    before: `${BASE}textures/grapehyacinth/gh-bud-before.png`,
+                    after:  `${BASE}textures/grapehyacinth/gh-bud-after.png`,
+                    labelA: "Before: Procedural base",
+                    labelB: "After: AI-stylized oil paint",
+                  },
+                  {
+                    before: `${BASE}textures/grapehyacinth/gh-leaves-before.png`,
+                    after:  `${BASE}textures/grapehyacinth/gh-leaves-after.png`,
+                    labelA: "Before: Procedural base",
+                    labelB: "After: AI-stylized oil paint",
+                  },
+                ],
+              },
+            ],
           },
         ],
-        compare: {
-          before: null,
-          after:  null,
-          labelA: "Original",
-          labelB: "Stylized",
-        },
+        keyPoints: [
+          { key: "Houdini",     value: "Modeled entirely in Houdini with a custom procedural tool. Artists can adjust stalk count, bloom density, and petal twist through a custom GUI." },
+          { key: "Unreal",      value: "Layout is driven by PCG, so density automatically follows splines. Backlit petals glow translucently via Unreal's SubsurfaceTwoSidedFoliage shader, no extra geometry needed." },
+          { key: "Performance", value: "Animation is baked to a Vertex Animation Texture (VAT) for optimized playback." },
+          { key: "Rendering",   value: "Sequencer + Movie Render Queue at film quality." },
+        ],
+      },
+      {
+        name:      "Additional Foliage",
+        location:  "Foreground daisy band",
+        // X shifted from 1.171 → -1.829 (−3) per user direction —
+        // slides the hotspot from the right-edge daisy cluster across
+        // to the left-edge daisy band that the camera also passes over.
+        worldPos:  [-1.829, -0.774, 1.574],
+        toolchain: [
+          "SpeedTree (procedural plant)",
+          "Triangle decimation",
+          "Substance Designer (stylized texture)",
+          "Unreal Engine 5 (set dress)",
+        ],
+        output:    "Real-time-ready foliage · 640 triangles · stylized procedural diffuse",
+        // Process-cards layout — three chip-labeled blocks matching the
+        // design reference: hero "Real-time Ready Foliage" plate, the
+        // modeling + optimization breakdown, and the Substance Designer
+        // stylization story. File bindings rebuilt with the new
+        // properly-labeled asset set (user delivered at
+        // C:\Users\aistudio\Downloads\Daisy with filenames that ARE the
+        // captions). Frames preserve natural image aspect ratio (see
+        // .ah-pc-pair + .ah-pc-step .ah-pc-single in style.css) — no
+        // letterbox bars, no fixed-plinth crop.
+        processCards: [
+          {
+            label: "Real-time Ready Foliage",
+            rows: [
+              { layout: "single", items: [
+                { src: `${BASE}textures/daisy/daisy-final-result.jpg`, caption: null, alt: "Stylised daisy field — final in-scene render" },
+              ]},
+            ],
+          },
+          {
+            label: "Modeling and Optimization",
+            rows: [
+              { layout: "pair", items: [
+                { src: `${BASE}textures/daisy/daisy-modeling-speedtree.png`,  caption: "Modeling in SpeedTree" },
+                { src: `${BASE}textures/daisy/daisy-speedtree-nodegraph.png`, caption: "Procedural Plant Generation in SpeedTree" },
+              ]},
+              { layout: "single", items: [
+                { src: `${BASE}textures/daisy/daisy-optimization.jpg`, caption: "Optimization · 28,557 → 640 triangles" },
+              ]},
+            ],
+            note: "To maintain stable and usable FPS performance, all foliage assets need to be carefully optimized.",
+          },
+          {
+            label: "Substance Designer Stylization Workflow",
+            rows: [
+              { layout: "single", items: [
+                { src: `${BASE}textures/daisy/daisy-substance-nodegraph.png`, caption: "Substance Designer Stylized Procedural Node Graph" },
+              ]},
+              { layout: "pair", items: [
+                { src: `${BASE}textures/daisy/daisy-substance-before.png`, caption: "Before Procedural Stylization" },
+                { src: `${BASE}textures/daisy/daisy-substance-after.png`,  caption: "After Procedural Stylization" },
+              ]},
+            ],
+            note: "Another exploration of stylized workflows in Substance Designer, inspired by the article \"Breakdown: Making 3D Landscape Look Like Painting\" from 80 Level — a procedural approach to creating stylized textures.",
+          },
+        ],
+        note:      "Real-time-ready foliage authored procedurally in SpeedTree, then aggressively decimated (28,557 → 640 triangles) so the scattered plant cards survive an interactive FPS budget without visible quality loss. A Substance Designer stylization graph produces the painterly diffuse + leaf atlas — the same procedural-painterly look as the Landscape texture pipeline, inspired by 80 Level's \"Making 3D Landscape Look Like Painting\" breakdown.",
       },
       {
         name:      "Tree",
         location:  "Near gazebo",
-        toolchain: ["SpeedTree", "Unreal Engine (set dress)"],
+        toolchain: ["SpeedTree", "Unreal Engine 5 (set dress)"],
         note:      "Procedural tree authored in SpeedTree, dressed into the Unreal scene before the env capture.",
       },
     ],
@@ -312,14 +458,17 @@ function renderItem(it, visMap) {
   // 2. Sub-line — short technical tagline (ref). Sits right under the title.
   const sub = it.ref ? `<div class="ts-item-sub">${it.ref}</div>` : "";
 
-  // 3. Toolchain zone — explicit "TOOLCHAIN" label + chip row with arrows
+  // 3. Keywords zone — chip row. No ▸ separators (the label is "Keywords"
+  // now, not "Toolchain" — arrows implied directional pipeline flow
+  // which doesn't apply to a tag list). Chips space themselves via
+  // the .ts-chain flex-gap rule.
   let chain = "";
   if (isAsset) {
     const chips = it.toolchain
       .map(t => `<span class="ts-chip">${t}</span>`)
-      .join('<span class="ts-arrow">▸</span>');
+      .join("");
     chain = `<div class="ts-zone">
-        <div class="ts-zone-label">Toolchain</div>
+        <div class="ts-zone-label">Keywords</div>
         <div class="ts-chain">${chips}</div>
       </div>`;
   }
@@ -338,10 +487,31 @@ function renderItem(it, visMap) {
   // declared via `compare: { before, after, labelA, labelB }` on the item.
   const compare = it.compare ? renderCompare(it.compare) : "";
 
+  // 5c. Rich content blocks (processCards / keyPoints / embed / simVideo) —
+  // mirrors the asset hover card so the Tech Breakdown drawer shows the
+  // same step-style walkthroughs, A/B compare grids, and Vimeo embeds.
+  // Shared with renderCard via the helpers exported from asset-hover.js.
+  // Wrapped in `.ts-rich` so the CSS rules that originally scope to
+  // `.ah-card` can also scope to the drawer via `:is(.ah-card, .ts-rich)`.
+  const hasRich = (Array.isArray(it.processCards) && it.processCards.length)
+               || (Array.isArray(it.keyPoints)    && it.keyPoints.length)
+               || it.embed
+               || it.simVideo;
+  const rich = hasRich
+    ? `<div class="ts-rich">
+         ${it.simVideo ? renderSimVideo(it.simVideo) : ""}
+         ${renderProcessCards(it.processCards)}
+         ${Array.isArray(it.embed)
+             ? it.embed.map(e => renderEmbed(e)).join("")
+             : (it.embed ? renderEmbed(it.embed) : "")}
+         ${renderKeyPoints(it.keyPoints)}
+       </div>`
+    : "";
+
   // 6. Source — small mono footer with hairline rule above
   const source = it.source ? `<div class="ts-item-src">${it.source}</div>` : "";
 
-  return `<li class="ts-item${isAsset ? " ts-item-asset" : ""}">${head}${sub}${chain}${output}${note}${compare}${source}</li>`;
+  return `<li class="ts-item${isAsset ? " ts-item-asset" : ""}">${head}${sub}${chain}${output}${note}${compare}${rich}${source}</li>`;
 }
 
 export function renderCompare(c) {
@@ -350,14 +520,25 @@ export function renderCompare(c) {
   const layer = (url, fallback, cls) => url
     ? `<img class="cmp-img ${cls}" src="${url}" draggable="false" alt="">`
     : `<div class="cmp-img cmp-ph ${cls}"><span>${fallback}</span></div>`;
+  // Labels render BELOW the frame as a citation-style row (left = A, right =
+  // B). The previous design overlaid them as absolute-positioned tags inside
+  // the frame, which worked when labels were short ("BEFORE" / "AFTER") but
+  // collided in the middle once labels grew into full descriptions like
+  // "Before: Procedural base" / "After: AI-stylized oil paint" — especially
+  // in the side-by-side compare-grid layout inside the Tech Breakdown
+  // drawer where each cell is only ~half the row width. Citations below
+  // never overlap regardless of label length and read more like a
+  // figure-caption: image first, then the legend.
   return `
     <div class="ts-compare">
       <div class="cmp-frame" data-cmp>
         ${layer(c.after, "AFTER · placeholder", "cmp-img-b")}
         ${layer(c.before, "BEFORE · placeholder", "cmp-img-a")}
         <div class="cmp-handle"><div class="cmp-knob"></div></div>
-        <div class="cmp-tag cmp-tag-a">${lblA}</div>
-        <div class="cmp-tag cmp-tag-b">${lblB}</div>
+      </div>
+      <div class="cmp-captions">
+        <span class="cmp-cap cmp-cap-a">${lblA}</span>
+        <span class="cmp-cap cmp-cap-b">${lblB}</span>
       </div>
     </div>`;
 }

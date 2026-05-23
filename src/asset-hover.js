@@ -17,13 +17,13 @@ import { fitVimeoFrames } from "./vimeo-fit.js";
 
 const _v = new THREE.Vector3();
 
-function escapeHtml(s) {
+export function escapeHtml(s) {
   return String(s ?? "").replace(/[&<>"']/g, c => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
   }[c]));
 }
 
-function renderSimVideo(v) {
+export function renderSimVideo(v) {
   if (!v) return "";
   const flags = [
     v.autoplay ? "autoplay" : "",
@@ -45,7 +45,7 @@ function renderSimVideo(v) {
     </section>`;
 }
 
-function renderEmbed(e) {
+export function renderEmbed(e) {
   if (!e || !e.src) return "";
   // Default 16:9; per-asset embeds can override with e.aspectRatio
   // (any valid CSS aspect-ratio value, e.g. "3 / 2" or "1000 / 667").
@@ -66,8 +66,154 @@ function renderEmbed(e) {
 
 function renderToolchain(items) {
   if (!Array.isArray(items) || items.length === 0) return "";
-  return items.map(t => `<span class="ah-chip">${escapeHtml(t)}</span>`)
-              .join('<span class="ah-arrow">▸</span>');
+  // Plain chip list — no ▸ arrow separators. The label was renamed
+  // from "Toolchain" to "Keywords", which means these are tags, not a
+  // sequence of pipeline stages. Arrows implied directional flow which
+  // is misleading now; chips are just space-separated. The .ah-chain
+  // CSS uses flex gap for breathing room between chips.
+  return items.map(t => `<span class="ah-chip">${escapeHtml(t)}</span>`).join("");
+}
+
+// Process-card renderer — supports TWO styles for rich design-walkthrough
+// cards. The renderer detects which style to use from the card's fields.
+//
+// STYLE A — chip-labeled (compact, used by Additional Foliage):
+//   { label: "Modeling and Optimization",
+//     rows: [{layout, items}], note: "bottom paragraph" }
+//   Renders: chip header · rows with captions BELOW images · optional note
+//
+// STYLE B — step / numbered (eyebrow + bold title + description prose +
+// captions ABOVE, used by Grape Hyacinth's 01/02/03 sections):
+//   { eyebrow: "01 — PROCEDURAL TOOL",
+//     title:   "Houdini Tool — Procedural Grape Hyacinth",
+//     description: "Body prose explaining the step…",
+//     rows: [{layout, items}] }
+//   Renders: small uppercase eyebrow · bold title h3 · description prose ·
+//   rows with captions ABOVE images. No bottom note (description carries
+//   the prose).
+//
+// Row items support BOTH images and Vimeo iframes:
+//   { src: "/path/to/img.png", caption: "…" }    → <img>
+//   { iframeSrc: "https://player.vimeo.com/…",
+//     caption: "…", aspectRatio: "16/9" }        → <iframe>
+//
+// Style detection: presence of `eyebrow` OR `title` → Style B; else
+// Style A. This keeps existing chip-style cards (Additional Foliage)
+// untouched while allowing the new step style for Grape Hyacinth.
+
+function renderProcessCardItem(item /* captionAbove unused — always below */) {
+  if (!item) return "";
+  const isIframe = !!item.iframeSrc;
+  const inner = isIframe
+    ? `<iframe src="${escapeHtml(item.iframeSrc)}"
+              title="${escapeHtml(item.alt || item.caption || "embedded video")}"
+              allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
+              referrerpolicy="strict-origin-when-cross-origin"
+              allowfullscreen></iframe>`
+    : (item.src ? `<img src="${escapeHtml(item.src)}" alt="${escapeHtml(item.alt || item.caption || "")}">` : "");
+  if (!inner) return "";
+  // Per-item aspectRatio (e.g. for an unusually-shaped iframe) overrides
+  // the row's default plinth ratio set by CSS.
+  const aspectStyle = item.aspectRatio
+    ? ` style="aspect-ratio: ${escapeHtml(item.aspectRatio)};"`
+    : "";
+  const cap = item.caption
+    ? `<figcaption>${escapeHtml(item.caption)}</figcaption>`
+    : "";
+  // All captions render BELOW their content (image or video) per user
+  // direction "图片的标注也需要在图片的下方". One uniform rule — keeps
+  // visual rhythm consistent across cards and matches the standard
+  // figure → figcaption flow. The .ah-pc-fig-cap-above CSS variant
+  // is left in style.css dormant in case a future card wants captions
+  // above; nothing currently uses it.
+  return `<figure class="ah-pc-fig">
+            <div class="ah-frame"${aspectStyle}>${inner}</div>
+            ${cap}
+          </figure>`;
+}
+
+function renderProcessCard(card) {
+  if (!card || !Array.isArray(card.rows) || card.rows.length === 0) return "";
+  // Detect style by presence of eyebrow/title (Style B) vs label (Style A).
+  const isStep = !!(card.eyebrow || card.title);
+  // Both styles render as FLAT sections (no rounded-box wrapper) — user
+  // direction: "我不要这样的卡片嵌套排版，类似Gazebo这样平铺的就可以".
+  // Each card becomes its own <section class="ah-section">, consistent
+  // with how Gazebo's "HOUDINI 3DGS SIMULATION" section is rendered.
+  // Captions also always render BELOW their content (image or video)
+  // per the follow-up "图片的标注也需要在图片的下方" — captionAbove
+  // plumbing is removed entirely; renderProcessCardItem handles the
+  // uniform below-caption layout itself.
+  const sectionClass = isStep ? "ah-section ah-pc-step" : "ah-section ah-pc-flat";
+
+  // Chip-style header → use the standard .ah-sec-title (uppercase
+  // letter-spaced label) so it visually matches Gazebo's section
+  // headers exactly. Step-style header keeps its eyebrow + bold title
+  // + description typography (Grape Hyacinth's richer narrative).
+  const header = isStep
+    ? `${card.eyebrow ? `<div class="ah-pc-eyebrow">${escapeHtml(card.eyebrow)}</div>` : ""}
+       ${card.title   ? `<h3 class="ah-pc-title">${escapeHtml(card.title)}</h3>` : ""}
+       ${card.description ? `<p class="ah-pc-desc">${escapeHtml(card.description)}</p>` : ""}`
+    : (card.label ? `<div class="ah-sec-title">${escapeHtml(card.label)}</div>` : "");
+
+  const rows = card.rows.map(r => {
+    // Compare-slider row: one or more A/B wipe widgets driven by the
+    // existing tech-spec.js helpers. Two schemas accepted:
+    //   • Single compare — row itself carries { before, after, labelA,
+    //     labelB, aspectRatio? }
+    //   • Multiple compares — row carries `items: [{ before, after, ...}]`
+    //     and each compare lays out side-by-side in a grid (1 item =
+    //     full-width, 2 items = pair, 3+ items = auto-fit grid).
+    // Default aspectRatio is "1 / 1" (Substance texture pairs are
+    // typically square); override per-item or per-row for landscape /
+    // portrait sources via e.g. "16 / 9".
+    if (r.layout === "compare") {
+      const items = Array.isArray(r.items) && r.items.length
+        ? r.items
+        : [r];   // back-compat: treat the row itself as one compare
+      const aspect    = r.aspectRatio || "1 / 1";
+      const pairClass = items.length > 1 ? " ah-pc-compare-grid" : "";
+      const inner = items.map(c => {
+        const a = c.aspectRatio || aspect;
+        return `<div class="ah-pc-cmp-cell" style="--cmp-aspect: ${a};">${renderCompare(c)}</div>`;
+      }).join("");
+      return `<div class="ah-pc-row ah-pc-compare${pairClass}" style="--cmp-aspect: ${aspect};">${inner}</div>`;
+    }
+    const layout = r.layout === "pair" ? "ah-pc-pair" : "ah-pc-single";
+    const items  = (r.items || []).map(renderProcessCardItem).join("");
+    return `<div class="ah-pc-row ${layout}">${items}</div>`;
+  }).join("");
+
+  const note = card.note
+    ? `<div class="ah-pc-note">${escapeHtml(card.note)}</div>`
+    : "";
+
+  return `<section class="${sectionClass}">${header}${rows}${note}</section>`;
+}
+
+export function renderProcessCards(cards) {
+  if (!Array.isArray(cards) || cards.length === 0) return "";
+  // No outer wrapping — each card is its own flat section, joined inline
+  // as siblings of the other top-level sections in the card body.
+  return cards.map(renderProcessCard).join("");
+}
+
+// Key-points renderer — bulleted summary at the bottom of an asset card,
+// each row is { key: "Houdini", value: "Modeled entirely in…" } and
+// renders as a list with the key bolded inline. Used by Grape Hyacinth's
+// Houdini/Unreal/Performance/Rendering wrap-up bullets. Opt-in per asset
+// via `keyPoints: [...]`; absence renders nothing.
+export function renderKeyPoints(points) {
+  if (!Array.isArray(points) || points.length === 0) return "";
+  const lis = points.map(p => {
+    if (!p || !p.value) return "";
+    const k = p.key ? `<strong>${escapeHtml(p.key)}:</strong> ` : "";
+    return `<li>${k}${escapeHtml(p.value)}</li>`;
+  }).join("");
+  return `
+    <section class="ah-section ah-keypoints">
+      <ul>${lis}</ul>
+    </section>`;
 }
 
 // Exported so mobile-ui.js can reuse the exact same markup inside a
@@ -87,9 +233,11 @@ export function renderCard(it) {
     </header>
 
     ${tc ? `<section class="ah-section">
-      <div class="ah-sec-title">Toolchain</div>
+      <div class="ah-sec-title">Keywords</div>
       <div class="ah-chain">${tc}</div>
     </section>` : ""}
+
+    ${renderProcessCards(it.processCards)}
 
     ${it.simVideo ? renderSimVideo(it.simVideo) : ""}
 
@@ -135,6 +283,8 @@ export function renderCard(it) {
     </section>` : ""}
 
     ${it.note ? `<section class="ah-section ah-note">${escapeHtml(it.note)}</section>` : ""}
+
+    ${renderKeyPoints(it.keyPoints)}
 
     ${it.compare ? `<section class="ah-section">
       <div class="ah-sec-title">Before / After</div>

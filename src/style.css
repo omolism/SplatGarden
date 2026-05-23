@@ -1776,14 +1776,18 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   cursor: ew-resize;
   user-select: none;
   -webkit-user-select: none;
-  /* touch-action: pan-y — iOS Safari otherwise claims horizontal touches
-     as browser-level gestures (back-swipe / page pan) before the JS
-     pointer handlers get them, so the compare slider couldn't be
-     dragged on mobile. Reserving horizontal for our JS while letting
-     vertical scroll bubble up to the parent (the bottom sheet on phone,
-     the asset card on desktop / iPad) is the right shape for a
-     compare slider nested inside a scrollable region. */
-  touch-action: pan-y;
+  /* touch-action: none — fully claim every touch on the frame so the JS
+     pointer handlers run reliably on iOS Safari + Chrome Android. The
+     earlier `pan-y` was supposed to leave horizontal for JS while letting
+     vertical scroll bubble up, but in practice mobile Safari raced its
+     own gesture interpretation against pointermove and the slider often
+     refused to drag at all (PM-report: "手机端AB compare似乎不能滑动").
+     Matching the same `touch-action: none` every other JS drag surface
+     in the project uses (canvas, asset-hotspot, lil-gui sliders) makes
+     the drag reliable. Users can still scroll the parent drawer by
+     touching outside the slider frame — the frames are 16:9 of the row
+     width, not full-bleed. */
+  touch-action: none;
   background: rgba(255, 255, 255, 0.03);
 }
 .ts-compare .cmp-img {
@@ -1851,24 +1855,41 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   font-size: 12px;
   color: var(--text);
 }
-.ts-compare .cmp-tag {
-  position: absolute;
-  top: 8px;
+/* Caption row beneath the compare frame — replaces the old absolute-
+   positioned .cmp-tag-a / .cmp-tag-b overlays that collided when both
+   labels were long (e.g., "Before: Procedural base" + "After: AI-stylized
+   oil paint" overlapping in the middle of a narrow side-by-side compare
+   cell). Reads as a figure caption: left half = the "before" label,
+   right half = the "after" label, gap in the middle so the two never
+   touch even when the text wraps. */
+.ts-compare .cmp-captions {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 8px;
   font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.12em;
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text);
-  background: rgba(8, 12, 18, 0.78);
-  border: 1px solid var(--hair);
-  padding: 3px 7px;
-  border-radius: 3px;
-  z-index: 4;
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  line-height: 1.4;
+  color: var(--text-mid);
 }
-.ts-compare .cmp-tag-a { left: 8px; }
-.ts-compare .cmp-tag-b { right: 8px; }
+.ts-compare .cmp-cap {
+  flex: 1 1 0;
+  min-width: 0;
+  /* No truncation — labels wrap onto multiple lines if needed so the
+     full description always reads. The fixed-width flex-basis (1 1 0)
+     keeps the A/B pair equal even when one line wraps and the other
+     doesn't. */
+  word-break: break-word;
+}
+.ts-compare .cmp-cap-a {
+  text-align: left;
+}
+.ts-compare .cmp-cap-b {
+  text-align: right;
+}
 #tech-spec .ts-footer {
   display: flex;
   justify-content: space-between;
@@ -3740,7 +3761,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 }
 
 /* Houdini SIM video — autoplay loop hero embed (Gazebo + future sim items) */
-.ah-card .ah-sim-frame {
+:is(.ah-card, .ts-rich) .ah-sim-frame {
   position: relative;
   aspect-ratio: 16 / 9;
   border-radius: var(--radius-sm);
@@ -3748,7 +3769,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   border: 1px solid var(--hair);
   overflow: hidden;
 }
-.ah-card .ah-sim-video {
+:is(.ah-card, .ts-rich) .ah-sim-video {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -3757,7 +3778,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   display: block;
   background: #000;
 }
-.ah-card .ah-sim-ph {
+:is(.ah-card, .ts-rich) .ah-sim-ph {
   position: absolute;
   inset: 0;
   display: flex;
@@ -3771,20 +3792,20 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   text-align: center;
   padding: 14px;
 }
-.ah-card .ah-sim-ph-eyebrow {
+:is(.ah-card, .ts-rich) .ah-sim-ph-eyebrow {
   font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.20em;
   text-transform: uppercase;
   color: var(--text);
 }
-.ah-card .ah-sim-ph-body {
+:is(.ah-card, .ts-rich) .ah-sim-ph-body {
   font-family: var(--font-ui);
   font-size: 10.5px;
   color: var(--text-mid);
   letter-spacing: 0.02em;
 }
-.ah-card .ah-sim-ph-body code {
+:is(.ah-card, .ts-rich) .ah-sim-ph-body code {
   font-family: var(--font-mono);
   font-size: 9.5px;
   padding: 1px 5px;
@@ -3795,7 +3816,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 }
 
 /* Embedded video (Vimeo / YouTube / generic iframe) — 16:9 wrapper */
-.ah-card .ah-embed-frame {
+:is(.ah-card, .ts-rich) .ah-embed-frame {
   position: relative;
   aspect-ratio: 16 / 9;
   border-radius: var(--radius-sm);
@@ -3803,13 +3824,248 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   overflow: hidden;
   background: #000;
 }
-.ah-card .ah-embed-frame iframe {
+:is(.ah-card, .ts-rich) .ah-embed-frame iframe {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   border: 0;
   display: block;
+}
+
+/* ============================================================
+   Process cards — chip-labeled visual cards used for assets with a
+   rich design-walkthrough story (Daisy / Real-time Ready Foliage).
+   Each card has an optional chip label, one or more image rows
+   (single or pair layout), and an optional bottom note.
+   ============================================================ */
+/* (Old .ah-process-cards container + .ah-process-card rounded-box +
+   .ah-pc-chip badge styles were removed per user direction —
+   "我不要这样的卡片嵌套排版，类似Gazebo这样平铺的就可以". Both styles
+   now render as flat <section class="ah-section"> blocks; the chip
+   label became a regular .ah-sec-title header, matching Gazebo's
+   "HOUDINI 3DGS SIMULATION" treatment. Per-card typography for the
+   step variant — eyebrow + bold title + description — is preserved
+   below; the rounded-box wrapper is gone.) */
+
+/* ── Step-style process section (eyebrow + title + description) ──
+   Used by Grape Hyacinth's 01/02/03 numbered breakdown. Renders the
+   richer editorial header — small uppercase numbered eyebrow, bold
+   title h3, prose description — then media rows with captions ABOVE.
+   FLAT (no rounded-box wrapper) per user direction; sibling spacing
+   handled by the .ah-section margin from style.css's section rules. */
+:is(.ah-card, .ts-rich) .ah-pc-eyebrow {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+:is(.ah-card, .ts-rich) .ah-pc-title {
+  font-family: var(--font-ui);
+  font-size: clamp(14px, 1.5vw, 17px);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  color: var(--text);
+  margin: 0 0 12px;
+}
+:is(.ah-card, .ts-rich) .ah-pc-desc {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--text-mid);
+  margin: 0 0 18px;
+}
+/* Caption ABOVE the image in step-style cards. Default figcaption uses
+   normal-flow order (caption AFTER frame); the .ah-pc-fig-cap-above
+   variant inverts via flex-direction so the caption appears above. */
+:is(.ah-card, .ts-rich) .ah-pc-fig-cap-above {
+  display: flex;
+  flex-direction: column;
+}
+:is(.ah-card, .ts-rich) .ah-pc-fig-cap-above figcaption {
+  order: 0;
+  margin: 0 0 6px;
+}
+:is(.ah-card, .ts-rich) .ah-pc-fig-cap-above .ah-frame {
+  order: 1;
+}
+/* iframe inside a step-style frame fills it cleanly. Iframes need an
+   explicit aspect ratio (no intrinsic dimensions like images have) —
+   the frame gets 16:9 so Vimeo embeds sit in their natural ratio
+   without letterbox. Images in the same single-row position are
+   handled separately below: natural aspect, no forced plinth. */
+:is(.ah-card, .ts-rich) .ah-pc-fig .ah-frame iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+}
+:is(.ah-card, .ts-rich) .ah-pc-step .ah-pc-single .ah-frame:has(iframe) {
+  aspect-ratio: 16 / 9;
+}
+:is(.ah-card, .ts-rich) .ah-pc-step .ah-pc-single .ah-frame iframe {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* Step-style single-image frames preserve natural image aspect so we
+   never letterbox a hero shot. Matches the user direction "ui框保留
+   图片比例" — frame fits image, not the other way around. */
+:is(.ah-card, .ts-rich) .ah-pc-step .ah-pc-single .ah-frame img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ── Key Points list (bottom-of-card summary bullets) ──
+   Used by Grape Hyacinth's Houdini/Unreal/Performance/Rendering wrap-up.
+   Small bulleted list with bold key + colon + value, designed to read
+   as a quick-reference checklist after the visual sections above. */
+:is(.ah-card, .ts-rich) .ah-keypoints ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+:is(.ah-card, .ts-rich) .ah-keypoints li {
+  position: relative;
+  padding-left: 14px;
+  margin-bottom: 9px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-mid);
+  letter-spacing: 0.005em;
+}
+:is(.ah-card, .ts-rich) .ah-keypoints li::before {
+  content: "•";
+  position: absolute;
+  left: 2px;
+  top: 0;
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.4;
+}
+:is(.ah-card, .ts-rich) .ah-keypoints li strong {
+  color: var(--text);
+  font-weight: 600;
+}
+:is(.ah-card, .ts-rich) .ah-keypoints li:last-child {
+  margin-bottom: 0;
+}
+:is(.ah-card, .ts-rich) .ah-pc-row {
+  margin-bottom: 12px;
+}
+:is(.ah-card, .ts-rich) .ah-pc-row:last-child {
+  margin-bottom: 0;
+}
+/* Compare-slider row inside a processCard. Adjustments to default
+   .ts-compare styling for nested use:
+   1. Override default 16:9 frame ratio with --cmp-aspect (defaults to
+      1:1, set per-row from JS — preserves source image's natural
+      aspect so square Substance textures don't crop).
+   2. Bump bottom gap so adjacent compare rows breathe apart.
+   3. When row has multiple compare items (--ah-pc-compare-grid class),
+      lay them out side-by-side in a 2-column grid; the wipe slider
+      still works inside each cell independently. */
+:is(.ah-card, .ts-rich) .ah-pc-row.ah-pc-compare {
+  margin-bottom: 16px;
+}
+:is(.ah-card, .ts-rich) .ah-pc-row.ah-pc-compare:last-child {
+  margin-bottom: 0;
+}
+:is(.ah-card, .ts-rich) .ah-pc-row.ah-pc-compare .ts-compare {
+  margin-top: 0;
+}
+:is(.ah-card, .ts-rich) .ah-pc-row.ah-pc-compare .cmp-frame {
+  aspect-ratio: var(--cmp-aspect, 1 / 1);
+}
+:is(.ah-card, .ts-rich) .ah-pc-row.ah-pc-compare.ah-pc-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+:is(.ah-card, .ts-rich) .ah-pc-cmp-cell {
+  min-width: 0;
+}
+:is(.ah-card, .ts-rich) .ah-pc-cmp-cell .cmp-frame {
+  aspect-ratio: var(--cmp-aspect, 1 / 1);
+}
+@media (max-width: 480px) {
+  /* On phones, two square compares side-by-side become tiny — stack them. */
+  :is(.ah-card, .ts-rich) .ah-pc-row.ah-pc-compare.ah-pc-compare-grid {
+    grid-template-columns: 1fr;
+  }
+}
+:is(.ah-card, .ts-rich) .ah-pc-fig {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+:is(.ah-card, .ts-rich) .ah-pc-fig .ah-frame {
+  background: #111;
+  border-radius: 8px;
+  overflow: hidden;
+}
+:is(.ah-card, .ts-rich) .ah-pc-fig figcaption {
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  letter-spacing: 0.01em;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* SINGLE-image rows — natural aspect, no constraint.
+   The image is the whole story; let it breathe at its native ratio. */
+:is(.ah-card, .ts-rich) .ah-pc-single .ah-frame img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* PAIR rows — each frame preserves its source image's natural aspect
+   ratio per user direction ("ui框保留图片比例"). No fixed plinth, no
+   `object-fit: cover` crop, no letterbox bars. Side-by-side images
+   align at the TOP; when the two source images share aspect (e.g. a
+   before/after pair rendered from the same graph at the same res) the
+   heights match naturally. When they differ (a portrait viewport
+   beside a landscape node-graph), each image stands at its own height
+   intact — the user accepted that tradeoff in exchange for never
+   cropping or letterboxing showcase imagery. */
+:is(.ah-card, .ts-rich) .ah-pc-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: start;
+}
+:is(.ah-card, .ts-rich) .ah-pc-pair .ah-pc-fig .ah-frame {
+  /* No fixed aspect — frame fits the image */
+}
+:is(.ah-card, .ts-rich) .ah-pc-pair .ah-pc-fig .ah-frame img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: initial;
+}
+:is(.ah-card, .ts-rich) .ah-pc-note {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hair);
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  line-height: 1.6;
+  color: var(--text-mid);
+  letter-spacing: 0.005em;
+}
+@media (max-width: 600px) {
+  :is(.ah-card, .ts-rich) .ah-pc-pair {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Pipeline strip — n-wide image row */
@@ -3886,6 +4142,154 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   color: var(--text-mid);
   flex: 1;
   word-break: break-word;
+}
+
+/* ============================================================
+   Tech-spec drawer — rich content block (.ts-rich)
+
+   Mirror of the asset-hover card's rich content (processCards /
+   keyPoints / embed / simVideo) embedded inside Tech Breakdown
+   drawer items. The .ah-pc-* / .ah-keypoints / .ah-embed-frame /
+   .ah-sim-* selectors are already shared via :is(.ah-card, .ts-rich)
+   higher up. This block fills in the small remaining gaps that were
+   previously scoped only to .ah-card — the chip-style section title
+   eyebrow, the base .ah-frame styling (no forced 1:1 aspect inside
+   the drawer; image height drives its own frame), and a top spacer
+   so the rich content sits a little lower than the item's note.
+   ============================================================ */
+.ts-rich {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+/* Sections inside .ts-rich are layout-only — no border / wide padding
+   like the asset-card uses. The drawer's .ts-item already provides the
+   outer spacing and divider lines between items. */
+.ts-rich .ah-section {
+  padding: 0;
+  border: 0;
+}
+.ts-rich .ah-section + .ah-section {
+  margin-top: 4px;
+}
+/* Chip-style processCard header — matches the .ah-card .ah-sec-title
+   uppercase eyebrow look so "MODELING AND OPTIMIZATION" reads the same
+   inside the drawer as in the hover card. */
+.ts-rich .ah-sec-title {
+  font-family: var(--font-ui);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.20em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+/* Frame baseline for non-processCard slots (currently unused but
+   keeps the look consistent if a future rich block emits a bare
+   .ah-frame). The .ah-pc-fig .ah-frame override (above) handles the
+   actual processCard frames. */
+.ts-rich .ah-frame {
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--hair);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ts-rich .ah-frame img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.ts-rich figcaption {
+  font-family: var(--font-ui);
+  font-size: 10px;
+  color: var(--text-mid);
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+/* ============================================================
+   Phone / iPad responsive adaptations for the rich content blocks
+   and the new compare captions row.
+
+   Strategy:
+   - Phone (≤480px): tighten font sizes, gaps, and stack the compare-
+     grid + pair rows (already handled higher up via the dedicated
+     media queries at 480px / 600px). Add tighter typography here so
+     the bottom-sheet (mobile) and the drawer (mobile portrait) both
+     read without horizontal crowding.
+   - iPad portrait (481–900px): keep the side-by-side compare grids
+     and pair rows — they look great at iPad widths and the existing
+     stack-at-480 rule does not trigger. No extra rules needed beyond
+     defaults. Only adjustment: slightly tighter compare-caption gap
+     so two long labels don't visually merge in the middle.
+
+   No rules target iPad specifically; iPad picks up either the default
+   desktop sizing (≥901px) or the 600px pair-stack rule depending on
+   orientation, and both look right.
+   ============================================================ */
+
+/* iPad-class viewports + small laptop (481–900px) — compare captions
+   benefit from a touch more breathing room because the side-by-side
+   compare-grid cells are tighter here than on desktop. */
+@media (min-width: 481px) and (max-width: 900px) {
+  .ts-compare .cmp-captions {
+    gap: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Compare captions — drop a hair of font size + letter-spacing so
+     the two-line wrap on long labels ("Before: Procedural base") still
+     fits inside the narrow compare cell without the right-aligned side
+     looking ragged. */
+  .ts-compare .cmp-captions {
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  /* Tech-spec drawer rich content — tighter vertical rhythm so the
+     drawer doesn't feel airy on a 375px viewport. */
+  .ts-rich {
+    margin-top: 10px;
+    gap: 11px;
+  }
+  /* Step-style processCard typography — eyebrow + title + desc all
+     come down a half-step. The clamp on .ah-pc-title already pins to
+     14px at narrow widths; we trim the margin-bottom under it so the
+     description prose starts closer to the title. */
+  :is(.ah-card, .ts-rich) .ah-pc-eyebrow {
+    font-size: 9.5px;
+    letter-spacing: 0.18em;
+    margin-bottom: 8px;
+  }
+  :is(.ah-card, .ts-rich) .ah-pc-title {
+    margin-bottom: 10px;
+  }
+  :is(.ah-card, .ts-rich) .ah-pc-desc {
+    font-size: 11.5px;
+    line-height: 1.55;
+    margin-bottom: 14px;
+  }
+  /* Tighter row spacing — small phones can't afford 12px between every
+     media row, especially when the user scrolls a long 03-Texturing
+     section with multiple compares stacked. */
+  :is(.ah-card, .ts-rich) .ah-pc-row {
+    margin-bottom: 10px;
+  }
+  :is(.ah-card, .ts-rich) .ah-pc-row.ah-pc-compare {
+    margin-bottom: 14px;
+  }
+  /* Keypoints — slightly smaller body and tighter bullets */
+  :is(.ah-card, .ts-rich) .ah-keypoints li {
+    font-size: 11.5px;
+    line-height: 1.55;
+    margin-bottom: 7px;
+  }
 }
 
 /* ============================================================
