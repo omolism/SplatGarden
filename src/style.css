@@ -1,13 +1,13 @@
-/* ============================================================
+﻿/* ============================================================
    Luma-style monochrome glass UI
    ============================================================
    Design notes:
-   • Single hue — pure neutral grayscale. No color accents.
-   • Panels: deeply blurred (28px) with very low-opacity fills.
-   • Hairline borders only (1px @ ~6% white).
-   • Typography: light weight, wide tracking on labels, mono for nums.
-   • Hover/active: subtle brightness shift, never a color change.
-   • Annotation hotspots & hand cursor: white-on-glass.
+   â€¢ Single hue â€” pure neutral grayscale. No color accents.
+   â€¢ Panels: deeply blurred (28px) with very low-opacity fills.
+   â€¢ Hairline borders only (1px @ ~6% white).
+   â€¢ Typography: light weight, wide tracking on labels, mono for nums.
+   â€¢ Hover/active: subtle brightness shift, never a color change.
+   â€¢ Annotation hotspots & hand cursor: white-on-glass.
    ============================================================ */
 
 :root {
@@ -185,7 +185,7 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  /* NO `z-index` declared on purpose — `position: absolute + z-index`
+  /* NO `z-index` declared on purpose â€” `position: absolute + z-index`
      would create a stacking context, which in Chromium prevents
      descendants' `backdrop-filter` from "seeing" the 3D canvas at
      the root level (the blur effect collapses to a faint tint).
@@ -197,7 +197,7 @@ html, body {
 }
 #left-stack > * { pointer-events: auto; }
 
-/* ============ Sidebar — Viewpoints ============ */
+/* ============ Sidebar â€” Viewpoints ============ */
 #sidebar {
   position: static;         /* now flex child of #left-stack */
   width: 100%;
@@ -214,7 +214,7 @@ html, body {
   overflow: hidden;
   box-shadow: var(--shadow-soft);
   /* Shrink-in-place transition for the collapse / expand motion.
-     IMPORTANT: do NOT declare `transition: transform` here — Chromium
+     IMPORTANT: do NOT declare `transition: transform` here â€” Chromium
      promotes any element with that declaration onto its own GPU
      compositor layer, and once it's a separate layer the panel's own
      backdrop-filter can no longer reach the scene behind it (shows
@@ -225,13 +225,13 @@ html, body {
               min-height 0.28s cubic-bezier(.22, 1, .36, 1),
               padding 0.28s cubic-bezier(.22, 1, .36, 1);
 }
-/* Collapsed state — the panel SHRINKS IN PLACE to a 38 × 38 chevron
+/* Collapsed state â€” the panel SHRINKS IN PLACE to a 38 Ã— 38 chevron
    tab. No floating-handle trick: the affordance lives at the panel's
    exact Y coordinate inside #left-stack, so multiple collapsed panels
    stack naturally and the "expand" tap target is always co-located
    with where the panel was. The slim tab IS the affordance, and the
    same chevron toggle (the only visible child when collapsed) handles
-   both directions — flipped 180° via CSS to read as "expand".
+   both directions â€” flipped 180Â° via CSS to read as "expand".
    Width changes via max-width so the smooth height transition pairs
    nicely with the horizontal shrink. */
 #sidebar.sidebar-minimized,
@@ -271,14 +271,14 @@ html, body {
   transform: rotate(180deg);
 }
 #scene-panel {
-  /* Same shrink-in-place transition as #sidebar — no `transform` in
+  /* Same shrink-in-place transition as #sidebar â€” no `transform` in
      the transition list (would break backdrop-filter, see #sidebar). */
   transition: max-width 0.28s cubic-bezier(.22, 1, .36, 1),
               max-height 0.28s cubic-bezier(.22, 1, .36, 1),
               min-height 0.28s cubic-bezier(.22, 1, .36, 1),
               padding 0.28s cubic-bezier(.22, 1, .36, 1);
 }
-/* Scene panel header — same flex shape as sidebar header so the new
+/* Scene panel header â€” same flex shape as sidebar header so the new
    chevron, the title, and "+ Add" align. */
 #scene-panel header {
   display: flex;
@@ -303,9 +303,9 @@ html, body {
 }
 #scene-panel #scene-toggle.sidebar-toggle:hover { background: rgba(255, 255, 255, 0.06); color: var(--text); }
 #scene-panel #scene-toggle.sidebar-toggle svg   { width: 16px; height: 16px; display: block; }
-/* Collapse / expand chevron — lives inside #sidebar header. The SAME
+/* Collapse / expand chevron â€” lives inside #sidebar header. The SAME
    button toggles in both directions: when the sidebar collapses, the
-   panel shrinks to a 38 × 38 tab around this chevron (rotated 180°
+   panel shrinks to a 38 Ã— 38 tab around this chevron (rotated 180Â°
    via CSS) so the affordance is always in place. */
 #sidebar .sidebar-toggle {
   background: transparent;
@@ -325,7 +325,7 @@ html, body {
 #sidebar .sidebar-toggle:hover { background: rgba(255, 255, 255, 0.06); color: var(--text); }
 #sidebar .sidebar-toggle svg { width: 16px; height: 16px; display: block; }
 
-/* (Floating .panel-expand-handle is gone — the collapsed panel IS the
+/* (Floating .panel-expand-handle is gone â€” the collapsed panel IS the
    expand affordance now. See the .sidebar-minimized / .hand-minimized
    rules above for the slim-tab-in-place idiom.) */
 
@@ -362,10 +362,10 @@ html, body {
   background: var(--hover-strong);
   border-color: rgba(255, 255, 255, 0.22);
 }
-/* Viewpoints header — both action buttons (Share + Add) use the same
+/* Viewpoints header â€” both action buttons (Share + Add) use the same
    icon-only square pill. Equal padding, equal hit-target, same hover
    treatment. Previously the +Add button was text-bearing and the Share
-   was icon-only — the asymmetry read as unfinished. */
+   was icon-only â€” the asymmetry read as unfinished. */
 #sidebar .vp-header-btn {
   padding: 4px 6px;
   display: inline-flex;
@@ -446,7 +446,7 @@ html, body {
    + descriptors). At the panel's 240 px width the longer rows wrap.
    Previously used `display: block` + `text-indent: -18px` hanging indent,
    but that broke down when wrapping landed in the middle of a text
-   node between two <kbd> elements — characters at the wrap boundary
+   node between two <kbd> elements â€” characters at the wrap boundary
    got clipped by the parent's overflow:hidden, producing "mov" /
    "down/u" / "viewpoin" garbage. Flex-wrap with proper inline gap
    handles the same case cleanly: every child (icon, kbd, text) gets
@@ -469,16 +469,16 @@ html, body {
   vertical-align: -1px;
 }
 #sidebar .hint kbd { margin: 0 1px; }
-/* Hide keyboard + mouse shortcut hints on phone devices — there's no
+/* Hide keyboard + mouse shortcut hints on phone devices â€” there's no
    physical keyboard, and listing WASD / Q / E / V / R alongside the
    viewpoints reads as misleading clutter. Bound to `body.phone-device`
-   (sticky, hardware-based) so this survives orientation changes —
+   (sticky, hardware-based) so this survives orientation changes â€”
    the existing `body.mobile #sidebar { display: none }` rule only
    hides the sidebar in PORTRAIT (mobile flips off when an iPhone
    rotates to landscape and the viewport width crosses 768 px),
    leaving the hints visible in landscape. */
 body.phone-device #sidebar .hint { display: none; }
-/* Same logic for the Scene panel's drag-and-drop hint — phones can't
+/* Same logic for the Scene panel's drag-and-drop hint â€” phones can't
    really drag files onto the canvas (the "+ Add" file picker and the
    Studio panel's "Use My Own" pill cover the same job on touch), and
    the hint footer was eating ~50 px of an already-short panel. Hiding
@@ -486,20 +486,20 @@ body.phone-device #sidebar .hint { display: none; }
 body.phone-device #scene-panel .hint { display: none; }
 
 /* ============================================================
-   Phone LANDSCAPE — #left-stack is only ≈ 312 px tall (viewport
-   height ≈ 430 minus 18 px top + 100 px bottom buffer for the
+   Phone LANDSCAPE â€” #left-stack is only â‰ˆ 312 px tall (viewport
+   height â‰ˆ 430 minus 18 px top + 100 px bottom buffer for the
    hand-panel). The default 60 / 40 split between Viewpoints and
-   Scene gives Scene only ≈ 125 px, of which 38 px is the header
-   and the layer list ends up clamped to ≈ 37 px — too short to
-   show even one full row, hence the user's report of "scene 部分
-   不显示" (Scene contents not displaying).
+   Scene gives Scene only â‰ˆ 125 px, of which 38 px is the header
+   and the layer list ends up clamped to â‰ˆ 37 px â€” too short to
+   show even one full row, hence the user's report of "scene éƒ¨åˆ†
+   ä¸æ˜¾ç¤º" (Scene contents not displaying).
 
    Rebalance for that orientation:
-   • Viewpoints (#sidebar) — hints are already hidden on
+   â€¢ Viewpoints (#sidebar) â€” hints are already hidden on
      body.phone-device, so the panel only ever holds the 3-item
-     default viewpoint list. 36 % is plenty (≈ 112 px → header
-     38 + 3 rows ≈ 108 fits within scroll).
-   • Scene (#scene-panel) — the panel users actually read; let
+     default viewpoint list. 36 % is plenty (â‰ˆ 112 px â†’ header
+     38 + 3 rows â‰ˆ 108 fits within scroll).
+   â€¢ Scene (#scene-panel) â€” the panel users actually read; let
      it own most of the column.
    The bound applies only to short landscape viewports so it
    doesn't perturb iPad / desktop. body.phone-device anchors to
@@ -512,28 +512,28 @@ body.phone-device #scene-panel .hint { display: none; }
 }
 
 /* ============================================================
-   Phone LANDSCAPE — comprehensive size + layout pass.
-   In landscape the viewport is wide-but-short (≈ 932 × 430 on
-   iPhone 14 PM, ≈ 844 × 390 on smaller phones). The default
+   Phone LANDSCAPE â€” comprehensive size + layout pass.
+   In landscape the viewport is wide-but-short (â‰ˆ 932 Ã— 430 on
+   iPhone 14 PM, â‰ˆ 844 Ã— 390 on smaller phones). The default
    desktop-derived layout (used because `body.mobile` flips off
    above 768 px) stacks the Viewpoints / Scene / Hand-Tracking
    panels on the left, the lil-gui Studio on the right, plus
    any open hover card / Quick Guide / USD annotation card in
-   between — together they easily occupy 100 % of the short
+   between â€” together they easily occupy 100 % of the short
    viewport with multiple overlaps (the user's screenshot
    showed exactly this).
 
    Scoped to `body.phone-device` so iPad + desktop are
    untouched. Strategy:
-     • Shrink lil-gui to a narrow right-rail
-     • Shrink Viewpoints / Scene to a slim left-rail
-     • Hand-Tracking starts collapsed (less footprint by default)
-     • USD annotation card narrows + pulls closer to right edge
-     • Asset hover card stays at its 0.72 zoom (existing rule)
-     • Quick Guide narrows so it doesn't span the viewport
+     â€¢ Shrink lil-gui to a narrow right-rail
+     â€¢ Shrink Viewpoints / Scene to a slim left-rail
+     â€¢ Hand-Tracking starts collapsed (less footprint by default)
+     â€¢ USD annotation card narrows + pulls closer to right edge
+     â€¢ Asset hover card stays at its 0.72 zoom (existing rule)
+     â€¢ Quick Guide narrows so it doesn't span the viewport
    ============================================================ */
 @media (orientation: landscape) and (max-height: 520px) {
-  /* lil-gui Studio — narrow rail on the right, not the full
+  /* lil-gui Studio â€” narrow rail on the right, not the full
      280-px desktop width. Tight max-height so it never spills
      past the viewport's bottom edge. */
   body.phone-device .lil-gui.root {
@@ -546,7 +546,7 @@ body.phone-device #scene-panel .hint { display: none; }
     --width: 220px !important;
     --font-size: 10.5px !important;
   }
-  /* Left rail — Viewpoints + Scene panels narrower so they
+  /* Left rail â€” Viewpoints + Scene panels narrower so they
      don't eat the centre of the viewport. */
   body.phone-device #left-stack {
     width: 180px;
@@ -554,7 +554,7 @@ body.phone-device #scene-panel .hint { display: none; }
     left: 12px;
     bottom: 78px;
   }
-  /* Hand Tracking panel — starts visually minimised in
+  /* Hand Tracking panel â€” starts visually minimised in
      landscape so it doesn't dominate the short viewport. The
      pill remains tappable to expand. */
   body.phone-device #hand-panel {
@@ -562,13 +562,13 @@ body.phone-device #scene-panel .hint { display: none; }
     left: 12px;
     bottom: 12px;
   }
-  /* Phone-landscape collapsed state — without this override the
+  /* Phone-landscape collapsed state â€” without this override the
      `body.phone-device #hand-panel { width: 180px }` rule above wins
      specificity over the generic `#hand-panel.hand-minimized { width: 38px }`
      declaration, leaving a stranded 180-px-wide empty olive rectangle
      when the user taps the chevron to collapse. User report:
-     "手机端横屏的收纳还是没做好 ... HANDTRACKING ui". Pin the
-     minimized state to a clean 36×36 pill so the collapse reads as
+     "æ‰‹æœºç«¯æ¨ªå±çš„æ”¶çº³è¿˜æ˜¯æ²¡åšå¥½ ... HANDTRACKING ui". Pin the
+     minimized state to a clean 36Ã—36 pill so the collapse reads as
      "tab IS the affordance" the same way it does on desktop. */
   body.phone-device #hand-panel.hand-minimized {
     width: 36px !important;
@@ -580,7 +580,7 @@ body.phone-device #scene-panel .hint { display: none; }
     width: 36px !important;
     height: 36px !important;
   }
-  /* USD annotation card — narrower + pulls in toward the right
+  /* USD annotation card â€” narrower + pulls in toward the right
      edge so it sits to the LEFT of the narrowed lil-gui rather
      than overlapping the viewport centre. */
   #usd-annotations {
@@ -588,11 +588,11 @@ body.phone-device #scene-panel .hint { display: none; }
     right: 244px;       /* 220 (gui) + 12 (gui right offset) + 12 gap */
     top: 12px;
   }
-  /* Quick Guide — narrower so it stops spanning the whole
+  /* Quick Guide â€” narrower so it stops spanning the whole
      viewport in landscape. The default 2-column section grid
      (`.kh-body { grid-template-columns: repeat(2, 1fr) }`) + the
-     110-px-wide key column inside each `.kh-row` left only ≈ 2 px
-     for the label text at 280 px card width — the descriptors
+     110-px-wide key column inside each `.kh-row` left only â‰ˆ 2 px
+     for the label text at 280 px card width â€” the descriptors
      ("Numbered viewpoints", "Pipeline drawer", "This guide")
      escaped the card visually. In landscape we collapse the
      section grid to a single column AND shrink the key column,
@@ -601,7 +601,7 @@ body.phone-device #scene-panel .hint { display: none; }
     max-width: 280px !important;
     bottom: 12px !important;
   }
-  /* Quick Guide on phone landscape — single-column flow (the new desktop
+  /* Quick Guide on phone landscape â€” single-column flow (the new desktop
      layout already does this <700 px), tighter vertical rhythm so the
      section breaks survive the short viewport. The key column auto-sizes
      to its content; rows + sections sit in a clear top-to-bottom read. */
@@ -624,8 +624,8 @@ body.phone-device #scene-panel .hint { display: none; }
     gap: 4px !important;
     padding-left: 8px !important;
   }
-  /* USD annotation card text — slightly smaller in landscape
-     so the narrower card still fits the intro + 2×2 grid
+  /* USD annotation card text â€” slightly smaller in landscape
+     so the narrower card still fits the intro + 2Ã—2 grid
      comfortably. */
   #usd-annotations .ua-title    { font-size: 20px; }
   #usd-annotations .ua-hero     { font-size: 18px; }
@@ -639,7 +639,7 @@ body.phone-device #scene-panel .hint { display: none; }
      The user's screenshot shows Viewpoints clipped after 2 items
      and Scene barely fitting one layer row. Squeeze every visual
      by ~25 % so 3 viewpoints + the layer list fit cleanly in
-     the ≈ 340-px tall #left-stack. */
+     the â‰ˆ 340-px tall #left-stack. */
   body.phone-device #sidebar header,
   body.phone-device #scene-panel header {
     padding: 8px 10px 6px !important;
@@ -677,7 +677,7 @@ body.phone-device #scene-panel .hint { display: none; }
   body.phone-device #scene-panel .layer .eye {
     width: 17px !important; height: 17px !important;
   }
-  /* Hand panel — tighter padding so the toggle pill takes the
+  /* Hand panel â€” tighter padding so the toggle pill takes the
      full panel width without dead space around it. */
   body.phone-device #hand-panel {
     padding: 8px !important;
@@ -687,12 +687,12 @@ body.phone-device #scene-panel .hint { display: none; }
     font-size: 11px !important;
   }
 }
-/* Soft empty-state for the viewpoint list — when seed defaults haven't
+/* Soft empty-state for the viewpoint list â€” when seed defaults haven't
    landed yet (or the user has deleted every saved viewpoint), the OL
    collapses to its 6 px padding and the panel reads as broken: header
-   → empty stripe → hints. This pseudo-element fills the space with a
+   â†’ empty stripe â†’ hints. This pseudo-element fills the space with a
    short prompt that explains the affordance. The OL still has `flex: 1`
-   so the placeholder occupies the natural list slot — no layout shift
+   so the placeholder occupies the natural list slot â€” no layout shift
    when a real viewpoint LI gets prepended. */
 #viewpoint-list:empty {
   display: flex;
@@ -728,15 +728,15 @@ body.phone-device #scene-panel .hint { display: none; }
   box-shadow: var(--shadow-soft);
 }
 /* ============================================================
-   Adaptive heights — when one of the left-stack panels collapses
-   to its 38 × 38 tab, the sibling should reclaim the freed space
+   Adaptive heights â€” when one of the left-stack panels collapses
+   to its 38 Ã— 38 tab, the sibling should reclaim the freed space
    instead of staying at its baseline `max-height: 40%` / 60% cap.
    Without these rules, collapsing Viewpoints leaves the Scene
-   panel stuck at 40% of #left-stack — most of the column unused,
+   panel stuck at 40% of #left-stack â€” most of the column unused,
    the layer list visibly clipped a few rows in (this is exactly
    the bug the screenshot showed: ONE layer + hint, when there
    was room for several more rows below). The general-sibling
-   combinator handles "Viewpoints collapsed → Scene grows"; the
+   combinator handles "Viewpoints collapsed â†’ Scene grows"; the
    :has() selector handles the reverse direction.
    ============================================================ */
 #sidebar.sidebar-minimized ~ #scene-panel {
@@ -788,8 +788,8 @@ body.phone-device #scene-panel .hint { display: none; }
   border-color: rgba(255, 255, 255, 0.22);
 }
 /* (A/B Compare button + divider CSS removed alongside the JS feature
-   removal — see scene-layers.js for the rationale.) */
-/* Animated minimize — list + hint collapse via max-height + opacity. */
+   removal â€” see scene-layers.js for the rationale.) */
+/* Animated minimize â€” list + hint collapse via max-height + opacity. */
 #scene-panel .layer-list,
 #scene-panel .hint {
   overflow: hidden;
@@ -919,7 +919,7 @@ kbd {
 /* ============ Hand-tracking gesture toast ============
  * Appears at the top-centre of the viewport for ~6 s after the user
  * toggles tracking ON. Teaches the gestures at the moment of relevance
- * — replaces the permanent sidebar hint rail rows that 99 % of visitors
+ * â€” replaces the permanent sidebar hint rail rows that 99 % of visitors
  * never used. Glassy capsule to match the rest of the floating UI. */
 #hand-tracking-tip {
   position: fixed;
@@ -976,7 +976,7 @@ kbd {
 }
 
 /* ============ Hand tracking panel ============ */
-/* Phone PORTRAIT only — hide the hand panel (camera-tracked input doesn't
+/* Phone PORTRAIT only â€” hide the hand panel (camera-tracked input doesn't
    work well held vertically with one thumb, and the panel competes with
    the bottom-bar for screen real estate). In phone LANDSCAPE the body
    class flips to .tablet and the panel reappears at its landscape position
@@ -985,7 +985,7 @@ kbd {
    IS_PHONE init-time inline `style.display = "none"` that was sticky
    from the initial portrait detection and persisted into landscape,
    leaving hand tracking unreachable after rotation (user report:
-   "手机横屏的handtracking显示有问题"). */
+   "æ‰‹æœºæ¨ªå±çš„handtrackingæ˜¾ç¤ºæœ‰é—®é¢˜"). */
 body.phone:not(.tablet) #hand-panel { display: none !important; }
 
 #hand-panel {
@@ -1004,13 +1004,13 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   gap: 8px;
   width: 224px;
   box-shadow: var(--shadow-soft);
-  /* Shrink-in-place transition (no `transform` declared — would
+  /* Shrink-in-place transition (no `transform` declared â€” would
      break backdrop-filter; see notes on #sidebar). */
   transition: width 0.28s cubic-bezier(.22, 1, .36, 1),
               height 0.28s cubic-bezier(.22, 1, .36, 1),
               padding 0.28s cubic-bezier(.22, 1, .36, 1);
 }
-/* Collapsed: panel shrinks in place to a 38 × 38 chevron tab anchored
+/* Collapsed: panel shrinks in place to a 38 Ã— 38 chevron tab anchored
    at its bottom-left position. The absolute-positioned corner chevron
    pops static to fill the tab; everything else hides. Same "tab IS the
    affordance" idiom as the left-stack panels. */
@@ -1040,7 +1040,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
 }
 /* Slim chevron-only strip at the top of #hand-panel. Dropped the
    uppercase "HAND TRACKING" label that used to sit next to the
-   chevron — it duplicated the existing "Hand Tracking" text inside
+   chevron â€” it duplicated the existing "Hand Tracking" text inside
    the toggle button below, which (a) read as visually redundant
    and (b) forced the toggle row narrower, clipping the "OFF" badge.
    Now the chevron sits alone at the top-left as a small affordance
@@ -1067,10 +1067,10 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
 }
 #hand-panel #hand-min-toggle.sidebar-toggle:hover { background: rgba(255, 255, 255, 0.06); color: var(--text); }
 #hand-panel #hand-min-toggle.sidebar-toggle svg   { width: 14px; height: 14px; display: block; }
-/* Hand Tracking toggle — restored to the 04ad9c1 snapshot per
+/* Hand Tracking toggle â€” restored to the 04ad9c1 snapshot per
    user request. Single bordered pill with the hand icon + label +
    a small mono "ON / OFF / ERR" badge on the right. No "snap to
-   white" active state, no iOS knob, no halo glow — the older
+   white" active state, no iOS knob, no halo glow â€” the older
    treatment had a clearer visual identity. The .hand-head chevron
    header above this toggle is visible by default (collapse rule
    removed) so the user can fold the panel back down. */
@@ -1118,7 +1118,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   background: #000;
   position: relative;
 }
-/* Landmark + skeleton overlay — sits on top of the webcam <video> so
+/* Landmark + skeleton overlay â€” sits on top of the webcam <video> so
    users see exactly what the tracker is locking onto. Pointer events
    pass through so it never steals interaction. Canvas drawing handled
    by src/hand-landmarks-overlay.js (rAF loop tied to the snapshot
@@ -1130,8 +1130,8 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   z-index: 2;
 }
 
-/* Gesture HUD — small floating chip near the top of the viewport that
-   surfaces the currently-interpreted gesture (ORBIT / ZOOM·PAN / TAP /
+/* Gesture HUD â€” small floating chip near the top of the viewport that
+   surfaces the currently-interpreted gesture (ORBIT / ZOOMÂ·PAN / TAP /
    PINCH / PAINT). Hidden by default; toggled via .show by the gesture
    handlers in main.js. Uses the project's standard panel design tokens
    (var(--panel) / var(--hair) / var(--text)) so it reads as part of
@@ -1193,7 +1193,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   letter-spacing: 0.04em;
 }
 
-/* Hand tracking error card — restored to the 04ad9c1 snapshot per
+/* Hand tracking error card â€” restored to the 04ad9c1 snapshot per
    user request. Simple red-tinted box, coral title, muted hint,
    small dashed-underline docs link. No warning icon, no Retry pill,
    no flex-row action footer. */
@@ -1264,7 +1264,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
 }
 
 /* ----------------------------------------------------------------------
- * Profiler — per-phase frame-time breakdown. Toggle via P. Luma-glass.
+ * Profiler â€” per-phase frame-time breakdown. Toggle via P. Luma-glass.
  * Sits above the bottom toolbar so it doesn't overlap on toggle.
  * -------------------------------------------------------------------- */
 #profiler {
@@ -1368,7 +1368,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
 }
 
 /* ----------------------------------------------------------------------
- * Pipeline — right-side slide-in. Information-design centerpiece for the
+ * Pipeline â€” right-side slide-in. Information-design centerpiece for the
  * showcase: assets, render primitives, capture & train, etc. Same
  * Luma-glass language as the sidebar / hand panel / pipeline HUD.
  * -------------------------------------------------------------------- */
@@ -1385,7 +1385,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
 #tech-spec.show { display: block; }
 /* Backdrop is fully transparent AND click-through so the 3DGS scene reads
  * sharply AND stays draggable behind the panel. The drawer is a live doc,
- * not a modal — close via T / Esc / the × button. */
+ * not a modal â€” close via T / Esc / the Ã— button. */
 #tech-spec .ts-backdrop {
   position: absolute;
   inset: 0;
@@ -1459,14 +1459,14 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   width: 28px;
   height: 28px;
   /* Explicit padding: 0 overrides the user-agent default (`1px 6px`
-     on <button>) — that default crashed the box width with
-     border-box sizing and forced the × off-centre. */
+     on <button>) â€” that default crashed the box width with
+     border-box sizing and forced the Ã— off-centre. */
   padding: 0;
   color: var(--text-mid);
   font-size: 18px;
   font-family: var(--font-ui);
   line-height: 1;
-  /* flex centring so the × glyph (whose font-metric centre is offset)
+  /* flex centring so the Ã— glyph (whose font-metric centre is offset)
      sits geometrically centred in the box. */
   display: inline-flex;
   align-items: center;
@@ -1512,7 +1512,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   cursor: pointer;
   user-select: none;
 }
-/* Layer prefix (L1 / L2 / L3) — sits at the top of the big section
+/* Layer prefix (L1 / L2 / L3) â€” sits at the top of the big section
  * title as a small bookend label that reads as "Layer 1 of 3". */
 #tech-spec .ts-sec-num {
   font-family: var(--font-mono);
@@ -1544,13 +1544,13 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   white-space: nowrap;
 }
 
-/* Layer sections (Authoring / Pipeline / Runtime) — left accent rail */
+/* Layer sections (Authoring / Pipeline / Runtime) â€” left accent rail */
 #tech-spec .ts-sec-layer {
   border-left: 1px solid rgba(255, 255, 255, 0.18);
   padding-left: 17px;       /* original 18 minus the 1 px rail */
 }
 
-/* Toolchain chip row inside a layer header — readable when collapsed */
+/* Toolchain chip row inside a layer header â€” readable when collapsed */
 #tech-spec .ts-sec-tools {
   display: flex;
   flex-wrap: wrap;
@@ -1560,7 +1560,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
 }
 #tech-spec .ts-sec.collapsed .ts-sec-tools { display: none; }
 
-/* Assets section — separator above so it visually breaks from the
+/* Assets section â€” separator above so it visually breaks from the
  * three-layer stack */
 #tech-spec .ts-sec-layer + .ts-sec-assets {
   margin-top: 8px;
@@ -1589,13 +1589,13 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   padding: 0;
 }
 /* ---- Item card ----
- * Visual hierarchy, top → bottom:
- *   1. Title row    — h3 name + optional location chip
- *   2. Subtitle     — short technical tagline (ref)
- *   3. Toolchain    — labelled chip row (only for asset items)
- *   4. Output       — labelled value line
- *   5. Note         — readable prose paragraph
- *   6. Source       — small mono footer with a hairline rule above
+ * Visual hierarchy, top â†’ bottom:
+ *   1. Title row    â€” h3 name + optional location chip
+ *   2. Subtitle     â€” short technical tagline (ref)
+ *   3. Toolchain    â€” labelled chip row (only for asset items)
+ *   4. Output       â€” labelled value line
+ *   5. Note         â€” readable prose paragraph
+ *   6. Source       â€” small mono footer with a hairline rule above
  */
 #tech-spec .ts-item {
   padding: 16px 0 18px;
@@ -1634,7 +1634,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   white-space: nowrap;
 }
 
-/* Hotspot ON/OFF pill — sits at the right edge of an asset item header.
+/* Hotspot ON/OFF pill â€” sits at the right edge of an asset item header.
  * Echoes ts-item-loc visually but is interactive: click toggles the
  * asset's floating dot in the scene. ON = bright green LED + white label;
  * OFF = dim red LED + muted label. */
@@ -1679,7 +1679,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   box-shadow: none;
 }
 
-/* 2. Subtitle — technical descriptor under the name (dimmer than the
+/* 2. Subtitle â€” technical descriptor under the name (dimmer than the
  *    note paragraph so the body text doesn't compete with the title) */
 #tech-spec .ts-item-sub {
   margin-top: 6px;
@@ -1738,7 +1738,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   user-select: none;
 }
 
-/* 5. Note — main reading paragraph; sized BELOW the title so it never
+/* 5. Note â€” main reading paragraph; sized BELOW the title so it never
  *    out-weighs the headline */
 #tech-spec .ts-item-note {
   margin: 14px 0 0;
@@ -1752,7 +1752,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
 #tech-spec .ts-item-note strong,
 #tech-spec .ts-item-note b { color: var(--text); font-weight: 500; }
 
-/* 6. Source — footnote with a hairline rule above */
+/* 6. Source â€” footnote with a hairline rule above */
 #tech-spec .ts-item-src {
   margin-top: 14px;
   padding-top: 8px;
@@ -1763,7 +1763,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   color: var(--text-dim);
 }
 
-/* 5b. Inline before/after compare widget — drag the handle to wipe.
+/* 5b. Inline before/after compare widget â€” drag the handle to wipe.
  * Placeholder mode (no images yet) shows two subtly tinted panes so the
  * wipe action still reads. */
 .ts-compare { margin-top: 16px; }
@@ -1776,16 +1776,16 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   cursor: ew-resize;
   user-select: none;
   -webkit-user-select: none;
-  /* touch-action: none — fully claim every touch on the frame so the JS
+  /* touch-action: none â€” fully claim every touch on the frame so the JS
      pointer handlers run reliably on iOS Safari + Chrome Android. The
      earlier `pan-y` was supposed to leave horizontal for JS while letting
      vertical scroll bubble up, but in practice mobile Safari raced its
      own gesture interpretation against pointermove and the slider often
-     refused to drag at all (PM-report: "手机端AB compare似乎不能滑动").
+     refused to drag at all (PM-report: "æ‰‹æœºç«¯AB compareä¼¼ä¹Žä¸èƒ½æ»‘åŠ¨").
      Matching the same `touch-action: none` every other JS drag surface
      in the project uses (canvas, asset-hotspot, lil-gui sliders) makes
      the drag reliable. Users can still scroll the parent drawer by
-     touching outside the slider frame — the frames are 16:9 of the row
+     touching outside the slider frame â€” the frames are 16:9 of the row
      width, not full-bleed. */
   touch-action: none;
   background: rgba(255, 255, 255, 0.03);
@@ -1845,7 +1845,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   cursor: ew-resize;
 }
 .ts-compare .cmp-knob::before {
-  content: "⇆";
+  content: "â‡†";
   position: absolute;
   inset: 0;
   display: flex;
@@ -1855,7 +1855,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   font-size: 12px;
   color: var(--text);
 }
-/* Caption row beneath the compare frame — replaces the old absolute-
+/* Caption row beneath the compare frame â€” replaces the old absolute-
    positioned .cmp-tag-a / .cmp-tag-b overlays that collided when both
    labels were long (e.g., "Before: Procedural base" + "After: AI-stylized
    oil paint" overlapping in the middle of a narrow side-by-side compare
@@ -1878,7 +1878,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
 .ts-compare .cmp-cap {
   flex: 1 1 0;
   min-width: 0;
-  /* No truncation — labels wrap onto multiple lines if needed so the
+  /* No truncation â€” labels wrap onto multiple lines if needed so the
      full description always reads. The fixed-width flex-basis (1 1 0)
      keeps the A/B pair equal even when one line wraps and the other
      doesn't. */
@@ -1908,7 +1908,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   letter-spacing: 0.02em;
 }
 
-/* Segmented toggles (Splat Subform, Hand Mode, etc.) — shared style */
+/* Segmented toggles (Splat Subform, Hand Mode, etc.) â€” shared style */
 .subform-toggle {
   display: flex;
   gap: 4px;
@@ -1936,14 +1936,14 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   background: rgba(255, 255, 255, 0.10);
   color: var(--text);
 }
-/* Hover-popover wrapping each sub-form button — same aesthetic as .frustum-tip */
+/* Hover-popover wrapping each sub-form button â€” same aesthetic as .frustum-tip */
 .subform-cell {
   position: relative;
   flex: 1;
   display: flex;
 }
 .subform-cell button { width: 100%; }
-/* Portalled tooltips — appended to <body> by JS so position:fixed isn't
+/* Portalled tooltips â€” appended to <body> by JS so position:fixed isn't
    broken by lil-gui's panel transform. Visibility toggled via .show class.
    z-index sits above every other overlay (Pipeline HUD, A/B Compare, etc.). */
 .subform-tip {
@@ -1985,7 +1985,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   color: #f0f3f6;
 }
 
-/* Hand-mode toggle (1-Hand / 2-Hand) — shown only when hand tracking is active */
+/* Hand-mode toggle (1-Hand / 2-Hand) â€” shown only when hand tracking is active */
 #hand-mode {
   display: none;
   gap: 4px;
@@ -2092,7 +2092,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   text-transform: uppercase;
   font-size: 10px;
   color: var(--text);
-  /* About-pill behavior — the brand text is now a button (see PM-6).
+  /* About-pill behavior â€” the brand text is now a button (see PM-6).
      Strip the native button chrome so it visually matches the old
      static label, but keep the click target obvious on hover. */
   background: transparent;
@@ -2172,16 +2172,16 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
 }
 
 /* =============================================================
-   Cinematic flourish — title card that fades in when the FBX
+   Cinematic flourish â€” title card that fades in when the FBX
    camera-move emits "finished". Typography mirrors the LOADING
    SPLASH (.ld-title / .ld-sub / .ld-rule / .ld-desc) so the
    closing card reads as the typographic SIBLING of the opening
    one. Same hero word "SplatGarden" (mixed case, NOT all-caps),
    same -0.025em tight tracking, same 56-px centred hairline,
    same mono mid-caption recipe. No letter-spacing animation, no
-   scale-out, no breathing — those flourishes felt theatrical and
+   scale-out, no breathing â€” those flourishes felt theatrical and
    broke the project's quiet authority. Just a clean opacity
-   fade in → hold → fade out.
+   fade in â†’ hold â†’ fade out.
 
    Tear-down: src/cinematic-flourish.js removes the element on
    sequence completion (or on dispose()), so a Replay-Intro can
@@ -2196,7 +2196,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   align-items: center;
   justify-content: center;
   /* Soft radial vignette so the card has a quiet anchor against
-     whatever splat colour happens to sit behind it — keeps the
+     whatever splat colour happens to sit behind it â€” keeps the
      text legible without a heavy black overlay that would feel
      like a modal. */
   background: radial-gradient(50% 40% at 50% 50%, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0.0) 70%);
@@ -2215,7 +2215,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   padding: 0 24px;
 }
 
-/* Title — same recipe as #loading .ld-title. NOT uppercase.
+/* Title â€” same recipe as #loading .ld-title. NOT uppercase.
    Mixed-case "SplatGarden" with tight negative letter-spacing
    (the editorial display style the loading splash uses). */
 .cinematic-flourish .cf-title {
@@ -2228,8 +2228,8 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   color: var(--text);
 }
 
-/* Subtitle — same recipe as #loading .ld-sub. Mixed case (per
-   user direction "不要用纯大写"), small mono, wide tracking,
+/* Subtitle â€” same recipe as #loading .ld-sub. Mixed case (per
+   user direction "ä¸è¦ç”¨çº¯å¤§å†™"), small mono, wide tracking,
    muted colour. */
 .cinematic-flourish .cf-sub {
   margin-top: 18px;
@@ -2239,7 +2239,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   color: var(--text-mid);
 }
 
-/* Hairline rule — same width / colour / spacing as #loading .ld-rule. */
+/* Hairline rule â€” same width / colour / spacing as #loading .ld-rule. */
 .cinematic-flourish .cf-rule {
   width: 56px;
   height: 1px;
@@ -2247,7 +2247,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   margin: 32px auto 28px;
 }
 
-/* Credit — tiny mono caption listing the tool chain. Mixed case,
+/* Credit â€” tiny mono caption listing the tool chain. Mixed case,
    sits below the rule as the loading splash's .ld-desc-fine does. */
 .cinematic-flourish .cf-credit {
   margin: 0;
@@ -2267,7 +2267,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   .cinematic-flourish .cf-credit { font-size: 10px; }
 }
 
-/* (Loading-splash particle canvas + its z-index pinning removed —
+/* (Loading-splash particle canvas + its z-index pinning removed â€”
    see commit history. Splash now relies on the static editorial
    layout defined in index.html with no overlay canvas.) */
 
@@ -2428,13 +2428,13 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   #loading .ld-pillars { gap: 22px; }
 }
 
-/* Narrow phones (SE / 13 Mini class, ≤ 480 px wide) — the corner
+/* Narrow phones (SE / 13 Mini class, â‰¤ 480 px wide) â€” the corner
    annotations' combined horizontal width exceeds the available viewport
    even with the tighter padding above:
-       bottom-left  "RUNTIME · SPARK · THREE.JS · WEBGL 2"  ≈ 210 px
-       bottom-right "SCENE · SPLATGARDEN"                   ≈ 110 px
-       sum 320 > (320 - 48 padding) on iPhone SE → 48 px horizontal overlap.
-   The corners are editorial chrome — the central title + desc + pillars
+       bottom-left  "RUNTIME Â· SPARK Â· THREE.JS Â· WEBGL 2"  â‰ˆ 210 px
+       bottom-right "SCENE Â· SPLATGARDEN"                   â‰ˆ 110 px
+       sum 320 > (320 - 48 padding) on iPhone SE â†’ 48 px horizontal overlap.
+   The corners are editorial chrome â€” the central title + desc + pillars
    + progress bar already carry the brand identity during the short
    load window. Hide all four on narrow phones to remove the layout
    fragility entirely; they reappear on > 480 px viewports. */
@@ -2442,7 +2442,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   #loading .ld-corner { display: none; }
 }
 
-/* ============ lil-gui — monochrome glass override ============ */
+/* ============ lil-gui â€” monochrome glass override ============ */
 .lil-gui {
   --background-color:        rgba(18, 18, 20, 0.55) !important;
   --title-background-color:  rgba(255, 255, 255, 0.04) !important;
@@ -2475,9 +2475,9 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   background: rgba(255, 255, 255, 0.04) !important;
   color: var(--text) !important;
   font-weight: 500 !important;
-  letter-spacing: 0.16em !important;     /* restored — the borderless 26-px icons free the horizontal budget */
+  letter-spacing: 0.16em !important;     /* restored â€” the borderless 26-px icons free the horizontal budget */
   text-transform: uppercase !important;
-  font-size: 10px !important;             /* restored — no longer fighting for space with bordered pills */
+  font-size: 10px !important;             /* restored â€” no longer fighting for space with bordered pills */
   padding: 10px 8px 10px 14px !important; /* tighter right padding now that the icons end the row */
   border-bottom: 1px solid var(--hair) !important;
   /* Title row hosts injected Replay + Reset icon-buttons. Flex row +
@@ -2493,10 +2493,10 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
 /* Replay / Reset icon buttons in the lil-gui title row.
    PM redesign: previously these were rounded pills with grey borders, which
    read as bolted-on next to the borderless chevron `v` on the left of the
-   title — three sibling header controls that didn't share a visual language.
+   title â€” three sibling header controls that didn't share a visual language.
    Now they match the chevron vocabulary exactly: borderless, transparent
-   background, identical 26×26 hit-target, identical hover treatment. The
-   header reads as one cohesive icon strip (chevron · title · play · reset)
+   background, identical 26Ã—26 hit-target, identical hover treatment. The
+   header reads as one cohesive icon strip (chevron Â· title Â· play Â· reset)
    instead of "title + 2 pill ornaments". The text labels are hidden
    permanently (tooltips carry the meaning) since the lil-gui panel default
    width can't host them without crowding the wordmark. */
@@ -2527,43 +2527,43 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   background: rgba(255, 255, 255, 0.06) !important;
 }
 .gui-reset-btn:active { background: rgba(255, 255, 255, 0.10) !important; }
-.gui-reset-btn span   { display: none !important; }     /* labels hidden — tooltips do the work */
+.gui-reset-btn span   { display: none !important; }     /* labels hidden â€” tooltips do the work */
 .gui-reset-btn svg    { display: block; width: 14px; height: 14px; flex: 0 0 auto; }
-/* Closed-panel state: the title becomes a self-contained pill — hide the
+/* Closed-panel state: the title becomes a self-contained pill â€” hide the
    action buttons there because clicking the closed panel should expand it,
    not trigger an action. */
 .lil-gui.root.closed .gui-reset-btn { display: none !important; }
 /* On phones specifically (more aggressive), hide Reset entirely and keep
-   only Replay — the more frequently-wanted action. Reset is still
+   only Replay â€” the more frequently-wanted action. Reset is still
    reachable via the GUI controls if a phone user really needs it. */
 body.phone .gui-reset-btn:not(.gui-replay-btn) { display: none !important; }
-  /* Tighter vertical padding when the whole panel is collapsed —
+  /* Tighter vertical padding when the whole panel is collapsed â€”
      keeps the chevron centered visually in the pill (see .closed rules
      below). Smooth so the height collapse feels of-a-piece. */
   transition: padding 0.22s cubic-bezier(.16,1,.3,1),
               border-radius 0.22s ease,
               border-bottom-color 0.22s ease;
 }
-/* Collapsed state — the SplatGarden Studio panel shrinks to just its
+/* Collapsed state â€” the SplatGarden Studio panel shrinks to just its
    title bar. We treat the closed panel as a SELF-CONTAINED CAPSULE
    PILL rather than a flat slab:
-   • drop the title's bottom-border (no children beneath it now),
-   • fatten the radius so all four corners read as a true pill,
-   • tighten + balance vertical padding so the chevron + title sit
+   â€¢ drop the title's bottom-border (no children beneath it now),
+   â€¢ fatten the radius so all four corners read as a true pill,
+   â€¢ tighten + balance vertical padding so the chevron + title sit
      centred in the capsule with even breathing room,
-   • slim the title-row to a single height so the panel doesn't
+   â€¢ slim the title-row to a single height so the panel doesn't
      reserve extra space for a non-existent body,
-   • brighten the hover state (background + tiny scale) so the
+   â€¢ brighten the hover state (background + tiny scale) so the
      capsule feels tappable rather than decorative,
-   • brighten the chevron a touch so the affordance reads at a
+   â€¢ brighten the chevron a touch so the affordance reads at a
      glance against the brighter pill background,
-   • lengthen letter-spacing slightly so SPLATGARDEN STUDIO breathes
+   â€¢ lengthen letter-spacing slightly so SPLATGARDEN STUDIO breathes
      inside the smaller pill format.
    The base .lil-gui already has `overflow: hidden`, so the rounded
    corners naturally clip whatever children remain underneath. */
 .lil-gui.root.closed {
   border-radius: 999px !important;
-  /* Soften the closed-state shadow a touch — at the smaller pill
+  /* Soften the closed-state shadow a touch â€” at the smaller pill
      footprint the full panel-sized shadow read as heavy. */
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.32),
               0 1px 0 rgba(255, 255, 255, 0.06) inset !important;
@@ -2575,7 +2575,7 @@ body.phone .gui-reset-btn:not(.gui-replay-btn) { display: none !important; }
      AND the title text onto the same vertical centre. The old block
      layout left the pseudo on the baseline (defaults to
      vertical-align: baseline) which sat ~2 px above the cap-line of
-     the small-caps title — visible as "text not vertically centred
+     the small-caps title â€” visible as "text not vertically centred
      inside the pill" in the user's screenshot. Flex sidesteps the
      baseline alignment entirely. */
   display: flex !important;
@@ -2587,14 +2587,14 @@ body.phone .gui-reset-btn:not(.gui-replay-btn) { display: none !important; }
   border-radius: 999px !important;
   letter-spacing: 0.20em !important;
   color: rgba(255, 255, 255, 0.92) !important;
-  /* Subtle inner highlight on the top edge — same "etched glass"
+  /* Subtle inner highlight on the top edge â€” same "etched glass"
      treatment the lil-gui itself uses, scaled down for the pill. */
   background:
     linear-gradient(180deg,
       rgba(255, 255, 255, 0.06) 0%,
       rgba(255, 255, 255, 0.02) 100%) !important;
 }
-/* Chevron ::before — explicit vertical-align inside the flex row.
+/* Chevron ::before â€” explicit vertical-align inside the flex row.
    line-height: 1 + align-items: center hands the glyph the same
    centre line as the title text, killing the half-pixel baseline
    drift that made the closed pill read as "text not centred". */
@@ -2604,7 +2604,7 @@ body.phone .gui-reset-btn:not(.gui-replay-btn) { display: none !important; }
   line-height: 1 !important;
   vertical-align: middle !important;
 }
-/* Hover — lift the capsule with a brighter surface + tiny scale.
+/* Hover â€” lift the capsule with a brighter surface + tiny scale.
    Tactile cue that the pill is a tappable affordance, not chrome. */
 .lil-gui.root.closed:hover {
   background: rgba(28, 30, 36, 0.62) !important;
@@ -2620,8 +2620,8 @@ body.phone .gui-reset-btn:not(.gui-replay-btn) { display: none !important; }
       rgba(255, 255, 255, 0.10) 0%,
       rgba(255, 255, 255, 0.04) 100%) !important;
 }
-/* Chevron — lil-gui draws "▾" as a ::before pseudo on .title that
-   rotates -90° in the closed state. Pop it from a faint grey to a
+/* Chevron â€” lil-gui draws "â–¾" as a ::before pseudo on .title that
+   rotates -90Â° in the closed state. Pop it from a faint grey to a
    confident white so the open affordance reads first. */
 .lil-gui.root.closed > .title::before {
   opacity: 0.95 !important;
@@ -2672,7 +2672,7 @@ body.phone .gui-reset-btn:not(.gui-replay-btn) { display: none !important; }
   white-space: nowrap;
   cursor: help;
 }
-/* USD tooltip — portalled to <body> so position:fixed lands relative to the
+/* USD tooltip â€” portalled to <body> so position:fixed lands relative to the
    viewport (lil-gui's panel transform would otherwise break it). Visibility
    toggled by a .show class set in JS on mouseenter/leave. */
 .usd-tooltip {
@@ -2724,7 +2724,7 @@ body.phone .gui-reset-btn:not(.gui-replay-btn) { display: none !important; }
 }
 
 /* =========================================================================
-   Mobile adaptations — applied only when JS adds `body.mobile`.
+   Mobile adaptations â€” applied only when JS adds `body.mobile`.
    Desktop styling stays untouched.
    ========================================================================= */
 body.mobile #sidebar {
@@ -2740,17 +2740,17 @@ body.mobile #sidebar button {
   font-size: 12px;
 }
 body.mobile #hand-panel { display: none !important; }
-/* Viewport Tuner + Scene panel + Viewpoints sidebar — all dense floating
+/* Viewport Tuner + Scene panel + Viewpoints sidebar â€” all dense floating
    panels that are awkward on phone/tablet (no K/keyboard shortcuts,
    narrow viewport, keyboard-hint footer is pointless on touch).
    The numbered hotspot dots in 3D remain tappable for viewpoint navigation. */
-/* PHONE-only hiding (iPad keeps these — wider screen accommodates them).
+/* PHONE-only hiding (iPad keeps these â€” wider screen accommodates them).
    Was `body.touch` originally; narrowed so tablets get the full desktop
    UI per project direction. */
 body.mobile #viewpoint-tuner,
 body.mobile #scene-panel,
 body.mobile #sidebar { display: none !important; }
-/* Museum-style hover cards — phone screens are too narrow to host the
+/* Museum-style hover cards â€” phone screens are too narrow to host the
    full asset card / USD annotation overlay without obstructing the
    splat. Tablets show them as desktop does. */
 body.mobile #asset-hover-card,
@@ -2852,7 +2852,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 .cam-timeline .ct-label,
 .cam-timeline .ct-time,
 .cam-timeline .ct-frame {
-  /* Each cell stays on one line — in phone landscape the timeline
+  /* Each cell stays on one line â€” in phone landscape the timeline
      gets squeezed enough that the default wrap broke "CAMERA MOVE"
      into two lines and split "14.04s / 16.58s" across visual rows.
      nowrap forces single-line rendering and gives the flexbox a
@@ -2871,12 +2871,12 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
 }
-/* Scrub bar — the whole .cam-timeline carries pointer-events: none so
+/* Scrub bar â€” the whole .cam-timeline carries pointer-events: none so
    the user can keep orbiting the scene during playback, but the
    progress bar itself opts back in so it accepts click + drag and
    becomes a seekable timeline. Hit area is the .ct-track (12 px
    tall transparent gutter); the visible groove is the thinner inner
-   line. Same idiom YouTube uses — the bar is small visually but
+   line. Same idiom YouTube uses â€” the bar is small visually but
    easy to grab. */
 .cam-timeline .ct-bar {
   position: relative;
@@ -2886,11 +2886,11 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   cursor: pointer;
   pointer-events: auto;
   touch-action: none;          /* drag scrubs, never page-pans */
-  /* No background here — the visible groove is the inner .ct-track */
+  /* No background here â€” the visible groove is the inner .ct-track */
   overflow: visible;
 }
 .cam-timeline .ct-bar::before {
-  /* The visible groove — drawn as a pseudo so the .ct-bar itself can
+  /* The visible groove â€” drawn as a pseudo so the .ct-bar itself can
      stay the big-hit-area wrapper. Sits horizontally centred. */
   content: "";
   position: absolute;
@@ -2921,7 +2921,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   height: 5px;
   background: #fff;
 }
-/* Thumb knob — hidden by default, appears on hover or during scrub.
+/* Thumb knob â€” hidden by default, appears on hover or during scrub.
    Sits at the right edge of .ct-fill so its centre tracks the play
    head. Sized for both pointer and touch (12 px visual / 14 px hit
    via the parent .ct-bar's vertical gutter). */
@@ -2984,7 +2984,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 .lil-gui input[type="color"] {
   border-radius: 4px !important;
 }
-/* lil-gui native checkbox accent — harmonised with the iOS-style
+/* lil-gui native checkbox accent â€” harmonised with the iOS-style
    toggle switches in 3DGS / USD so the panel's "active" cue uses
    the same off-white across every control type (checkbox / toggle /
    active pill / slider fill). Cross-control coherence: when you
@@ -3006,9 +3006,9 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   border: 1px solid var(--hair) !important;
   border-radius: var(--radius-sm) !important;
   color: var(--text) !important;
-  /* Subtle spring lift on hover — translate-y + shadow keeps the
+  /* Subtle spring lift on hover â€” translate-y + shadow keeps the
      interaction premium without being bouncy. Easing curve is
-     cubic-bezier(.16,1,.3,1) — "ease-out-quint-ish" — so the lift
+     cubic-bezier(.16,1,.3,1) â€” "ease-out-quint-ish" â€” so the lift
      feels crisp on enter and settles on exit. */
   transition: background 0.18s cubic-bezier(.16,1,.3,1),
               border-color 0.18s cubic-bezier(.16,1,.3,1),
@@ -3030,7 +3030,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 }
 
 /* ============================================================
-   Viewport Tuner — press K to open. Top-right of the viewport,
+   Viewport Tuner â€” press K to open. Top-right of the viewport,
    under lil-gui. Shows live camera pos/target and lets you commit
    the current pose to any seeded viewpoint slot.
    ============================================================ */
@@ -3100,7 +3100,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   border-color: rgba(255, 255, 255, 0.22);
   color: var(--text);
 }
-/* Animated minimize — body collapses via max-height + opacity so the
+/* Animated minimize â€” body collapses via max-height + opacity so the
  * header stays put while the contents slide out cleanly. */
 #viewpoint-tuner .vt-body {
   overflow: hidden;
@@ -3220,9 +3220,9 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 }
 
 /* ============================================================
-   Quick Guide — keyboard / mouse shortcut card
+   Quick Guide â€” keyboard / mouse shortcut card
    - Floats bottom-centre on first entry, auto-hides after a few seconds.
-   - Press H to summon back, Esc / × to dismiss, hover to keep open.
+   - Press H to summon back, Esc / Ã— to dismiss, hover to keep open.
    ============================================================ */
 #key-hints {
   position: absolute;
@@ -3234,7 +3234,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   pointer-events: none;
   z-index: 25;
   width: min(560px, calc(100vw - 60px));
-  /* (Original see-through panel — user kept this; the readability
+  /* (Original see-through panel â€” user kept this; the readability
      concern turned out to be LAYOUT / typography, not backdrop.) */
   background: var(--panel-strong);
   backdrop-filter: blur(28px) saturate(140%);
@@ -3255,11 +3255,11 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   pointer-events: auto;
   transition: opacity 0.32s ease, transform 0.32s ease, visibility 0s linear 0s;
 }
-/* Staggered section reveal — same micro-choreography as `body.ui-ready`
+/* Staggered section reveal â€” same micro-choreography as `body.ui-ready`
    on the main UI surfaces. Each `.kh-sec` fades + slides up 6 px with
    80 ms between sections, so the Quick Guide reads as a sequence of
    "tips" landing one after another rather than a single block. The
-   .show toggle fires the keyframe; reapply on hide → re-show via the
+   .show toggle fires the keyframe; reapply on hide â†’ re-show via the
    `both` fill-mode + opacity baseline below. */
 #key-hints .kh-sec {
   opacity: 0;
@@ -3322,19 +3322,19 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   color: var(--text);
 }
 
-/* Quick Guide body — redesigned for readability per PM review.
+/* Quick Guide body â€” redesigned for readability per PM review.
    Old layout used a 2-column section grid with a fixed 110-px key column
    inside each row. Problems flagged by the user:
-   • zigzag scan path (sections side-by-side at different heights)
-   • fixed key column wasted space for short keys ([T]) and overflowed long
+   â€¢ zigzag scan path (sections side-by-side at different heights)
+   â€¢ fixed key column wasted space for short keys ([T]) and overflowed long
      chords ([W][A][S][D])
-   • section titles indistinguishable from row labels
+   â€¢ section titles indistinguishable from row labels
    New layout:
-   • single column by default (cheat-sheet reading flow, top-to-bottom)
-   • opt-in 2-column at wide widths via @media (keeps the card compact on
+   â€¢ single column by default (cheat-sheet reading flow, top-to-bottom)
+   â€¢ opt-in 2-column at wide widths via @media (keeps the card compact on
      desktops with room to spare, but never sacrifices readability)
-   • per-row grid auto-sizes the key column to its content, gap is fixed
-   • section titles get more breathing room above + stronger contrast vs.
+   â€¢ per-row grid auto-sizes the key column to its content, gap is fixed
+   â€¢ section titles get more breathing room above + stronger contrast vs.
      row labels so the two tiers don't blur on a quick scan */
 #key-hints .kh-body {
   padding: 16px 20px 18px;
@@ -3353,7 +3353,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
     row-gap: 20px;
   }
 }
-/* Section title — bigger, more letter-spacing, hairline accent on the
+/* Section title â€” bigger, more letter-spacing, hairline accent on the
    left. The accent gives the eye an anchor at the section's x-position
    so the row labels visually align beneath it. */
 #key-hints .kh-sec-title {
@@ -3386,7 +3386,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   flex-direction: column;
   gap: 7px;
 }
-/* Row pairing — auto-sized key column instead of a fixed 110 px, and a
+/* Row pairing â€” auto-sized key column instead of a fixed 110 px, and a
    tighter 12 px gap. Result: keys and labels read as one chord per row
    with no extra horizontal whitespace to bridge. */
 #key-hints .kh-row {
@@ -3449,8 +3449,8 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 /* ============================================================
    Asset hotspots + hover info card
    - A small floating dot sits at each TECH_SPECS asset's worldPos
-   - Hover the dot → poster-style overlay card pops in the upper-centre
-     of the viewport; click locks it open (pinned state, close × visible)
+   - Hover the dot â†’ poster-style overlay card pops in the upper-centre
+     of the viewport; click locks it open (pinned state, close Ã— visible)
    ============================================================ */
 .asset-hotspot {
   position: absolute;
@@ -3464,7 +3464,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   cursor: pointer;
   pointer-events: auto;
   will-change: transform;
-  /* Button reset — element is now a <button> for VoiceOver / screen
+  /* Button reset â€” element is now a <button> for VoiceOver / screen
      reader semantics, so we strip the default browser button chrome
      and keep the visual identical to the previous <div>. */
   background: transparent;
@@ -3474,7 +3474,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   font: inherit;
   outline: none;
 }
-/* Invisible 44 × 44 hit halo on every device (was body.touch-only).
+/* Invisible 44 Ã— 44 hit halo on every device (was body.touch-only).
    Pulls effective tap target up to Apple HIG minimum without
    resizing the visible dot. Pointer events bubble to the button
    owner so the existing click / pointer handlers fire as before. */
@@ -3484,7 +3484,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   inset: -11px;
   border-radius: 50%;
 }
-/* Tap reactivity — when .asset-hotspot--firing is added (by
+/* Tap reactivity â€” when .asset-hotspot--firing is added (by
    asset-hover.js on click / tap / phone tap), the visible dot
    does a quick pop-scale and a separate burst ring expands
    outward. Together with the camera fly-to, the click feels
@@ -3543,7 +3543,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   font-weight: 500;
   letter-spacing: 0.10em;
   /* Honour the asset's authored casing (e.g. "Gazebo", "Daffodil")
-     instead of forcing ALL CAPS — the names read more naturally and
+     instead of forcing ALL CAPS â€” the names read more naturally and
      match how the assets are referenced in the rest of the UI. */
   color: var(--text);
   background: rgba(8, 12, 18, 0.82);
@@ -3568,7 +3568,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 
 /* ---------- Card ---------- */
 #asset-hover-card {
-  /* No default centering — _anchorCardToDot() in asset-hover.js sets
+  /* No default centering â€” _anchorCardToDot() in asset-hover.js sets
    * left/top so the card sits next to the dot the user is hovering
    * (right or left), eliminating the centre-jump flicker. z-index sits
    * above all the regular page UI (lil-gui 1001, onboarding pointers
@@ -3620,9 +3620,9 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
      otherwise squash the box width under border-box sizing. */
   padding: 0;
   cursor: pointer;
-  /* Hidden by default — the `.pinned .ah-close` rule below flips
+  /* Hidden by default â€” the `.pinned .ah-close` rule below flips
      display:inline-flex when the card is pinned. flex centring keeps
-     the × glyph geometrically centred in the box. */
+     the Ã— glyph geometrically centred in the box. */
   display: none;
   align-items: center;
   justify-content: center;
@@ -3657,7 +3657,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   font-size: 22px;
   font-weight: 500;
   letter-spacing: 0.02em;
-  /* Honour the asset's authored casing (e.g. "Gazebo", "Daffodil") —
+  /* Honour the asset's authored casing (e.g. "Gazebo", "Daffodil") â€”
      the ALL CAPS treatment was visually loud and the asset names
      already carry their own intentional capitalisation. */
   color: var(--text);
@@ -3676,7 +3676,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 }
 
 .ah-card .ah-section {
-  /* Vertical rhythm trimmed (was 14px) — the section eyebrows + chip
+  /* Vertical rhythm trimmed (was 14px) â€” the section eyebrows + chip
      rows had so much breathing room that on shorter viewports two of
      them ate the screen, with no signal that more content sat below. */
   padding: 10px 18px;
@@ -3717,7 +3717,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   color: var(--text-faint);
 }
 
-/* Triptych — Style Reference / Original Texture / Result */
+/* Triptych â€” Style Reference / Original Texture / Result */
 .ah-card .ah-triptych {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3760,7 +3760,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   text-align: center;
 }
 
-/* Houdini SIM video — autoplay loop hero embed (Gazebo + future sim items) */
+/* Houdini SIM video â€” autoplay loop hero embed (Gazebo + future sim items) */
 :is(.ah-card, .ts-rich) .ah-sim-frame {
   position: relative;
   aspect-ratio: 16 / 9;
@@ -3815,7 +3815,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   color: var(--text);
 }
 
-/* Embedded video (Vimeo / YouTube / generic iframe) — 16:9 wrapper */
+/* Embedded video (Vimeo / YouTube / generic iframe) â€” 16:9 wrapper */
 :is(.ah-card, .ts-rich) .ah-embed-frame {
   position: relative;
   aspect-ratio: 16 / 9;
@@ -3834,24 +3834,24 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 }
 
 /* ============================================================
-   Process cards — chip-labeled visual cards used for assets with a
+   Process cards â€” chip-labeled visual cards used for assets with a
    rich design-walkthrough story (Daisy / Real-time Ready Foliage).
    Each card has an optional chip label, one or more image rows
    (single or pair layout), and an optional bottom note.
    ============================================================ */
 /* (Old .ah-process-cards container + .ah-process-card rounded-box +
-   .ah-pc-chip badge styles were removed per user direction —
-   "我不要这样的卡片嵌套排版，类似Gazebo这样平铺的就可以". Both styles
+   .ah-pc-chip badge styles were removed per user direction â€”
+   "æˆ‘ä¸è¦è¿™æ ·çš„å¡ç‰‡åµŒå¥—æŽ’ç‰ˆï¼Œç±»ä¼¼Gazeboè¿™æ ·å¹³é“ºçš„å°±å¯ä»¥". Both styles
    now render as flat <section class="ah-section"> blocks; the chip
    label became a regular .ah-sec-title header, matching Gazebo's
    "HOUDINI 3DGS SIMULATION" treatment. Per-card typography for the
-   step variant — eyebrow + bold title + description — is preserved
+   step variant â€” eyebrow + bold title + description â€” is preserved
    below; the rounded-box wrapper is gone.) */
 
-/* ── Step-style process section (eyebrow + title + description) ──
+/* â”€â”€ Step-style process section (eyebrow + title + description) â”€â”€
    Used by Grape Hyacinth's 01/02/03 numbered breakdown. Renders the
-   richer editorial header — small uppercase numbered eyebrow, bold
-   title h3, prose description — then media rows with captions ABOVE.
+   richer editorial header â€” small uppercase numbered eyebrow, bold
+   title h3, prose description â€” then media rows with captions ABOVE.
    FLAT (no rounded-box wrapper) per user direction; sibling spacing
    handled by the .ah-section margin from style.css's section rules. */
 :is(.ah-card, .ts-rich) .ah-pc-eyebrow {
@@ -3894,7 +3894,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   order: 1;
 }
 /* iframe inside a step-style frame fills it cleanly. Iframes need an
-   explicit aspect ratio (no intrinsic dimensions like images have) —
+   explicit aspect ratio (no intrinsic dimensions like images have) â€”
    the frame gets 16:9 so Vimeo embeds sit in their natural ratio
    without letterbox. Images in the same single-row position are
    handled separately below: natural aspect, no forced plinth. */
@@ -3913,15 +3913,15 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   object-fit: cover;
 }
 /* Step-style single-image frames preserve natural image aspect so we
-   never letterbox a hero shot. Matches the user direction "ui框保留
-   图片比例" — frame fits image, not the other way around. */
+   never letterbox a hero shot. Matches the user direction "uiæ¡†ä¿ç•™
+   å›¾ç‰‡æ¯”ä¾‹" â€” frame fits image, not the other way around. */
 :is(.ah-card, .ts-rich) .ah-pc-step .ah-pc-single .ah-frame img {
   width: 100%;
   height: auto;
   display: block;
 }
 
-/* ── Key Points list (bottom-of-card summary bullets) ──
+/* â”€â”€ Key Points list (bottom-of-card summary bullets) â”€â”€
    Used by Grape Hyacinth's Houdini/Unreal/Performance/Rendering wrap-up.
    Small bulleted list with bold key + colon + value, designed to read
    as a quick-reference checklist after the visual sections above. */
@@ -3941,7 +3941,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   letter-spacing: 0.005em;
 }
 :is(.ah-card, .ts-rich) .ah-keypoints li::before {
-  content: "•";
+  content: "â€¢";
   position: absolute;
   left: 2px;
   top: 0;
@@ -3965,7 +3965,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 /* Compare-slider row inside a processCard. Adjustments to default
    .ts-compare styling for nested use:
    1. Override default 16:9 frame ratio with --cmp-aspect (defaults to
-      1:1, set per-row from JS — preserves source image's natural
+      1:1, set per-row from JS â€” preserves source image's natural
       aspect so square Substance textures don't crop).
    2. Bump bottom gap so adjacent compare rows breathe apart.
    3. When row has multiple compare items (--ah-pc-compare-grid class),
@@ -3995,7 +3995,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   aspect-ratio: var(--cmp-aspect, 1 / 1);
 }
 @media (max-width: 480px) {
-  /* On phones, two square compares side-by-side become tiny — stack them. */
+  /* On phones, two square compares side-by-side become tiny â€” stack them. */
   :is(.ah-card, .ts-rich) .ah-pc-row.ah-pc-compare.ah-pc-compare-grid {
     grid-template-columns: 1fr;
   }
@@ -4007,14 +4007,14 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   gap: 6px;
 }
 :is(.ah-card, .ts-rich) .ah-pc-fig .ah-frame {
-  /* Checkerboard plinth — the universal DCC convention for "this image
+  /* Checkerboard plinth â€” the universal DCC convention for "this image
      has alpha" (Photoshop, Substance Painter, Marmoset all use it).
-     PNGs with alpha (like Daffodil's BaseColor — the UV-mask-cropped
+     PNGs with alpha (like Daffodil's BaseColor â€” the UV-mask-cropped
      painterly diffuse) used to reveal the card's dark surface through
      their transparent pixels, which looked like a rendering glitch.
      Now the alpha is presented as DESIGN INFORMATION on a subtle
      2-tone checker. Opaque images (JPGs, videos, regular PNGs) cover
-     the checker entirely so visually there's zero change for them —
+     the checker entirely so visually there's zero change for them â€”
      this only activates where alpha actually exists. Two near-black
      greys (#161616 / #1c1c1c) keep the checker quiet against the
      card's dark surface; size 16px reads as "texture preview" without
@@ -4027,33 +4027,33 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   background-position: 0 0, 8px 8px;
   border-radius: 8px;
   overflow: hidden;
-  /* Subtle hairline border — the diagrams from Houdini / Unreal /
+  /* Subtle hairline border â€” the diagrams from Houdini / Unreal /
      Substance often have pure-black backgrounds that bleed into the
      card's own dark surface, losing frame definition. A 1px low-alpha
      border re-establishes the edge without adding visual chrome.
-     Bumped from 0.06 → 0.08 per the audit — at 0.06 the edge was
+     Bumped from 0.06 â†’ 0.08 per the audit â€” at 0.06 the edge was
      invisible on regular (non-retina) monitors. */
   border: 1px solid rgba(255, 255, 255, 0.08);
-  /* aspect-ratio: auto — frame fits the image's natural height, never
+  /* aspect-ratio: auto â€” frame fits the image's natural height, never
      letterboxes. The base .ah-card .ah-frame rule sets a 1/1 square,
      which is right for the triptych (Style/Original/Result tiles)
-     where we WANT a uniform plinth — but wrong here. processCard
+     where we WANT a uniform plinth â€” but wrong here. processCard
      images range from square node-graphs to wide hero plates; the
      box must follow the picture, not the other way around. Image
      itself uses `height: auto` via .ah-pc-single .ah-frame img to
      compute its natural height inside the now-flexible parent. */
   aspect-ratio: auto;
-  /* Drop the flex centering inherited from .ah-frame too — with the
+  /* Drop the flex centering inherited from .ah-frame too â€” with the
      frame matching the image's natural height there's no leftover
      space to center within, and `align-items: center` was producing
      a sub-pixel gap on some images. */
   display: block;
 }
-/* Iframe (Vimeo / YouTube) frames flatten the checker — the iframe's
+/* Iframe (Vimeo / YouTube) frames flatten the checker â€” the iframe's
    own AA edges + rounded corners revealed the checker pattern at
    pixel-level seams. Video plates always read better against solid
    black anyway. The :has() selector keeps this scoped to frames that
-   actually contain a video — image frames keep their checker. */
+   actually contain a video â€” image frames keep their checker. */
 :is(.ah-card, .ts-rich) .ah-pc-fig .ah-frame:has(iframe) {
   background-color: #0b0b0b;
   background-image: none;
@@ -4075,7 +4075,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   line-height: 1.4;
 }
 
-/* SINGLE-image rows — natural aspect, no constraint.
+/* SINGLE-image rows â€” natural aspect, no constraint.
    The image is the whole story; let it breathe at its native ratio. */
 :is(.ah-card, .ts-rich) .ah-pc-single .ah-frame img {
   width: 100%;
@@ -4083,14 +4083,14 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   display: block;
 }
 
-/* PAIR rows — each frame preserves its source image's natural aspect
-   ratio per user direction ("ui框保留图片比例"). No fixed plinth, no
+/* PAIR rows â€” each frame preserves its source image's natural aspect
+   ratio per user direction ("uiæ¡†ä¿ç•™å›¾ç‰‡æ¯”ä¾‹"). No fixed plinth, no
    `object-fit: cover` crop, no letterbox bars. Side-by-side images
    align at the TOP; when the two source images share aspect (e.g. a
    before/after pair rendered from the same graph at the same res) the
    heights match naturally. When they differ (a portrait viewport
    beside a landscape node-graph), each image stands at its own height
-   intact — the user accepted that tradeoff in exchange for never
+   intact â€” the user accepted that tradeoff in exchange for never
    cropping or letterboxing showcase imagery. */
 :is(.ah-card, .ts-rich) .ah-pc-pair {
   display: grid;
@@ -4099,7 +4099,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   align-items: start;
 }
 :is(.ah-card, .ts-rich) .ah-pc-pair .ah-pc-fig .ah-frame {
-  /* No fixed aspect by default — frame fits the image */
+  /* No fixed aspect by default â€” frame fits the image */
 }
 :is(.ah-card, .ts-rich) .ah-pc-pair .ah-pc-fig .ah-frame img {
   width: 100%;
@@ -4107,15 +4107,15 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   display: block;
   object-fit: initial;
 }
-/* OPT-IN equal-height mode — when the pair row declares an
+/* OPT-IN equal-height mode â€” when the pair row declares an
    `aspectRatio` (e.g. "16 / 9" / "4 / 3"), both frames lock to that
    ratio so the two cells line up at exactly the same height. Image
-   uses object-fit: cover to fill — natural-aspect preservation is
+   uses object-fit: cover to fill â€” natural-aspect preservation is
    traded for visual rhythm. Use this when the two source images have
    wildly different aspects (e.g. a portrait viewport beside a 2:1
    landscape node-graph): without it the cells end up ragged-bottom.
    The .ah-pc-fig also stretches so the (frame + caption) column
-   matches its sibling — caption position stays consistent. */
+   matches its sibling â€” caption position stays consistent. */
 :is(.ah-card, .ts-rich) .ah-pc-pair[style*="--pair-aspect"] {
   align-items: stretch;
 }
@@ -4132,8 +4132,8 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   object-position: center;
 }
 
-/* QUAD rows — four items in a single row (e.g. PBR texture map sets:
-   BaseColor / Normal / ORM / ScatterMask). Always equal-height —
+/* QUAD rows â€” four items in a single row (e.g. PBR texture map sets:
+   BaseColor / Normal / ORM / ScatterMask). Always equal-height â€”
    cells share the --quad-aspect CSS var (default 1/1 from JS).
    object-fit: cover so different-aspect maps still align. */
 :is(.ah-card, .ts-rich) .ah-pc-quad {
@@ -4159,7 +4159,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   letter-spacing: 0.04em;
 }
 /* Tablet / narrow desktop: 4-up gets cramped under ~620px container
-   width. Fall to 2x2 — still keeps the "set of maps" gestalt. */
+   width. Fall to 2x2 â€” still keeps the "set of maps" gestalt. */
 @media (max-width: 620px) {
   :is(.ah-card, .ts-rich) .ah-pc-quad {
     grid-template-columns: repeat(2, 1fr);
@@ -4167,11 +4167,11 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   }
 }
 
-/* In-section bullet list — sits at the END of a processCard, BEFORE
+/* In-section bullet list â€” sits at the END of a processCard, BEFORE
    any `note` paragraph. Used by Vine's WPO blueprint section to
    describe the controls exposed by that specific blueprint. Same
    visual language as .ah-keypoints (the global wrap-up bullet list)
-   so the asset card reads with one consistent bullet style — readers
+   so the asset card reads with one consistent bullet style â€” readers
    don't have to learn two. */
 :is(.ah-card, .ts-rich) .ah-pc-points {
   list-style: none;
@@ -4189,7 +4189,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   letter-spacing: 0.005em;
 }
 :is(.ah-card, .ts-rich) .ah-pc-points li::before {
-  content: "•";
+  content: "â€¢";
   position: absolute;
   left: 2px;
   top: 0;
@@ -4204,6 +4204,59 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 :is(.ah-card, .ts-rich) .ah-pc-points li:last-child {
   margin-bottom: 0;
 }
+
+/* Grouped points â€” sub-headings + bullet groups inside a single
+   processCard step. Used by Gazebo's Key Process section where
+   topics (Simulation Mask Â· Velocity from Pyro Â· ...) each carry
+   their own bullet list. The heading is a bold sentence-case label;
+   bullets follow the same visual language as .ah-pc-points but
+   stack closer together so the topic+bullets reads as one unit. */
+:is(.ah-card, .ts-rich) .ah-pc-group {
+  margin-top: 14px;
+}
+:is(.ah-card, .ts-rich) .ah-pc-group:first-child {
+  margin-top: 16px;
+}
+:is(.ah-card, .ts-rich) .ah-pc-group-heading {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.005em;
+  margin-bottom: 6px;
+}
+:is(.ah-card, .ts-rich) .ah-pc-group-points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+:is(.ah-card, .ts-rich) .ah-pc-group-points li {
+  position: relative;
+  padding-left: 14px;
+  margin-bottom: 6px;
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text-mid);
+  letter-spacing: 0.005em;
+}
+:is(.ah-card, .ts-rich) .ah-pc-group-points li::before {
+  content: "â€¢";
+  position: absolute;
+  left: 2px;
+  top: 0;
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.4;
+}
+:is(.ah-card, .ts-rich) .ah-pc-group-points li strong {
+  color: var(--text);
+  font-weight: 600;
+}
+:is(.ah-card, .ts-rich) .ah-pc-group-points li:last-child {
+  margin-bottom: 0;
+}
+
 :is(.ah-card, .ts-rich) .ah-pc-note {
   margin-top: 12px;
   padding-top: 12px;
@@ -4215,17 +4268,17 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   letter-spacing: 0.005em;
 }
 @media (max-width: 600px) {
-  /* Default pair behaviour on phone: stack vertically — gives each
+  /* Default pair behaviour on phone: stack vertically â€” gives each
      image full drawer width and more room for detail. */
   :is(.ah-card, .ts-rich) .ah-pc-pair {
     grid-template-columns: 1fr;
   }
-  /* Equal-height (aspectRatio) pairs stay SIDE-BY-SIDE on phone — the
+  /* Equal-height (aspectRatio) pairs stay SIDE-BY-SIDE on phone â€” the
      whole point of declaring an aspect-ratio on a pair is to keep
      before/after visually aligned in one row. Stacking them defeats
      that pairing. The cells are smaller on phone but still equal
-     height + same row, which honours the "用justify的形式在同一行,
-     相同height" intent. Slightly tighter gap + caption sizing below
+     height + same row, which honours the "ç”¨justifyçš„å½¢å¼åœ¨åŒä¸€è¡Œ,
+     ç›¸åŒheight" intent. Slightly tighter gap + caption sizing below
      so the smaller cells don't feel cramped. */
   :is(.ah-card, .ts-rich) .ah-pc-pair[style*="--pair-aspect"] {
     grid-template-columns: 1fr 1fr;
@@ -4237,7 +4290,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   }
 }
 
-/* Pipeline strip — n-wide image row */
+/* Pipeline strip â€” n-wide image row */
 .ah-card .ah-strip {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
@@ -4284,7 +4337,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   letter-spacing: 0.01em;
 }
 
-/* Footer — Output / Source / Pos */
+/* Footer â€” Output / Source / Pos */
 .ah-card .ah-foot {
   padding: 12px 18px 14px;
   border-top: 1px solid var(--hair);
@@ -4314,20 +4367,20 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 }
 
 /* ============================================================
-   Tech-spec drawer — rich content block (.ts-rich)
+   Tech-spec drawer â€” rich content block (.ts-rich)
 
    Mirror of the asset-hover card's rich content (processCards /
    keyPoints / embed / simVideo) embedded inside Tech Breakdown
    drawer items. The .ah-pc-* / .ah-keypoints / .ah-embed-frame /
    .ah-sim-* selectors are already shared via :is(.ah-card, .ts-rich)
    higher up. This block fills in the small remaining gaps that were
-   previously scoped only to .ah-card — the chip-style section title
+   previously scoped only to .ah-card â€” the chip-style section title
    eyebrow, the base .ah-frame styling (no forced 1:1 aspect inside
    the drawer; image height drives its own frame), and a top spacer
    so the rich content sits a little lower than the item's note.
    ============================================================ */
 .ts-rich {
-  /* Drawer parity with the hover-card surface — without this the rich
+  /* Drawer parity with the hover-card surface â€” without this the rich
      content reads as bare list content stuffed under a divider line,
      while the hover card frames the same content as a magazine spread.
      A 1px-lighter background + radius + soft inset shadow gives the
@@ -4345,19 +4398,19 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 }
 
 /* ============================================================
-   Editorial line-breaking — apply across every text-bearing class
+   Editorial line-breaking â€” apply across every text-bearing class
    inside the asset-hover card AND the tech-spec drawer rich content.
 
    Two CSS properties cooperate:
 
-   1. `hanging-punctuation: last allow-end` — terminal punctuation
-      (period, comma, full-width 。 ， 、 etc.) is allowed to hang
+   1. `hanging-punctuation: last allow-end` â€” terminal punctuation
+      (period, comma, full-width ã€‚ ï¼Œ ã€ etc.) is allowed to hang
       PAST the line edge rather than starting the next visual line.
       This prevents the "lonely comma at line start" effect, which is
-      a real readability bug in Chinese typography (where 标点禁则
+      a real readability bug in Chinese typography (where æ ‡ç‚¹ç¦åˆ™
       / kinsoku rules forbid it) and a polish issue in English too.
 
-   2. `text-wrap: pretty` — newer browsers (Chrome 117+, Safari 18+)
+   2. `text-wrap: pretty` â€” newer browsers (Chrome 117+, Safari 18+)
       use a smarter line-break algorithm that minimises widows and
       orphans, balancing the last few lines so a single short word
       doesn't dangle on its own. Older browsers ignore it gracefully.
@@ -4383,7 +4436,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   hanging-punctuation: last allow-end;
   text-wrap: pretty;
 }
-/* Sections inside .ts-rich are layout-only — no border / wide padding
+/* Sections inside .ts-rich are layout-only â€” no border / wide padding
    like the asset-card uses. The drawer's .ts-item already provides the
    outer spacing and divider lines between items. */
 .ts-rich .ah-section {
@@ -4393,7 +4446,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 .ts-rich .ah-section + .ah-section {
   margin-top: 4px;
 }
-/* Chip-style processCard header — matches the .ah-card .ah-sec-title
+/* Chip-style processCard header â€” matches the .ah-card .ah-sec-title
    uppercase eyebrow look so "MODELING AND OPTIMIZATION" reads the same
    inside the drawer as in the hover card. */
 .ts-rich .ah-sec-title {
@@ -4436,30 +4489,30 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
    and the new compare captions row.
 
    Strategy:
-   - Phone (≤480px): tighten font sizes, gaps, and stack the compare-
+   - Phone (â‰¤480px): tighten font sizes, gaps, and stack the compare-
      grid + pair rows (already handled higher up via the dedicated
      media queries at 480px / 600px). Add tighter typography here so
      the bottom-sheet (mobile) and the drawer (mobile portrait) both
      read without horizontal crowding.
-   - iPad portrait (481–900px): keep the side-by-side compare grids
-     and pair rows — they look great at iPad widths and the existing
+   - iPad portrait (481â€“900px): keep the side-by-side compare grids
+     and pair rows â€” they look great at iPad widths and the existing
      stack-at-480 rule does not trigger. No extra rules needed beyond
      defaults. Only adjustment: slightly tighter compare-caption gap
      so two long labels don't visually merge in the middle.
 
    No rules target iPad specifically; iPad picks up either the default
-   desktop sizing (≥901px) or the 600px pair-stack rule depending on
+   desktop sizing (â‰¥901px) or the 600px pair-stack rule depending on
    orientation, and both look right.
    ============================================================ */
 
-/* iPad-class viewports + small laptop (481–900px) — compare captions
+/* iPad-class viewports + small laptop (481â€“900px) â€” compare captions
    benefit from a touch more breathing room because the side-by-side
    compare-grid cells are tighter here than on desktop. */
 @media (min-width: 481px) and (max-width: 900px) {
   .ts-compare .cmp-captions {
     gap: 16px;
   }
-  /* QUAD layout — 4 maps in a row at iPad-class widths is ~110px per
+  /* QUAD layout â€” 4 maps in a row at iPad-class widths is ~110px per
      cell inside the drawer (and tight even in the hover-card). Fall
      to 2x2 here; phones already get 2x2 via the 620px rule on .ah-pc-
      quad. This extends 2x2 coverage to iPad portrait + small laptop. */
@@ -4475,13 +4528,13 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   :is(.ah-card, .ts-rich) .ah-pc-desc {
     font-size: 11.5px;
   }
-  /* Drawer rich-content container — smaller inset padding so the
+  /* Drawer rich-content container â€” smaller inset padding so the
      pair / quad cells inside keep their effective row width. */
   .ts-rich {
     padding: 12px 12px 14px;
     gap: 14px;
   }
-  /* Tech-spec section header — 26px UPPERCASE dominates inside a
+  /* Tech-spec section header â€” 26px UPPERCASE dominates inside a
      460px drawer. Bring the big title down so it doesn't overwhelm
      the per-item content below. */
   #tech-spec .ts-sec-name {
@@ -4490,7 +4543,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   }
 }
 
-/* Phone LANDSCAPE — short viewport. Goal: keep the rich content
+/* Phone LANDSCAPE â€” short viewport. Goal: keep the rich content
    visible above the fold without forcing the user past 2 paragraphs
    of description first. Tighten section spacing + ts-rich padding
    aggressively; the cards still read fine because the content is
@@ -4513,7 +4566,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
     margin-bottom: 12px;
   }
   /* Tech Breakdown drawer also tightens its outer chrome on short
-     landscape viewports — header, section header, section padding
+     landscape viewports â€” header, section header, section padding
      all trim so the rich content per item lands above the fold
      quicker. Drawer width on phone landscape is governed by the
      base min(460px, 92vw) which is fine at ~614px on a 667px
@@ -4542,7 +4595,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 }
 
 @media (max-width: 480px) {
-  /* Compare captions — drop a hair of font size + letter-spacing so
+  /* Compare captions â€” drop a hair of font size + letter-spacing so
      the two-line wrap on long labels ("Before: Procedural base") still
      fits inside the narrow compare cell without the right-aligned side
      looking ragged. */
@@ -4552,13 +4605,13 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
     gap: 8px;
     margin-top: 6px;
   }
-  /* Tech-spec drawer rich content — tighter vertical rhythm so the
+  /* Tech-spec drawer rich content â€” tighter vertical rhythm so the
      drawer doesn't feel airy on a 375px viewport. */
   .ts-rich {
     margin-top: 10px;
     gap: 11px;
   }
-  /* Step-style processCard typography — eyebrow + title + desc all
+  /* Step-style processCard typography â€” eyebrow + title + desc all
      come down a half-step. The clamp on .ah-pc-title already pins to
      14px at narrow widths; we trim the margin-bottom under it so the
      description prose starts closer to the title. */
@@ -4575,7 +4628,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
     line-height: 1.55;
     margin-bottom: 14px;
   }
-  /* Tighter row spacing — small phones can't afford 12px between every
+  /* Tighter row spacing â€” small phones can't afford 12px between every
      media row, especially when the user scrolls a long 03-Texturing
      section with multiple compares stacked. */
   :is(.ah-card, .ts-rich) .ah-pc-row {
@@ -4584,13 +4637,13 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   :is(.ah-card, .ts-rich) .ah-pc-row.ah-pc-compare {
     margin-bottom: 14px;
   }
-  /* Keypoints — slightly smaller body and tighter bullets */
+  /* Keypoints â€” slightly smaller body and tighter bullets */
   :is(.ah-card, .ts-rich) .ah-keypoints li {
     font-size: 11.5px;
     line-height: 1.55;
     margin-bottom: 7px;
   }
-  /* Tech Breakdown drawer panel — gain ~12px of content area on phones
+  /* Tech Breakdown drawer panel â€” gain ~12px of content area on phones
      (drawer was 92vw = 345px on a 375px iPhone; now 96vw = 360px).
      Modest gain but it lets pair rows inside ts-rich breathe without
      stacking. The remaining 4vw left margin keeps the drawer visually
@@ -4598,7 +4651,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   #tech-spec .ts-panel {
     width: 96vw;
   }
-  /* Section header — 26px UPPERCASE is too dominant inside a 360px
+  /* Section header â€” 26px UPPERCASE is too dominant inside a 360px
      drawer. Scale down so the section title cues the section without
      overwhelming the per-item content that follows it. */
   #tech-spec .ts-sec-name {
@@ -4614,12 +4667,12 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   #tech-spec .ts-sec-count {
     font-size: 8.5px;
   }
-  /* Section outer padding tighter on phone — recovers ~12px of content
+  /* Section outer padding tighter on phone â€” recovers ~12px of content
      width vs the default 16/18. */
   #tech-spec .ts-sec {
     padding: 14px 14px 12px;
   }
-  /* Section description prose smaller — matches the new section name
+  /* Section description prose smaller â€” matches the new section name
      scale + the narrower content width. */
   #tech-spec .ts-sec-desc {
     font-size: 11.5px;
@@ -4646,7 +4699,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
     padding: 11px 11px 13px;
     border-radius: 8px;
   }
-  /* Drawer header trim for phone — the "TECH BREAKDOWN" title is
+  /* Drawer header trim for phone â€” the "TECH BREAKDOWN" title is
      authoritative but the surrounding chrome (sub-line, close button)
      eats vertical space. Tighten without losing legibility. */
   #tech-spec .ts-header {
@@ -4659,7 +4712,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 }
 
 /* ============================================================
- * Credits — centered slide-up panel (team + software)
+ * Credits â€” centered slide-up panel (team + software)
  * ============================================================ */
 #credits {
   position: fixed;
@@ -4711,7 +4764,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   /* Fixed 28x28 box + flex centring + explicit padding:0 (overrides the
      UA <button> default `1px 6px` that was crashing the box width).
      flex-shrink: 0 stops the flex parent (.cr-head) from squashing
-     the button — without it the button shrank to ~14px wide. */
+     the button â€” without it the button shrank to ~14px wide. */
   background: transparent;
   border: 0;
   box-sizing: border-box;
@@ -4746,7 +4799,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   color: var(--text-dim);
   margin-bottom: 10px;
 }
-/* About block — opens the Credits panel with project-level context BEFORE
+/* About block â€” opens the Credits panel with project-level context BEFORE
    the team / software / tech-stack sections. Typography intentionally
    mirrors the loading-splash & cinematic-flourish hero card (.ld-title)
    so the project's three "bookend" surfaces speak the same language. */
@@ -4828,7 +4881,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   color: var(--text);
   font-weight: 500;
 }
-/* Special Thanks rows skip the middle "role" column — just name + link. */
+/* Special Thanks rows skip the middle "role" column â€” just name + link. */
 #credits .cr-row-thanks {
   grid-template-columns: 1fr auto;
 }
@@ -4868,7 +4921,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   border: 1px solid var(--hair);
   color: var(--text-mid);
 }
-/* Featured chip — Unreal/Houdini in Software, HP AI Studio/OpenUSD in
+/* Featured chip â€” Unreal/Houdini in Software, HP AI Studio/OpenUSD in
  * Tech Stack. Wears a brighter background + slightly larger type so
  * the eye lands on the hero entries first. */
 #credits .cr-chip-featured {
@@ -4880,7 +4933,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   letter-spacing: 0.06em;
   padding: 5px 11px;
 }
-/* "Also: ..." footnote under the chip grid — for software used minimally
+/* "Also: ..." footnote under the chip grid â€” for software used minimally
    that deserves credit but not equal billboard space. Sits below the
    chips at small mono weight so the visual hierarchy stays clear. */
 #credits .cr-also {
@@ -4892,7 +4945,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 }
 
 /* ============================================================
- * IntroOverlay — hero title + phase callouts over the auto-play
+ * IntroOverlay â€” hero title + phase callouts over the auto-play
  * camera move (first visit only)
  * ============================================================ */
 #intro-overlay {
@@ -4977,7 +5030,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 }
 
 /* ============================================================
- * OnboardingPointers — animated arrows + label cards pointing at
+ * OnboardingPointers â€” animated arrows + label cards pointing at
  * T (Pipeline) / K (Tuner) / Scene panel after the intro
  * ============================================================ */
 #onboarding-pointers {
@@ -4988,12 +5041,12 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   font-family: var(--font-ui);
 }
 #onboarding-pointers[hidden] { display: none; }
-/* Hide onboarding pointers on phones — the bottom-bar tabs (Tour /
+/* Hide onboarding pointers on phones â€” the bottom-bar tabs (Tour /
    Effects / Studio / Info / Share) are already labelled, so the
    floating callouts duplicate information AND overlap each other
-   horribly (three ≈ 320 px wide nowrap cards trying to anchor above
-   five ≈ 64 px wide bar tabs in the same row produce the stack the
-   user reported). Tablet + desktop keep the pointers — both have
+   horribly (three â‰ˆ 320 px wide nowrap cards trying to anchor above
+   five â‰ˆ 64 px wide bar tabs in the same row produce the stack the
+   user reported). Tablet + desktop keep the pointers â€” both have
    wider viewports and panels without printed labels. */
 body.mobile #onboarding-pointers { display: none !important; }
 
@@ -5017,7 +5070,7 @@ body.mobile #onboarding-pointers { display: none !important; }
 
 /* Flex direction per side so the arrow always sits on the side of the
    card that faces the target (e.g. tip placed to the LEFT of the
-   target → arrow on the RIGHT of the card, pointing right at it). */
+   target â†’ arrow on the RIGHT of the card, pointing right at it). */
 #onboarding-pointers .op-side-right { flex-direction: row;            }
 #onboarding-pointers .op-side-left  { flex-direction: row-reverse;    }
 #onboarding-pointers .op-side-above { flex-direction: column;         }
@@ -5072,7 +5125,7 @@ body.mobile #onboarding-pointers { display: none !important; }
   animation: op-arrow-bob 1.6s ease-in-out infinite;
 }
 /* Positive translateX in the arrow's local frame leans the arrowhead
-   toward the target after the wrapper's rotation — works correctly for
+   toward the target after the wrapper's rotation â€” works correctly for
    every side (rotated frames remap +X to the correct visual axis). */
 @keyframes op-arrow-bob {
   0%, 100% { transform: translateX(0); }
@@ -5080,12 +5133,12 @@ body.mobile #onboarding-pointers { display: none !important; }
 }
 
 /* ============================================================
- * UsdLayers panel — 3DGS / USD layer rows with eye toggles, subform
+ * UsdLayers panel â€” 3DGS / USD layer rows with eye toggles, subform
  * pills, and inline size sliders. Visual language matches the Scene
  * panel (same eye buttons, same row shape).
  * ============================================================ */
 #usd-layers-panel {
-  /* Default standalone style — kept as a fallback if the embedded path
+  /* Default standalone style â€” kept as a fallback if the embedded path
    * fails (e.g. lil-gui internals change). The .usd-embedded class
    * below overrides everything once the panel mounts inside lil-gui. */
   position: fixed;
@@ -5104,7 +5157,7 @@ body.mobile #onboarding-pointers { display: none !important; }
   border-radius: var(--radius);
   box-shadow: var(--shadow-soft);
 }
-/* Embedded inside lil-gui — strip the floating-panel chrome so the
+/* Embedded inside lil-gui â€” strip the floating-panel chrome so the
  * panel reads as the topmost section of the existing lil-gui surface.
  * Width inherits, max-height drops (lil-gui scrolls), background and
  * border collapse away. */
@@ -5128,7 +5181,7 @@ body.mobile #onboarding-pointers { display: none !important; }
   overflow: visible;
   padding: 4px 6px 8px;
 }
-/* (UsdLayers no longer renders its own header — the surrounding
+/* (UsdLayers no longer renders its own header â€” the surrounding
    lil-gui folder "3DGS / USD" provides the title, caret, and fold
    behaviour. The .usd-embedded class strips the panel's standalone
    chrome so only the folder's treatment shows.) */
@@ -5143,7 +5196,7 @@ body.mobile #onboarding-pointers { display: none !important; }
   overflow: hidden;
   transition: opacity 0.4s ease, max-height 0.35s ease, padding 0.35s ease;
 }
-/* Hint auto-retires once the user has clicked any toggle — its job is
+/* Hint auto-retires once the user has clicked any toggle â€” its job is
    teaching multi-select; after the first toggle the user has proven
    they understood. Fades out + collapses, persists across sessions. */
 #usd-layers-panel .usd-hint.dismissed {
@@ -5154,9 +5207,9 @@ body.mobile #onboarding-pointers { display: none !important; }
   pointer-events: none;
 }
 /* The embedded variant inherits the same subtle text-link styling
-   defined for the base .usd-upload — no overrides needed now that
+   defined for the base .usd-upload â€” no overrides needed now that
    the upload action is a discrete link rather than a block button. */
-/* (Header / fold-caret / folded-state rules removed — UsdLayers no
+/* (Header / fold-caret / folded-state rules removed â€” UsdLayers no
    longer manages its own folding. The wrapping lil-gui folder owns
    that now. See the .usd-hint rule above for the only piece of
    header-y chrome we still render: a small uppercase cue line above
@@ -5169,11 +5222,11 @@ body.mobile #onboarding-pointers { display: none !important; }
   text-transform: uppercase;
   color: var(--text-mid);
 }
-/* "Use My Own" — *rare* secondary action. Styled as a subtle text
+/* "Use My Own" â€” *rare* secondary action. Styled as a subtle text
    link rather than a button so the visual weight is clearly less
    than the primary controls (toggle switches + subform pills). This
    was an outlined block-button before, which read at the same weight
-   as the actual primary controls — false hierarchy, distracting. Now
+   as the actual primary controls â€” false hierarchy, distracting. Now
    it's tucked at the bottom as discreet small-caps text the user can
    discover but won't fight for attention. */
 #usd-layers-panel .usd-upload {
@@ -5205,7 +5258,7 @@ body.mobile #onboarding-pointers { display: none !important; }
   overflow-y: auto;
   flex: 1;
 }
-/* Section header — quiet label matching lil-gui's folder title weight.
+/* Section header â€” quiet label matching lil-gui's folder title weight.
  * No blurb line, no bold display type; the section is just a marker
  * between groups of rows so the panel reads like a tighter Post-Process
  * folder rather than its own visual world. */
@@ -5256,7 +5309,7 @@ body.mobile #onboarding-pointers { display: none !important; }
    because (a) the switch's pill+knob shape inherently signals "this is
    one of multiple independent toggles you can mix freely", and (b) the
    eye icon was easy to mistake for a "preview / hover" affordance.
-   Each row's switch operates independently — layers stack. */
+   Each row's switch operates independently â€” layers stack. */
 #usd-layers-panel .usd-row .usd-toggle {
   position: relative;
   width: 34px;
@@ -5269,11 +5322,11 @@ body.mobile #onboarding-pointers { display: none !important; }
   padding: 0;
   transition: background 0.18s ease, border-color 0.18s ease;
 }
-/* Invisible 44 × 44 hit zone via ::before — the visible pill is 34 × 20
+/* Invisible 44 Ã— 44 hit zone via ::before â€” the visible pill is 34 Ã— 20
    (a polished iOS-style switch reads small) but fingers need more
    slop. The pseudo-element extends the tap target outward by 5 px
    horizontally and 12 px vertically so any reasonable finger landing
-   on the switch row registers as a hit. Stays transparent — purely
+   on the switch row registers as a hit. Stays transparent â€” purely
    for touch reliability. Doesn't extend rightward enough to overlap
    the layer name to the toggle's right. */
 #usd-layers-panel .usd-row .usd-toggle::before {
@@ -5291,7 +5344,7 @@ body.mobile #onboarding-pointers { display: none !important; }
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.78);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
-  /* Snappy snap-back curve with a tiny overshoot — like iOS's switch
+  /* Snappy snap-back curve with a tiny overshoot â€” like iOS's switch
      animation. The knob lands a hair past its target, then settles.
      Gives the toggle a "decided" feel. */
   transition: transform 0.28s cubic-bezier(.34, 1.56, .64, 1),
@@ -5411,30 +5464,30 @@ body.mobile #onboarding-pointers { display: none !important; }
 }
 
 /* ============================================================
- * UsdAnnotations — museum-style annotation card that pops when the
+ * UsdAnnotations â€” museum-style annotation card that pops when the
  * user manually activates a layer in the 3DGS/USD panel.
  * Anchored upper-right, slides in from the right edge with a thin
  * connector rule on the left so the eye reads it as pinned to the
  * scene rather than floating in the chrome.
  * ============================================================ */
-/* UsdAnnotations — redesigned to follow the user's iOS reference
+/* UsdAnnotations â€” redesigned to follow the user's iOS reference
    (Outer Hebrides weather widget). The card now has the same
    information hierarchy as that reference:
 
-     ┌──────────────────────────────────────┐
-     │ EYEBROW · UPPERCASE         × close │
-     │ Title (big)              HeroValue ▶│
-     │ Friendly intro line in plain English│
-     │ ┌──────────┐  ┌──────────┐          │
-     │ │ icon  k  │  │ icon  k  │          │ ← 2×2 grid
-     │ │       v  │  │       v  │          │
-     │ └──────────┘  └──────────┘          │
-     │ ┌──────────┐  ┌──────────┐          │
-     │ │ icon  k  │  │ icon  k  │          │
-     │ │       v  │  │       v  │          │
-     │ └──────────┘  └──────────┘          │
-     │ italic body — "why we built this"   │
-     └──────────────────────────────────────┘
+     â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+     â”‚ EYEBROW Â· UPPERCASE         Ã— close â”‚
+     â”‚ Title (big)              HeroValue â–¶â”‚
+     â”‚ Friendly intro line in plain Englishâ”‚
+     â”‚ â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”          â”‚
+     â”‚ â”‚ icon  k  â”‚  â”‚ icon  k  â”‚          â”‚ â† 2Ã—2 grid
+     â”‚ â”‚       v  â”‚  â”‚       v  â”‚          â”‚
+     â”‚ â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜          â”‚
+     â”‚ â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”  â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”          â”‚
+     â”‚ â”‚ icon  k  â”‚  â”‚ icon  k  â”‚          â”‚
+     â”‚ â”‚       v  â”‚  â”‚       v  â”‚          â”‚
+     â”‚ â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜  â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜          â”‚
+     â”‚ italic body â€” "why we built this"   â”‚
+     â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 
    Anchored upper-left of centre (not pinned to the lil-gui rail any
    more) so it reads as a free-floating glass widget instead of a
@@ -5442,7 +5495,7 @@ body.mobile #onboarding-pointers { display: none !important; }
    as the Studio panel for visual continuity. */
 #usd-annotations {
   position: fixed;
-  /* Anchored to the RIGHT side of the viewport — sits adjacent to
+  /* Anchored to the RIGHT side of the viewport â€” sits adjacent to
      the lil-gui Studio panel (which is `right: 18 / width: 280`),
      so the card lands right where the user's eye already is after
      tapping a layer toggle. Was previously centred; the user asked
@@ -5472,7 +5525,7 @@ body.mobile #onboarding-pointers { display: none !important; }
   transform: translateY(-8px);
   transition: opacity 0.28s ease,
               transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
-  /* Draggable affordance — the card is grabbable anywhere except
+  /* Draggable affordance â€” the card is grabbable anywhere except
      the close button + interactive elements (those keep default
      cursor via the inner rules). Switches to grabbing while drag
      is active (.dragging class set by usd-annotations.js). */
@@ -5502,18 +5555,18 @@ body.mobile #onboarding-pointers { display: none !important; }
   cursor: pointer;
 }
 
-/* Eyebrow caption — small uppercase mono line above the title row.
-   Same role as "H:24° L:8° 6:01" in the reference. */
+/* Eyebrow caption â€” small uppercase mono line above the title row.
+   Same role as "H:24Â° L:8Â° 6:01" in the reference. */
 #usd-annotations .ua-eyebrow {
   font-family: var(--font-mono);
   font-size: 9px;
   letter-spacing: 0.22em;
   color: rgba(255, 255, 255, 0.55);
   margin-bottom: 6px;
-  padding-right: 32px;        /* leaves room for the × button */
+  padding-right: 32px;        /* leaves room for the Ã— button */
 }
 
-/* Close button — small circular chip top-right. */
+/* Close button â€” small circular chip top-right. */
 #usd-annotations .ua-close {
   position: absolute;
   top: 12px;
@@ -5538,8 +5591,8 @@ body.mobile #onboarding-pointers { display: none !important; }
 }
 #usd-annotations .ua-close:active { transform: scale(0.92); }
 
-/* Title row — big title on the left, hero value on the right.
-   Mirrors "Outer Hebrides | 12°" balance. */
+/* Title row â€” big title on the left, hero value on the right.
+   Mirrors "Outer Hebrides | 12Â°" balance. */
 #usd-annotations .ua-titleRow {
   display: flex;
   align-items: baseline;
@@ -5564,8 +5617,8 @@ body.mobile #onboarding-pointers { display: none !important; }
   flex-shrink: 0;
 }
 
-/* Intro — ONE friendly plain-English sentence. Top tier of the
-   three-tier information ladder (intro → grid → body). */
+/* Intro â€” ONE friendly plain-English sentence. Top tier of the
+   three-tier information ladder (intro â†’ grid â†’ body). */
 #usd-annotations .ua-intro {
   margin: 8px 0 14px;
   font-size: 12.5px;
@@ -5574,7 +5627,7 @@ body.mobile #onboarding-pointers { display: none !important; }
   letter-spacing: 0.005em;
 }
 
-/* 2×2 fact grid — translucent inner tiles, each with an icon, a
+/* 2Ã—2 fact grid â€” translucent inner tiles, each with an icon, a
    tiny mono label, and a value. Matches the Wind / Humidity /
    UV / Rain layout in the reference. */
 #usd-annotations .ua-grid {
@@ -5623,9 +5676,9 @@ body.mobile #onboarding-pointers { display: none !important; }
   letter-spacing: 0.005em;
   line-height: 1.3;
   /* Allow the value to wrap to a 2nd / 3rd line instead of getting
-     truncated by an ellipsis — the previous `white-space: nowrap`
+     truncated by an ellipsis â€” the previous `white-space: nowrap`
      + `text-overflow: ellipsis` clipped "Anisotropic 3D Gaussian"
-     to "Anisotropic 3D G…" and lost the key information. The grid
+     to "Anisotropic 3D Gâ€¦" and lost the key information. The grid
      row auto-sizes so the tile grows vertically to fit; the iOS
      reference's short values ("5 km/h") never needed wrap, but
      our longer USD terms do. word-break: break-word so any single
@@ -5636,7 +5689,7 @@ body.mobile #onboarding-pointers { display: none !important; }
   word-break: break-word;
 }
 
-/* Italic body — "why we built this" paragraph. Lower weight, soft
+/* Italic body â€” "why we built this" paragraph. Lower weight, soft
    colour, italic so it reads as a quieter footnote than the intro
    above. Same role as the gray italic blurb at the bottom of the
    reference card. */
@@ -5650,7 +5703,7 @@ body.mobile #onboarding-pointers { display: none !important; }
   text-align: center;
 }
 
-/* Narrow viewports — drop to a single column for the fact tiles so
+/* Narrow viewports â€” drop to a single column for the fact tiles so
    the values don't get truncated to ellipses, and shrink padding
    so the card still floats in the centre without dominating the
    viewport. */
@@ -5667,7 +5720,7 @@ body.mobile #onboarding-pointers { display: none !important; }
 }
 
 /* ============================================================
- * MobileNav — hamburger trigger + slide-down drawer (touch only)
+ * MobileNav â€” hamburger trigger + slide-down drawer (touch only)
  * ============================================================ */
 #mobile-nav-btn {
   position: fixed;
@@ -5692,24 +5745,24 @@ body.mobile #onboarding-pointers { display: none !important; }
 #mobile-nav-btn svg {
   width: 22px;
   height: 22px;
-  /* Slight cross-fade between the hamburger ↔ × glyphs feels less abrupt
+  /* Slight cross-fade between the hamburger â†” Ã— glyphs feels less abrupt
      when the JS swaps innerHTML. Transition is on the wrapping svg
      attributes (opacity), but the actual cross-fade is implicit since
-     innerHTML replacement is instant — this just keeps the existing
+     innerHTML replacement is instant â€” this just keeps the existing
      line work crisp during press. */
   transition: transform 0.18s ease;
 }
 #mobile-nav-btn:hover         { background: rgba(28, 30, 34, 0.85); }
 #mobile-nav-btn:active        { background: rgba(40, 42, 48, 0.90); transform: scale(0.96); }
 /* Open state: subtle lift so users can tell at a glance whether the
-   drawer is open without having to spot the × vs. ≡ glyph. */
+   drawer is open without having to spot the Ã— vs. â‰¡ glyph. */
 #mobile-nav-btn[aria-expanded="true"] {
   background: rgba(28, 30, 34, 0.92);
   border-color: rgba(255, 255, 255, 0.18);
 }
-/* Hamburger is dormant on phone — every menu item moved into the bottom-
+/* Hamburger is dormant on phone â€” every menu item moved into the bottom-
    bar sheets (Info / Camera). On tablet the hamburger isn't shown either
-   (its display: none default applies — body.touch was the only thing
+   (its display: none default applies â€” body.touch was the only thing
    that would have shown it, and tablets now skip that path). */
 body.mobile #mobile-nav-btn { display: none !important; }
 
@@ -5789,7 +5842,7 @@ body.mobile #mobile-nav-btn { display: none !important; }
   padding: 2px 6px;
 }
 
-/* Status-bar crossfade — when #status text changes meaning (not the
+/* Status-bar crossfade â€” when #status text changes meaning (not the
    silent FPS suffix), it flashes a quick fade + slide so the change
    reads as intentional motion rather than a snap. Driven by a
    MutationObserver in main.js that only re-adds the class on
@@ -5803,9 +5856,9 @@ body.mobile #mobile-nav-btn { display: none !important; }
 }
 
 /* ============================================================
- * Choreographed entrance — once the splash hides, the major UI
+ * Choreographed entrance â€” once the splash hides, the major UI
  * surfaces fade in with a staggered sequence so the viewer's eye
- * naturally goes hero → side panels → toolbar. Pure CSS, fires
+ * naturally goes hero â†’ side panels â†’ toolbar. Pure CSS, fires
  * once on page load. The `body.ui-ready` class is added by main.js
  * right after hideLoading() so the animation never starts behind
  * a splash. Each surface uses `animation-fill-mode: backwards`
@@ -5813,19 +5866,19 @@ body.mobile #mobile-nav-btn { display: none !important; }
  * ============================================================ */
 /* Keyframes intentionally OPACITY-ONLY (no transform) for any element
    that has backdrop-filter. Chromium drops backdrop-filter pass-through
-   whenever an ancestor sits in a non-identity transform context — even
+   whenever an ancestor sits in a non-identity transform context â€” even
    after the animation completes, `transform: translateX(0)` from
    `animation-fill-mode: both` keeps the stacking context alive and the
    glass blur breaks. Plain opacity has no such side-effect.
 
-   CRITICAL — animate the LEAF panel, not its wrapper. Putting an
+   CRITICAL â€” animate the LEAF panel, not its wrapper. Putting an
    `animation` on `#left-stack` (a parent of `#sidebar` + `#scene-panel`)
    promotes #left-stack onto its own compositor layer; once that happens
    its DESCENDANTS' backdrop-filter can only sample inside that layer,
    so #sidebar and #scene-panel render as flat tinted panels with no
    blur of the 3D scene behind them. lil-gui works because its
-   animation is on `.lil-gui.root` — the same element that owns the
-   backdrop-filter — so the filter samples its own layer's input
+   animation is on `.lil-gui.root` â€” the same element that owns the
+   backdrop-filter â€” so the filter samples its own layer's input
    (which IS the canvas). We follow the same pattern for the left
    stack: animate #sidebar + #scene-panel directly, leave #left-stack
    untouched. #hand-panel owns its backdrop-filter so it can keep the
@@ -5844,7 +5897,7 @@ body.mobile #mobile-nav-btn { display: none !important; }
 body.ui-ready .lil-gui.root {
   animation: ui-enter-opacity 0.55s cubic-bezier(.16,1,.3,1) 0.08s both;
 }
-/* Animate the panels DIRECTLY, not their #left-stack wrapper —
+/* Animate the panels DIRECTLY, not their #left-stack wrapper â€”
    see comment above. Two-step stagger inside the left column. */
 body.ui-ready #sidebar {
   animation: ui-enter-opacity 0.55s cubic-bezier(.16,1,.3,1) 0.20s both;
@@ -5859,7 +5912,7 @@ body.ui-ready #toolbar {
   animation: ui-enter-translate 0.50s cubic-bezier(.16,1,.3,1) 0.40s both;
 }
 body.ui-ready #mobile-bottombar {
-  /* Opacity-only — the bar's `transform: translateX(-50%)` is what
+  /* Opacity-only â€” the bar's `transform: translateX(-50%)` is what
      centers it horizontally, so a translate-based animation would
      fight the centering and momentarily slide it off-centre. */
   animation: ui-enter-opacity 0.55s cubic-bezier(.16,1,.3,1) 0.12s both;
@@ -5867,7 +5920,7 @@ body.ui-ready #mobile-bottombar {
 body.ui-ready #mobile-studio-btn {
   animation: ui-enter-opacity 0.50s cubic-bezier(.16,1,.3,1) 0.22s both;
 }
-/* Asset hotspots pulse in after the chrome UI — final layer in the
+/* Asset hotspots pulse in after the chrome UI â€” final layer in the
    cinematic reveal sequence. They use opacity-only because the
    per-frame transform is driven by the projection update. */
 @keyframes ui-hotspot-fade { from { opacity: 0; } to { opacity: 1; } }
@@ -5876,12 +5929,12 @@ body.ui-ready .asset-hotspot {
 }
 
 /* ============================================================
- * MobileUI — bottom toolbar + slide-up sheet + asset toast.
+ * MobileUI â€” bottom toolbar + slide-up sheet + asset toast.
  * Scoped to body.mobile (phone only). Tablets get the desktop UI
  * because iPad's screen is wide enough for the lil-gui + sidebar
  * pattern and the user wants iPad === PC.
  * ============================================================ */
-/* Floating capsule bottom-bar — Apple Health / Portfolite-y idiom.
+/* Floating capsule bottom-bar â€” Apple Health / Portfolite-y idiom.
    Lifted off the viewport edge with a generous radius pill and a soft
    ambient drop-shadow. Width hugs its content; horizontally centred
    so the whole bar feels like one polished object instead of a strip
@@ -5934,7 +5987,7 @@ body.mobile #mobile-bottombar { display: flex; }
   justify-content: center;
   width: 22px;
   height: 22px;
-  /* Tiny lift on the active icon — purely tactile, no layout shift. */
+  /* Tiny lift on the active icon â€” purely tactile, no layout shift. */
   transition: transform 0.18s ease;
 }
 #mobile-bottombar button .mb-ico svg { width: 22px; height: 22px; display: block; }
@@ -5942,7 +5995,7 @@ body.mobile #mobile-bottombar { display: flex; }
 #mobile-bottombar button:hover            { color: rgba(255, 255, 255, 0.78); }
 /* Active state: soft rounded pill + brighter icon/label + the icon
    lifts very slightly. The pill replaces the old 22 px underline dash
-   — it's much more readable in low-light viewport overlays and ties
+   â€” it's much more readable in low-light viewport overlays and ties
    the tab visually to the sheet content above. */
 #mobile-bottombar button.active {
   color: rgba(255, 255, 255, 0.98);
@@ -5950,7 +6003,7 @@ body.mobile #mobile-bottombar { display: flex; }
 }
 #mobile-bottombar button.active .mb-ico { transform: translateY(-1px); color: rgba(255, 255, 255, 0.98); }
 
-/* Center "Studio" slot — the project's primary action (3DGS / USD
+/* Center "Studio" slot â€” the project's primary action (3DGS / USD
    showcase). Visually elevated above the other tabs so the eye lands
    there first. Slightly wider, brighter ring on idle, fuller fill +
    subtle glow when active. Same pattern as Apple Health's centre +
@@ -5978,8 +6031,8 @@ body.mobile #mobile-bottombar { display: flex; }
               0 0 22px rgba(255, 255, 255, 0.08);
 }
 
-/* (No backdrop — the sheet is non-modal. Scene above stays bright +
-   interactive. User closes via the × button, swipe-down on the
+/* (No backdrop â€” the sheet is non-modal. Scene above stays bright +
+   interactive. User closes via the Ã— button, swipe-down on the
    handle, or re-tap of the active bottom-bar tab.) */
 
 /* ---- Sheet ----
@@ -5987,13 +6040,13 @@ body.mobile #mobile-bottombar { display: flex; }
    3-item list doesn't take half the viewport. Capped at max-height
    for content that genuinely needs scroll. Portfolite-inspired:
    larger corner radius, softer borders, more breathing room. */
-/* Bottom sheet — restyled to match the iOS reference (Outer Hebrides
+/* Bottom sheet â€” restyled to match the iOS reference (Outer Hebrides
    weather widget) the user supplied. Was previously a full-width slab
    bolted to the bottom edge with only the top corners rounded; now it
    floats as a centred glass CARD with all four corners rounded, sitting
    ABOVE the capsule bottom-bar (not flush against it), with the same
    luminous frosted glass + warm tint the Studio panel + USD annotation
-   card use. Visual continuity across Tour / Effects / Info → Studio
+   card use. Visual continuity across Tour / Effects / Info â†’ Studio
    so every bottom-bar tab reads as part of the same family. */
 #mobile-sheet {
   position: fixed;
@@ -6044,7 +6097,7 @@ body.mobile #mobile-bottombar { display: flex; }
   align-items: center;
   justify-content: space-between;
   padding: 4px 20px 12px;
-  /* No border — the title's typographic weight + spacing carries the
+  /* No border â€” the title's typographic weight + spacing carries the
      section separation. Cleaner, more Portfolite-y. */
 }
 #mobile-sheet .ms-title {
@@ -6077,13 +6130,13 @@ body.mobile #mobile-bottombar { display: flex; }
   overflow: auto;
   /* Size to content (no flex-grow). Sheet height = handle + head +
      body content + padding-bottom. Capped by the sheet's max-height
-     when content gets very tall — in which case overflow:auto on
+     when content gets very tall â€” in which case overflow:auto on
      this body keeps scrolling inside the sheet. */
   flex: 0 1 auto;
   min-height: 0;
   -webkit-overflow-scrolling: touch;
   /* Tab-switch crossfade: BottomSheet.show() adds `.swapping` for
-     ~130 ms while it swaps innerHTML between tabs (Tour → Effects →
+     ~130 ms while it swaps innerHTML between tabs (Tour â†’ Effects â†’
      Info). Without this, the content hard-snaps and reads as
      "panel cleared then refilled". With it, the sheet feels like a
      single surface that morphs between tabs. */
@@ -6103,7 +6156,7 @@ body.mobile #mobile-bottombar { display: flex; }
   color: rgba(255, 255, 255, 0.42);
   margin: 4px 0 10px;
 }
-/* Second-and-later section label inside the same sheet body — adds
+/* Second-and-later section label inside the same sheet body â€” adds
    visual separation between merged sections (e.g. Tour's Viewpoints
    list above + Camera Movement controls below). Without this the
    "CAMERA MOVEMENT" header would visually touch the last viewpoint
@@ -6143,7 +6196,7 @@ body.mobile #mobile-bottombar { display: flex; }
   justify-content: space-between;
   padding: 14px 0;
   /* Replace the heavy border with a hairline that doesn't carve up
-     the sheet visually — closer to the Portfolite list-row idiom. */
+     the sheet visually â€” closer to the Portfolite list-row idiom. */
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 #mobile-sheet .ms-toggle-label { font-size: 14px; color: rgba(255, 255, 255, 0.92); }
@@ -6302,16 +6355,16 @@ body.mobile #mobile-bottombar { display: flex; }
 /* ---- Asset detail card inside the sheet ----
    The renderCard() output is the SAME on phone (here) and desktop
    (the floating #asset-hover-card). The .ah-card class is on both
-   wrappers, so all the rich content styling — chips, triptych, sim
-   video, before/after compare, etc. — applies identically. Below we
-   only override the sheet-specific bits: hide the redundant ×
+   wrappers, so all the rich content styling â€” chips, triptych, sim
+   video, before/after compare, etc. â€” applies identically. Below we
+   only override the sheet-specific bits: hide the redundant Ã—
    (sheet has its own close), drop the in-card chrome that would
    double up with the sheet header. */
 #mobile-sheet .ms-asset-card .ah-close { display: none; }
 /* The mobile bottom-sheet renders its own title in the sheet header
    (from this.sheet.show("asset", it.name, ...)), so the card's INTERNAL
    .ah-head (which also renders the asset name) was producing the
-   duplicate "Vine / Vine" the user reported on mobile. Hide it — the
+   duplicate "Vine / Vine" the user reported on mobile. Hide it â€” the
    sheet header is the canonical title; the body starts with toolchain
    / embed / etc. straight away. */
 #mobile-sheet .ms-asset-card .ah-head { display: none; }
@@ -6347,7 +6400,7 @@ body.mobile #mobile-bottombar { display: flex; }
 }
 
 /* ---- Phone-only layout shifts (push existing things out of the way) ---- */
-/* Hide the desktop bottom-right brand/status bar — the new bottom-bar
+/* Hide the desktop bottom-right brand/status bar â€” the new bottom-bar
    replaces it, and they fight for the same corner. (Tablet keeps the
    desktop toolbar since the bottom-bar isn't shown there.) */
 body.mobile #toolbar { display: none !important; }
@@ -6357,7 +6410,7 @@ body.mobile #toolbar { display: none !important; }
    `.mobile` toggles off when the iPhone rotates and the width
    crosses 768 px. The hardware-bound `.phone-device` class
    survives that flip, so this rule keeps the status hidden on
-   the same physical phone regardless of which way it's held —
+   the same physical phone regardless of which way it's held â€”
    nobody reads a one-line technical status on a phone, and the
    strip was floating over the splat in landscape per the user's
    screenshot. */
@@ -6369,7 +6422,7 @@ body.mobile #key-hints {
      from the bottom edge, plus the device safe-area). */
   bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
 }
-/* Hide the floating lil-gui at top-right on PHONE — bottom-bar's
+/* Hide the floating lil-gui at top-right on PHONE â€” bottom-bar's
    Effects sheet now owns "Open Advanced" as the canonical entry point.
    Undo the hide when the gui has been re-parented INTO the sheet so
    power users get the full panel when they ask for it. Tablets keep
@@ -6382,9 +6435,9 @@ body.mobile #mobile-sheet .lil-gui.root { display: block !important; }
    intro playback (CAPTURE eyebrow / "Captured in Unreal Engine" / the
    timeline F-43/397 strip all collide in ~50 px of vertical space).
    Lift each one above the previous so the stack reads cleanly:
-     [phase text]                ← bottom: 150 + safe-area
-     [timeline strip]            ← bottom: 72  + safe-area
-     [bottom bar (54px + safe)]  ← bottom: 0 */
+     [phase text]                â† bottom: 150 + safe-area
+     [timeline strip]            â† bottom: 72  + safe-area
+     [bottom bar (54px + safe)]  â† bottom: 0 */
 body.mobile .cam-timeline {
   /* Above the floating capsule bar (64 + 14 lift + safe-area). */
   bottom: calc(92px + env(safe-area-inset-bottom, 0px));
@@ -6394,9 +6447,9 @@ body.mobile #intro-overlay .io-phase {
 }
 
 /* ============================================================
- * MobileStudioPanel — top-right floating 3DGS / USD entry point.
+ * MobileStudioPanel â€” top-right floating 3DGS / USD entry point.
  * The button slot is the same spot the (now-empty) hamburger used to
- * occupy — keeps the top corners symmetric. The drop-down panel hosts
+ * occupy â€” keeps the top corners symmetric. The drop-down panel hosts
  * the live #usd-layers-panel (re-parented at open time) so all its
  * existing eye toggles + subform pills + size sliders work as-is.
  * ============================================================ */
@@ -6421,7 +6474,7 @@ body.mobile #intro-overlay .io-phase {
               inset 0 1px 0 rgba(255, 255, 255, 0.05);
   transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
 }
-/* DEPRECATED on phone — Studio now lives in the centre slot of the
+/* DEPRECATED on phone â€” Studio now lives in the centre slot of the
    bottom bar (#mobile-bottombar button.mb-center). Keep the floating
    button hidden so users get one canonical Studio entrypoint. The
    #mobile-studio-panel itself is still triggered from the centre tab
@@ -6436,19 +6489,19 @@ body.mobile #mobile-studio-btn { display: none; }
   color: #fff;
 }
 
-/* Studio panel — repositioned per UX/UI/PM analysis the user
+/* Studio panel â€” repositioned per UX/UI/PM analysis the user
    requested. WAS: top: 66 / right: 14 (top-right drop-down), which
-   broke the spatial relationship with its trigger button — users
+   broke the spatial relationship with its trigger button â€” users
    tapped the centre "Studio" slot in the bottom-bar and the panel
    appeared diagonally across the screen. Three issues with that:
      1. Eye context-switch from tap point to result location.
      2. Inconsistent with Tour / Effects / Info, which already use
-        a centred bottom-sheet pattern — one mental model for the
+        a centred bottom-sheet pattern â€” one mental model for the
         bar's left tabs, a different one for the centre tab.
      3. One-handed reach: top-right is the FURTHEST spot from a
         thumb resting on the bottom-bar.
    NOW: centred horizontally, anchored above the floating capsule
-   bar — same coords as #mobile-sheet, same translateX(-50%) +
+   bar â€” same coords as #mobile-sheet, same translateX(-50%) +
    translateY() compose, same heavy frosted-glass treatment as the
    USD annotation card. Slides up from the bar rather than dropping
    in from the corner, so the affordance reads as "the centre tab
@@ -6460,10 +6513,10 @@ body.mobile #mobile-studio-btn { display: none; }
   width: calc(100vw - 24px);
   max-width: 380px;
   /* Cap tuned for the AR-compact row layout WITH the size slider
-     restored. A typical row is ≈ 70 px when the slider is showing
-     (40 px header line + 30 px slider line). Three rows × 70 +
-     header 80 + upload pill 60 ≈ 350 px, plus breathing room.
-     Still well below the old ≈ 560 px when each layer was a
+     restored. A typical row is â‰ˆ 70 px when the slider is showing
+     (40 px header line + 30 px slider line). Three rows Ã— 70 +
+     header 80 + upload pill 60 â‰ˆ 350 px, plus breathing room.
+     Still well below the old â‰ˆ 560 px when each layer was a
      vertically-stacked card. */
   max-height: min(440px, calc(100vh - 100px - (54px + env(safe-area-inset-bottom, 0px))));
   z-index: 1501;            /* below the trigger (1502), above bottom-bar (1500) */
@@ -6550,7 +6603,7 @@ body.mobile #mobile-studio-btn { display: none; }
   margin: 0 !important;
   display: block !important;
 }
-/* The panel's own header text is redundant — our own .msp-head already
+/* The panel's own header text is redundant â€” our own .msp-head already
    announces "3DGS / USD". Hide just the title, keep the Use My Own
    upload button which is genuinely useful. */
 #mobile-studio-panel #usd-layers-panel > header > .title { display: none !important; }
@@ -6561,30 +6614,30 @@ body.mobile #mobile-studio-btn { display: none; }
 }
 
 /* ============================================================
- * MobileStudioPanel — visual refresh (reference: sulmurry_ui_ux
+ * MobileStudioPanel â€” visual refresh (reference: sulmurry_ui_ux
  * "Venuxo" event-space mobile concept). The goal is a luminous,
  * airy glass-morphism panel that reads as a stack of FLOATING
  * TRANSLUCENT CARDS rather than the previous flat-dark rectangle.
  *
  * Design language vs the old panel:
- *   • Outer container — lighter, more translucent glass with heavier
- *     blur + saturation. Border-radius bumped 14 → 28 so it feels
+ *   â€¢ Outer container â€” lighter, more translucent glass with heavier
+ *     blur + saturation. Border-radius bumped 14 â†’ 28 so it feels
  *     like a pill-stack instead of a window. Soft diffused outer
  *     shadow + a 1-px inner highlight ring on the top edge for the
  *     iOS-26 "etched glass" look.
- *   • Header — drop the divider hairline; the cards below provide
+ *   â€¢ Header â€” drop the divider hairline; the cards below provide
  *     enough visual separation. Title weight up, subtitle goes
- *     softer caps. Close × becomes a soft circular chip.
- *   • Each .usd-row becomes its OWN floating glass card (white
+ *     softer caps. Close Ã— becomes a soft circular chip.
+ *   â€¢ Each .usd-row becomes its OWN floating glass card (white
  *     translucent fill, 1-px hairline, soft shadow). Rows now
  *     stack with breathing room instead of running edge-to-edge.
- *   • .usd-pill — capsule chips with brighter active state + a
+ *   â€¢ .usd-pill â€” capsule chips with brighter active state + a
  *     subtle white glow. Reads as "tab chips" matching the
  *     Weddings / Concerts / Outdoor row in the reference.
- *   • .usd-toggle — keep the iOS-style switch; lift the "on" state
+ *   â€¢ .usd-toggle â€” keep the iOS-style switch; lift the "on" state
  *     to pure white + add a soft halo so it pops against the
  *     glass card.
- *   • .usd-upload — promoted from text-link into a tappable pill
+ *   â€¢ .usd-upload â€” promoted from text-link into a tappable pill
  *     so it lines up visually with the other primary affordances
  *     (a small "ghost button" rather than vanishing text).
  *
@@ -6592,7 +6645,7 @@ body.mobile #mobile-studio-btn { display: none; }
  * inside-lil-gui desktop experience keeps its compact treatment.
  * ============================================================ */
 #mobile-studio-panel {
-  /* Lighter glass — lets the splat read through softly. Heavier
+  /* Lighter glass â€” lets the splat read through softly. Heavier
      blur + saturation gives the colours behind a creamy tint
      instead of muddy dark. */
   background: rgba(26, 28, 34, 0.55) !important;
@@ -6605,7 +6658,7 @@ body.mobile #mobile-studio-btn { display: none; }
     0 1px 0 rgba(255, 255, 255, 0.10) inset,
     0 0 0 1px rgba(255, 255, 255, 0.04) inset !important;
 }
-/* Header — bigger title, softer divider (dropped), close pill */
+/* Header â€” bigger title, softer divider (dropped), close pill */
 #mobile-studio-panel .msp-head {
   padding: 18px 18px 12px 22px !important;
   border-bottom: 0 !important;
@@ -6639,7 +6692,7 @@ body.mobile #mobile-studio-btn { display: none; }
   padding: 4px 14px 18px !important;
 }
 
-/* The hint strip ("TOGGLE LAYERS · STACK FREELY") above the rows —
+/* The hint strip ("TOGGLE LAYERS Â· STACK FREELY") above the rows â€”
    tighten to a single mono caption that reads as a section eyebrow
    instead of a chunky paragraph. */
 #mobile-studio-panel #usd-layers-panel .usd-hint {
@@ -6649,7 +6702,7 @@ body.mobile #mobile-studio-btn { display: none; }
   color: rgba(255, 255, 255, 0.40) !important;
 }
 
-/* Row list — vertical stack with cards as children. Remove the
+/* Row list â€” vertical stack with cards as children. Remove the
    default 6px padding and use gap so the cards float free. */
 #mobile-studio-panel #usd-layers-panel .usd-row-list {
   display: flex !important;
@@ -6658,20 +6711,20 @@ body.mobile #mobile-studio-btn { display: none; }
   padding: 0 !important;
 }
 
-/* AR-COMPACT GRID MODE — each layer row uses CSS grid with a
+/* AR-COMPACT GRID MODE â€” each layer row uses CSS grid with a
    FIXED 2-column structure so the three slider tracks all share
    the same start AND end X coordinates across rows:
        column 1 (110 px)        column 2 (1 fr, right-aligned)
-       ┌───────────────────────┬──────────────────────────────┐
-   r1: │ [toggle] Name         │            [pill] [pill]     │
-   r2: │            ━━━━━━━━●━━━━━━━━━━━━━━━━━━ slider full   │
-       └───────────────────────┴──────────────────────────────┘
-   This matches the user's "三个滑动条都要对齐" requirement.
+       â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+   r1: â”‚ [toggle] Name         â”‚            [pill] [pill]     â”‚
+   r2: â”‚            â”â”â”â”â”â”â”â”â—â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â” slider full   â”‚
+       â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+   This matches the user's "ä¸‰ä¸ªæ»‘åŠ¨æ¡éƒ½è¦å¯¹é½" requirement.
    `.usd-row-sub` uses `display: contents` so its children
    participate in the .usd-row grid directly (no nested layout
    container blocking the alignment). Tighter padding (8/2 px
    vs the old 10/2 + 10/16) shrinks each row by ~30 %, satisfying
-   the "更紧凑" ask without sacrificing tap target size. */
+   the "æ›´ç´§å‡‘" ask without sacrificing tap target size. */
 #mobile-studio-panel #usd-layers-panel .usd-row {
   background: transparent !important;
   border: 0 !important;
@@ -6691,13 +6744,13 @@ body.mobile #mobile-studio-btn { display: none; }
 #mobile-studio-panel #usd-layers-panel .usd-row + .usd-row {
   border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
-/* "Off" row — softer hue across the whole row so state reads at a
+/* "Off" row â€” softer hue across the whole row so state reads at a
    glance without needing to find the toggle position. */
 #mobile-studio-panel #usd-layers-panel .usd-row.hidden-row {
   opacity: 0.55 !important;
 }
 
-/* Toggle + name cluster — pinned to grid column 1 / row 1, fixed
+/* Toggle + name cluster â€” pinned to grid column 1 / row 1, fixed
    width so the divider between toggle-area and controls is at the
    SAME X for every row (this is what makes the sliders below
    line up perfectly across rows). */
@@ -6709,7 +6762,7 @@ body.mobile #mobile-studio-btn { display: none; }
   align-items: center !important;
   gap: 10px !important;
 }
-/* `.usd-row-sub` becomes a layout-transparent wrapper — its
+/* `.usd-row-sub` becomes a layout-transparent wrapper â€” its
    children (pills + size) flow into the parent grid directly,
    so we can place each one in an explicit grid cell below. */
 #mobile-studio-panel #usd-layers-panel .usd-row-sub {
@@ -6720,7 +6773,7 @@ body.mobile #mobile-studio-btn { display: none; }
   font-weight: 500 !important;
   color: #fff !important;
 }
-/* Technical badge ("PointInstancer · Plane" etc.) — hidden in the
+/* Technical badge ("PointInstancer Â· Plane" etc.) â€” hidden in the
    compact view. Re-discoverable on the desktop Advanced panel; on
    mobile the subform pill names already convey "what you're
    looking at" without the schema string fighting for line width. */
@@ -6728,7 +6781,7 @@ body.mobile #mobile-studio-btn { display: none; }
   display: none !important;
 }
 
-/* Pills cluster — placed in grid column 2, row 1, justified to
+/* Pills cluster â€” placed in grid column 2, row 1, justified to
    the END so the chips hug the right edge of the panel. The
    grid's fixed column 1 + this right-justify means the chips
    for every row land in a consistent vertical lane. */
@@ -6740,9 +6793,9 @@ body.mobile #mobile-studio-btn { display: none; }
   flex-direction: row !important;
   align-items: center !important;
 }
-/* Size slider — spans both columns on the SECOND grid row, so all
+/* Size slider â€” spans both columns on the SECOND grid row, so all
    three sliders share the same left + right edge. This is what
-   the user asked for: "滑动条三个都要对齐". The slider sits flush
+   the user asked for: "æ»‘åŠ¨æ¡ä¸‰ä¸ªéƒ½è¦å¯¹é½". The slider sits flush
    to the row's full width regardless of how long each layer's
    name happens to be. Compact treatment matches the previous
    inline-flex slider (slim track, 14-px thumb, mono caption +
@@ -6813,7 +6866,7 @@ body.mobile #mobile-studio-btn { display: none; }
   text-align: right !important;
 }
 
-/* Subform pill chips — capsule, soft fill, brighter active state
+/* Subform pill chips â€” capsule, soft fill, brighter active state
    with a tiny white glow halo. Tightened down a notch for the
    compact one-line layout (was 6/14, now 4/11) so two pills fit
    comfortably on the right side of a 320-ish-px-wide row. */
@@ -6841,7 +6894,7 @@ body.mobile #mobile-studio-btn { display: none; }
   box-shadow: 0 0 14px rgba(255, 255, 255, 0.12) !important;
 }
 
-/* iOS toggle — sized down a notch to match the compact one-line
+/* iOS toggle â€” sized down a notch to match the compact one-line
    row layout. Bright "on" state keeps the halo so the toggle still
    pops against the panel's glass. */
 #mobile-studio-panel #usd-layers-panel .usd-toggle {
@@ -6868,7 +6921,7 @@ body.mobile #mobile-studio-btn { display: none; }
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.20) !important;
 }
 
-/* Size slider — pull the label / value into a single tidy row
+/* Size slider â€” pull the label / value into a single tidy row
    that fits inside the card's padding. */
 #mobile-studio-panel #usd-layers-panel .usd-size {
   margin-top: 8px !important;
@@ -6884,7 +6937,7 @@ body.mobile #mobile-studio-btn { display: none; }
   color: rgba(255, 255, 255, 0.85) !important;
 }
 
-/* "Use My Own" — promoted from buried text-link into a soft
+/* "Use My Own" â€” promoted from buried text-link into a soft
    pill-button so it sits at the same affordance level as the
    per-row toggles. Still discreet (low-key border + transparent
    fill), but tappable instead of needing tiny-text aim. */
@@ -6912,13 +6965,13 @@ body.mobile #mobile-studio-btn { display: none; }
 
 /* Phone-landscape asset card: viewport is wide but only ~430 px
    tall, while the floating card's natural size is tuned for desktop
-   / iPad height — the card ate 70 % of the viewport. Proportionally
+   / iPad height â€” the card ate 70 % of the viewport. Proportionally
    scale it down using `zoom` (NOT `transform: scale`) because zoom
    updates the layout coordinate system, so the JS anchor logic in
    asset-hover.js (which reads `offsetWidth` / `getBoundingClientRect`
    to position the card next to its dot) still works correctly.
-   Targets only short landscape viewports — iPad in landscape (height
-   ≥ 700 px) keeps the full-size card.
+   Targets only short landscape viewports â€” iPad in landscape (height
+   â‰¥ 700 px) keeps the full-size card.
 
    Replaces an earlier `zoom: 0.72` hack: zoom in Chrome doesn't update
    offsetWidth/offsetHeight consistently across versions, so the JS
@@ -6931,13 +6984,13 @@ body.mobile #mobile-studio-btn { display: none; }
     width: min(420px, 58vw);
     max-height: calc(100vh - 24px);
     /* Right margin reserves room for the column-mode bottombar pill
-       (≈ 76 px wide) + a small breathing gap. */
+       (â‰ˆ 76 px wide) + a small breathing gap. */
     margin-right: 88px;
   }
 }
 
 /* ============================================================
- * Phone LANDSCAPE — short viewport tuning. Since the recent restyle
+ * Phone LANDSCAPE â€” short viewport tuning. Since the recent restyle
  * the BASE #mobile-sheet rule already lays the panel out as a
  * centred floating card (translateX(-50%), max-width 480, all-four
  * rounded corners, frosted glass) so the old landscape override
@@ -6963,7 +7016,7 @@ body.mobile #mobile-studio-btn { display: none; }
  * edge, so a centre-aligned sheet leaves a wedge of empty splat scene
  * on the LEFT and visually competes with the dock on the RIGHT. Anchor
  * sheets to the left edge instead: dock-right, sheet-left, splat in
- * the middle — three clear zones, no overlap. Cap width so the sheet
+ * the middle â€” three clear zones, no overlap. Cap width so the sheet
  * reads as an intentional drawer, not a stretched-too-wide slab.
  *
  * Also tightens vertical rhythm inside the sheets (header padding,
@@ -6981,10 +7034,10 @@ body.mobile #mobile-studio-btn { display: none; }
      - dvh (dynamic viewport height) responds correctly to Safari URL-bar
        collapse/expand; plain vh doesn't, and would over-size the sheet
        when the URL bar is visible.
-     - max-width tightened 480 → 400 so the card occupies ≤ 50 % of a
+     - max-width tightened 480 â†’ 400 so the card occupies â‰¤ 50 % of a
        typical 800 px landscape phone. "User interaction first, don't
        block most of the screen."
-     - Slide-in changes from bottom→up to left→right; matches the
+     - Slide-in changes from bottomâ†’up to leftâ†’right; matches the
        left-anchor mental model. */
   body.mobile #mobile-sheet {
     left:   calc(14px + env(safe-area-inset-left, 0px));
@@ -7014,7 +7067,7 @@ body.mobile #mobile-studio-btn { display: none; }
   #mobile-studio-panel .msp-head { padding: 10px 14px; }
   #mobile-studio-panel .msp-body { padding: 4px 14px 12px; }
 
-  /* Asset hover card — left-anchored + safe-area-top, capped to the
+  /* Asset hover card â€” left-anchored + safe-area-top, capped to the
      usable height between safe areas. */
   #asset-hover-card {
     left:   calc(14px + env(safe-area-inset-left, 0px)) !important;
@@ -7028,7 +7081,7 @@ body.mobile #mobile-studio-btn { display: none; }
  * The bottom-edge pill eats vertical real estate that's already scarce
  * in landscape (most phones are ~400 px tall), and reaching back to the
  * bottom is awkward when the device is held horizontally. Anchor the
- * pill to the right edge as a vertical strip — same buttons, just laid
+ * pill to the right edge as a vertical strip â€” same buttons, just laid
  * out as a column. Targets short landscape viewports only; tablets and
  * wider phones (Plus / Pro Max landscape) drop body.mobile via JS. */
 @media (orientation: landscape) and (max-height: 520px) {
@@ -7055,15 +7108,15 @@ body.mobile #mobile-studio-btn { display: none; }
 }
 
 /* ============================================================
- * Responsive — phone (<768px) and tablet (768-1024px) tuning
+ * Responsive â€” phone (<768px) and tablet (768-1024px) tuning
  * ============================================================ */
 @media (max-width: 767px) {
-  /* Pipeline drawer — full width, edge-to-edge */
+  /* Pipeline drawer â€” full width, edge-to-edge */
   #tech-spec .ts-panel {
     width: 100vw !important;
     max-width: 100vw !important;
   }
-  /* Credits — near-full width, capped height with internal scroll */
+  /* Credits â€” near-full width, capped height with internal scroll */
   #credits {
     width: calc(100vw - 24px);
     max-width: calc(100vw - 24px);
@@ -7073,12 +7126,12 @@ body.mobile #mobile-studio-btn { display: none; }
   .loading-splash .ld-title { font-size: clamp(40px, 12vw, 64px) !important; }
   .loading-splash .ld-desc  { font-size: 13px !important; }
   .loading-splash .ld-desc-fine { font-size: 11px !important; }
-  /* Intro overlay copy — reduce so it fits a phone screen */
+  /* Intro overlay copy â€” reduce so it fits a phone screen */
   #intro-overlay .io-hero-title { font-size: clamp(34px, 11vw, 56px); }
   #intro-overlay .io-hero-sub   { font-size: 10px; letter-spacing: 0.22em; }
   #intro-overlay .io-phase      { left: 5vw; bottom: 10vh; max-width: 86vw; }
   #intro-overlay .io-phase-text { font-size: clamp(18px, 5vw, 24px); }
-  /* lil-gui — move to bottom and limit height; tap targets bigger */
+  /* lil-gui â€” move to bottom and limit height; tap targets bigger */
   .lil-gui.root {
     width: calc(100vw - 16px) !important;
     max-width: 360px;
@@ -7087,9 +7140,9 @@ body.mobile #mobile-studio-btn { display: none; }
     top: auto !important;
     max-height: 60vh !important;
   }
-  /* Scene panel + viewpoint sidebar — compact */
+  /* Scene panel + viewpoint sidebar â€” compact */
   #left-stack { max-width: 200px; }
-  /* Fallback bottom-sheet for the standalone case — only applies when
+  /* Fallback bottom-sheet for the standalone case â€” only applies when
    * UsdLayers is NOT embedded inside lil-gui. Once embedded the panel
    * rides with lil-gui (which goes bottom-sheet on phones via its
    * own .lil-gui.root rule above). */
@@ -7103,13 +7156,13 @@ body.mobile #mobile-studio-btn { display: none; }
     max-height: 50vh !important;
     z-index: 25;
   }
-  /* Onboarding pointers — narrower arrow on phone so the tip fits next
+  /* Onboarding pointers â€” narrower arrow on phone so the tip fits next
      to small targets like a 1/5-width bottom-bar tab. Positions are
      handled by JS (see onboarding-pointers.js), so no more hardcoded
-     [data-i=…] overrides here. */
+     [data-i=â€¦] overrides here. */
   #onboarding-pointers .op-arrow      { width: 60px; height: 30px; }
   #onboarding-pointers .op-arrow-wrap { transform-origin: center; }
-  /* Asset hover card — full-width sheet */
+  /* Asset hover card â€” full-width sheet */
   #asset-hover-card {
     width: calc(100vw - 16px) !important;
     max-width: calc(100vw - 16px) !important;
@@ -7120,7 +7173,7 @@ body.mobile #mobile-studio-btn { display: none; }
 }
 
 @media (min-width: 768px) and (max-width: 1024px) {
-  /* iPad / large tablet — slightly tighter than desktop */
+  /* iPad / large tablet â€” slightly tighter than desktop */
   #tech-spec .ts-panel {
     width: 70vw !important;
     max-width: 600px;
@@ -7128,7 +7181,7 @@ body.mobile #mobile-studio-btn { display: none; }
   #credits {
     width: min(480px, calc(100vw - 32px));
   }
-  /* Standalone fallback only — embedded UsdLayers rides with lil-gui. */
+  /* Standalone fallback only â€” embedded UsdLayers rides with lil-gui. */
   #usd-layers-panel:not(.usd-embedded) {
     width: 260px !important;
     max-height: 360px !important;
@@ -7137,20 +7190,20 @@ body.mobile #mobile-studio-btn { display: none; }
   #usd-annotations { width: min(320px, calc(100vw - 320px)); right: 296px; }
 }
 
-/* Touch — bigger tap targets everywhere */
+/* Touch â€” bigger tap targets everywhere */
 body.touch .ts-hotspot-toggle,
 body.touch .vt-save-btn,
 body.touch .cr-close,
 body.touch .ts-close { min-height: 32px; padding: 6px 12px; }
 body.touch #app .annotation { width: 32px; height: 32px; font-size: 13px; }
 body.touch .asset-hotspot .ahot-label { font-size: 12px; }
-/* Suppress the floating hotspot labels while an asset card is pinned —
+/* Suppress the floating hotspot labels while an asset card is pinned â€”
    the card title already names the asset so the extra "Gazebo" /
    "Daffodil" pills near each dot become redundant chrome that fights
    the card for screen space. Dots themselves remain visible so the
    user can still see WHERE assets sit in 3D. */
 body.asset-card-pinned .asset-hotspot .ahot-label { opacity: 0; }
-/* When hand tracking is active, hide the floating asset labels —
+/* When hand tracking is active, hide the floating asset labels â€”
    they compete with the hand cursor for the user's visual attention
    and make the scene feel chatty during gesture interaction. The
    dots themselves stay visible so users still see WHERE assets are;
@@ -7161,9 +7214,9 @@ body:has(#hand-toggle.active) .asset-hotspot .ahot-label {
   pointer-events: none;
   transition: opacity 0.25s ease;
 }
-/* Touch hit-area + drag isolation. The 44 × 44 hit halo itself lives
+/* Touch hit-area + drag isolation. The 44 Ã— 44 hit halo itself lives
    on the universal .asset-hotspot::before rule (was scoped to
-   body.touch before the HIG audit — the wider hit zone helps every
+   body.touch before the HIG audit â€” the wider hit zone helps every
    device including mouse users with motor disabilities). All that
    stays touch-specific is the `touch-action: none` declaration,
    which prevents the browser's default tap-to-pan behaviour from
@@ -7171,7 +7224,7 @@ body:has(#hand-toggle.active) .asset-hotspot .ahot-label {
 body.touch .asset-hotspot { touch-action: none; }
 
 /* ============================================================
-   Accessibility — reduced motion (PM-8)
+   Accessibility â€” reduced motion (PM-8)
 
    Visitors who've set their OS preference to "Reduce motion"
    shouldn't experience: long camera fly-tos, animated splash
@@ -7179,7 +7232,7 @@ body.touch .asset-hotspot { touch-action: none; }
    We damp the durations to near-zero and disable looping /
    bouncy animations entirely.
 
-   The biggest motion source — the FBX cinematic auto-play —
+   The biggest motion source â€” the FBX cinematic auto-play â€”
    is gated in main.js (matchMedia "prefers-reduced-motion:
    reduce") so we don't even spin up the mixer. The CSS below
    handles the smaller UI motion: panel slides, hover bounces,
@@ -7195,7 +7248,7 @@ body.touch .asset-hotspot { touch-action: none; }
    cleared in main.js around camera-move state transitions; here we
    just neutralise pointer-events on the relevant scene surfaces.
 
-   The right-rail GUI, Scene panel, Viewpoints sidebar, About pill —
+   The right-rail GUI, Scene panel, Viewpoints sidebar, About pill â€”
    these stay clickable because they're how the user can ESCAPE the
    intro (e.g. by pressing Stop in lil-gui). Only the IN-VIEWPORT
    click surfaces get disabled.
@@ -7217,7 +7270,7 @@ body.intro-playing #annotation-layer {
    - Splat asset failed to load (404, network error, corruption)
 
    Sits above the loading splash with a centered card that can be
-   read and acted on (Try again → reload). Designed to feel like
+   read and acted on (Try again â†’ reload). Designed to feel like
    part of the editorial design language, not a stock browser
    error message: same glassmorphism, same typography, same
    one-clear-action affordance as the rest of the app.
@@ -7294,7 +7347,7 @@ body.intro-playing #annotation-layer {
    default vertical pan. The canvas already gets `touch-action:
    none` (it captures orbit / pan / zoom gestures whole) but the
    floating overlay PANELS (Tech Spec drawer, Credits, Asset Hover
-   card, mobile bottom-sheet) are content surfaces — they need
+   card, mobile bottom-sheet) are content surfaces â€” they need
    the OPPOSITE: allow vertical-pan scrolling, smooth iOS momentum.
 
    Applied surfaces: anything with overflow-y:auto that the user
@@ -7313,7 +7366,7 @@ body.touch .ts-content {
   -webkit-overflow-scrolling: touch;   /* iOS momentum scrolling */
   overscroll-behavior: contain;        /* don't bounce the page itself */
 }
-/* The lil-gui panel on touch — same treatment. Its inner .children
+/* The lil-gui panel on touch â€” same treatment. Its inner .children
    contain knob rows AND scrollable folders, so we want vertical scroll
    to work without the user accidentally dragging the panel itself. */
 body.touch .lil-gui.root,
@@ -7324,11 +7377,11 @@ body.touch .lil-gui.root .children {
 }
 
 /* ============================================================
- * About — project-narrative panel + prominent floating trigger.
+ * About â€” project-narrative panel + prominent floating trigger.
  *
  * Separate surface from Credits (Credits stays as team/thanks/
  * software). About is the "what is this project actually about?"
- * surface — visible-by-default trigger at the top centre of the
+ * surface â€” visible-by-default trigger at the top centre of the
  * viewport, designed to be reached in the first few seconds.
  * ============================================================ */
 
@@ -7361,7 +7414,7 @@ body.touch .lil-gui.root .children {
     inset 0 1px 0 rgba(255, 255, 255, 0.10);
   transition: background 0.18s ease, border-color 0.18s ease,
               transform 0.14s ease, box-shadow 0.18s ease;
-  /* Soft attention pulse for the first ~8 seconds after load — fades to
+  /* Soft attention pulse for the first ~8 seconds after load â€” fades to
      idle automatically. Lets a casual visitor see the entry point
      without it being permanent visual noise. */
   animation: ab-trig-pulse 2.2s ease-in-out 0.8s 3 normal both;
@@ -7393,7 +7446,7 @@ body.touch .lil-gui.root .children {
 #about-trigger:hover .ab-trig-arrow,
 #about-trigger.active .ab-trig-arrow { transform: translateX(2px); }
 
-/* The pulse: subtle outer ring breathing — emphatic enough to draw
+/* The pulse: subtle outer ring breathing â€” emphatic enough to draw
    the eye on first load, gentle enough to not feel like an ad. Auto-
    retires after 3 iterations (~6.6 s). */
 @keyframes ab-trig-pulse {
@@ -7428,7 +7481,7 @@ body:has(#about-panel.show) #mobile-bottombar {
   transition: opacity 0.22s ease, filter 0.22s ease;
 }
 
-/* --- Panel — floats centered, fades + scales in. */
+/* --- Panel â€” floats centered, fades + scales in. */
 #about-panel {
   position: fixed;
   top: 50%;
@@ -7507,424 +7560,11 @@ body:has(#about-panel.show) #mobile-bottombar {
   border-radius: 3px;
 }
 
-/* ============================================================
-   POSTER MODE
-   ============================================================
-   Sister presentation to Studio Mode — single VAT-animated asset
-   framed by a sci-fi infographic HUD. Activated via body.mode-poster.
-   The accent color is the ONLY chromatic addition to the project's
-   otherwise-monochrome palette; scoped to .mode-poster so the rest
-   of the project (Studio Mode) keeps its white-on-glass identity.
-   ============================================================ */
-:root {
-  --poster-accent:      #6dffb3;
-  --poster-accent-dim:  rgba(109, 255, 179, 0.55);
-  --poster-accent-soft: rgba(109, 255, 179, 0.18);
-  --poster-bg:          #050706;
-  --poster-line:        rgba(109, 255, 179, 0.22);
-  --poster-line-soft:   rgba(109, 255, 179, 0.10);
-}
 
-/* ----- Mode toggle (segmented control, top-right) ----- */
-#poster-toggle {
-  position: fixed;
-  top: max(env(safe-area-inset-top, 0px), 14px);
-  right: 14px;
-  z-index: 1300;
-  display: inline-flex;
-  align-items: stretch;
-  gap: 0;
-  padding: 2px;
-  background: var(--panel-strong);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-  border: 1px solid var(--hair-strong);
-  border-radius: 999px;
-  pointer-events: auto;
-  font-family: var(--font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.14em;
-  user-select: none;
-}
-#poster-toggle .pt-seg {
-  appearance: none;
-  background: transparent;
-  border: 0;
-  padding: 6px 11px;
-  color: var(--text-mid);
-  cursor: pointer;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: background 0.16s ease, color 0.16s ease;
-  font-family: inherit;
-  font-size: inherit;
-  letter-spacing: inherit;
-  text-transform: uppercase;
-}
-#poster-toggle .pt-seg:hover { color: var(--text); }
-#poster-toggle .pt-seg.active {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text);
-}
-#poster-toggle .pt-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--text-dim);
-  transition: background 0.16s ease, box-shadow 0.16s ease;
-}
-#poster-toggle .pt-seg.active .pt-dot {
-  background: var(--text);
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
-}
-/* In poster mode, the active POSTER segment dot glows with the accent
-   so the toggle reads as a mode indicator, not just a UI control. */
-body.mode-poster #poster-toggle .pt-seg[data-mode="poster"].active .pt-dot {
-  background: var(--poster-accent);
-  box-shadow: 0 0 8px var(--poster-accent);
-}
+/* Poster Mode CSS moved to https://github.com/omolism/SplatGarden-Poster
+   (lives entirely in that repo now — was ~510 lines of HUD layout +
+    tuner positioning + toggle pill + mode-aware Studio chrome hides). */
 
-/* ----- Mode-aware Studio chrome visibility -----
-   When the user is in Poster Mode, hide every Studio-Mode-only
-   surface so the poster gets the full viewport. Hover-card hotspots,
-   lil-gui, sidebar, scene-layers panel, USD annotations, viewpoint
-   tuner, mobile bottombar, mobile sheet, key hints, intro overlay,
-   onboarding pointers, hand panel — all suppressed. The poster
-   toggle + HUD itself stay visible; about + credits panels stay
-   reachable from the toggle row if the user wants attribution. */
-body.mode-poster .lil-gui.root,
-body.mode-poster #sidebar,
-body.mode-poster #scene-panel,
-body.mode-poster #hand-panel,
-body.mode-poster #toolbar,
-body.mode-poster #annotation-layer,
-body.mode-poster .asset-hotspot,
-body.mode-poster #asset-hover-card,
-body.mode-poster #tech-spec,
-body.mode-poster #usd-annotations,
-body.mode-poster #key-hints,
-body.mode-poster #onboarding-pointers,
-body.mode-poster #mobile-bottombar,
-body.mode-poster #mobile-sheet,
-body.mode-poster #mobile-nav-btn,
-body.mode-poster #mobile-toast,
-body.mode-poster #mobile-studio-btn,
-body.mode-poster #intro-overlay,
-body.mode-poster #status,
-body.mode-poster #about-btn,
-body.mode-poster .cam-timeline {
-  display: none !important;
-}
-/* Inversely — the HUD only renders when mode IS poster. Hidden by
-   default; the .show class is added by PosterHUD.setVisible(true). */
-#poster-hud { display: none; }
-#poster-hud.show { display: block; }
-
-/* Subtle vignette + scanline atmosphere on the canvas in poster mode.
-   Achieves the "scan view" feel without per-frame shader cost. */
-body.mode-poster #viewport {
-  background: radial-gradient(
-    ellipse at center,
-    #08110d 0%,
-    #050706 60%,
-    #000000 100%
-  );
-}
-
-/* ============================================================
-   POSTER HUD — DOM overlay
-   ============================================================
-   Layout uses CSS grid on desktop (≥901px) for precise zoning;
-   collapses to a flex stack on tablets and phones. The 3D canvas
-   sits BELOW the HUD via z-index; the HUD has pointer-events:none
-   so canvas drags still work, with selective re-enable on any
-   interactive widget (none yet — Phase 6).
-   ============================================================ */
-#poster-hud {
-  position: fixed;
-  inset: 0;
-  z-index: 1100;
-  pointer-events: none;
-  font-family: var(--font-mono);
-  color: var(--poster-accent);
-  letter-spacing: 0.04em;
-  font-feature-settings: "tnum", "lnum";
-  /* Desktop grid: 12-column layout. Each zone occupies named
-     coordinates so they stay anchored across resize. */
-  display: grid;
-  grid-template-columns: 280px 1fr 1fr 280px;
-  grid-template-rows:
-    auto                  /* top row — banners */
-    1fr                   /* mid row — side panels around the canvas */
-    auto                  /* bottom row — bio signal + waveforms */
-    auto;                 /* footer row */
-  grid-template-areas:
-    "tl  tl  tr  tr"
-    "sl  ..  ..  sr"
-    "bl  bm  bm  br"
-    "ft  ft  ft  ft";
-  padding: 20px 22px;
-  gap: 14px;
-}
-
-#poster-hud .ph-zone {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-#poster-hud .ph-top-left    { grid-area: tl; align-self: start; }
-#poster-hud .ph-top-right   { grid-area: tr; align-self: start; justify-self: end; text-align: right; }
-#poster-hud .ph-side-left   { grid-area: sl; align-self: center; }
-#poster-hud .ph-side-right  { grid-area: sr; align-self: center; align-items: flex-end; text-align: right; }
-#poster-hud .ph-bottom-left { grid-area: bl; align-self: end; }
-#poster-hud .ph-bottom-mid  { grid-area: bm; align-self: end; }
-#poster-hud .ph-bottom-right{ grid-area: br; align-self: end; align-items: flex-end; }
-#poster-hud .ph-footer      { grid-area: ft; flex-direction: row; justify-content: space-between; align-items: center; gap: 12px; }
-
-/* ── Banner blocks (SCAN MODE / BIO SIGNAL) — the angular header
-      strip with eyebrow + subline. Distinctive sci-fi shape: a
-      half-bracket using border-left + border-top + slanted corner. */
-#poster-hud .ph-banner {
-  position: relative;
-  padding: 6px 14px 6px 8px;
-  background: linear-gradient(
-    90deg,
-    var(--poster-accent-soft) 0%,
-    transparent 100%
-  );
-  border-left: 2px solid var(--poster-accent);
-  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%);
-}
-#poster-hud .ph-banner-line {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: 0.10em;
-  color: var(--poster-accent);
-  text-shadow: 0 0 8px var(--poster-accent-dim);
-  text-transform: uppercase;
-}
-#poster-hud .ph-banner-sub {
-  font-size: 9.5px;
-  color: var(--poster-accent-dim);
-  margin-top: 1px;
-  letter-spacing: 0.10em;
-  text-transform: uppercase;
-}
-#poster-hud .ph-banner-sm .ph-banner-line { font-size: 13px; }
-#poster-hud .ph-banner-sm .ph-banner-sub  { font-size: 8.5px; }
-
-/* ── Eyebrows — small uppercase labels above each panel. */
-#poster-hud .ph-eyebrow {
-  font-size: 8.5px;
-  color: var(--poster-accent-dim);
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--poster-line-soft);
-}
-
-/* ── Data table — tabular numeric data. */
-#poster-hud .ph-table {
-  border-collapse: collapse;
-  font-size: 9.5px;
-  color: var(--poster-accent);
-  margin-top: 4px;
-}
-#poster-hud .ph-table th,
-#poster-hud .ph-table td {
-  padding: 2px 10px 2px 0;
-  text-align: left;
-  font-weight: 400;
-  letter-spacing: 0.04em;
-}
-#poster-hud .ph-table thead th {
-  color: var(--poster-accent-dim);
-  font-size: 8px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  border-bottom: 1px solid var(--poster-line);
-  padding-bottom: 4px;
-}
-#poster-hud .ph-table tbody td:first-child { color: var(--poster-accent); }
-#poster-hud .ph-table tbody td             { color: rgba(255, 255, 255, 0.78); }
-
-/* ── Bar histograms — horizontal strip of vertical bars. */
-#poster-hud .ph-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  height: 36px;
-  padding-top: 6px;
-  border-top: 1px solid var(--poster-line-soft);
-}
-#poster-hud .ph-bars span {
-  flex: 1;
-  background: var(--poster-accent);
-  opacity: 0.65;
-  min-width: 2px;
-}
-#poster-hud .ph-bars-tall { height: 60px; }
-
-/* ── Readout grid (top-right and side-right panels). */
-#poster-hud .ph-readout-grid,
-#poster-hud .ph-readout-stack {
-  display: grid;
-  gap: 3px 12px;
-  font-size: 10px;
-  margin-top: 6px;
-}
-#poster-hud .ph-readout-grid  { grid-template-columns: auto 1fr; }
-#poster-hud .ph-readout-stack { grid-template-columns: 1fr; }
-#poster-hud .ph-readout-grid > div,
-#poster-hud .ph-readout-stack > div {
-  display: contents;
-}
-#poster-hud .ph-readout-grid .k,
-#poster-hud .ph-readout-stack .k {
-  font-size: 8.5px;
-  color: var(--poster-accent-dim);
-  letter-spacing: 0.10em;
-  text-transform: uppercase;
-}
-#poster-hud .ph-readout-grid .v,
-#poster-hud .ph-readout-stack .v {
-  color: var(--poster-accent);
-  font-feature-settings: "tnum";
-  text-align: right;
-}
-
-/* ── Sparkline SVG charts. */
-#poster-hud .ph-sparkline svg {
-  width: 100%;
-  height: 24px;
-  display: block;
-}
-/* ── Radar dial with sweeping needle. */
-#poster-hud .ph-radar { margin-top: 4px; }
-#poster-hud .ph-radar svg { width: 60px; height: 60px; }
-#poster-hud .ph-radar-sweep {
-  transform-origin: 30px 30px;
-  animation: poster-radar-sweep 4s linear infinite;
-}
-@keyframes poster-radar-sweep {
-  0%   { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* ── Compass dial. */
-#poster-hud .ph-compass svg { width: 56px; height: 56px; }
-#poster-hud .ph-compass-needle {
-  transform-origin: 30px 30px;
-  transition: transform 0.22s ease;
-}
-
-/* ── BIO SIGNAL prose + coords. */
-#poster-hud .ph-coord {
-  font-size: 11px;
-  color: var(--poster-accent);
-  letter-spacing: 0.06em;
-  margin-top: 6px;
-}
-#poster-hud .ph-prose {
-  font-size: 9.5px;
-  line-height: 1.5;
-  color: rgba(255, 255, 255, 0.72);
-  margin-top: 6px;
-  max-width: 280px;
-  letter-spacing: 0.02em;
-}
-
-/* ── Spectrogram (bottom-mid waveform). */
-#poster-hud .ph-spectrogram svg {
-  width: 100%;
-  height: 40px;
-  display: block;
-}
-
-/* ── Footer mark. */
-#poster-hud .ph-footer {
-  font-size: 9px;
-  color: var(--poster-accent-dim);
-  letter-spacing: 0.12em;
-  padding-top: 8px;
-  border-top: 1px solid var(--poster-line-soft);
-}
-#poster-hud .ph-mark { color: var(--poster-accent); }
-#poster-hud .ph-meta { color: rgba(255, 255, 255, 0.5); }
-
-/* ============================================================
-   POSTER HUD — Responsive (iPad portrait + phone)
-   ============================================================
-   On narrow viewports the 4-column grid collapses to a 2-column
-   stack so the data tables and waveforms don't shrink illegibly
-   over the centred 3D asset. Side panels move BELOW the canvas
-   area on phone portrait. The asset always stays centred via
-   the canvas underneath.
-   ============================================================ */
-@media (max-width: 900px) {
-  #poster-hud {
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: auto auto auto auto auto;
-    grid-template-areas:
-      "tl  tr"
-      "sl  sr"
-      "bl  br"
-      "bm  bm"
-      "ft  ft";
-    padding: 16px 16px;
-    gap: 10px;
-  }
-  #poster-hud .ph-banner-line { font-size: 14px; }
-  #poster-hud .ph-table { font-size: 9px; }
-  #poster-hud .ph-prose { font-size: 9px; max-width: none; }
-}
-@media (max-width: 480px) {
-  #poster-hud {
-    grid-template-columns: 1fr;
-    grid-template-areas:
-      "tl"
-      "tr"
-      "bl"
-      "bm"
-      "br"
-      "sl"
-      "sr"
-      "ft";
-    padding: 12px 12px max(12px, env(safe-area-inset-bottom, 0px));
-    gap: 10px;
-  }
-  #poster-hud .ph-top-right,
-  #poster-hud .ph-side-right,
-  #poster-hud .ph-bottom-right {
-    align-self: start;
-    justify-self: start;
-    text-align: left;
-    align-items: flex-start;
-  }
-  #poster-hud .ph-readout-grid .v,
-  #poster-hud .ph-readout-stack .v {
-    text-align: left;
-  }
-  #poster-hud .ph-banner-line { font-size: 13px; }
-  #poster-hud .ph-banner-sub  { font-size: 8px; }
-  /* Toggle position on phone — slightly tighter to clear the URL bar. */
-  #poster-toggle {
-    top: max(env(safe-area-inset-top, 0px), 10px);
-    right: 10px;
-    font-size: 9px;
-  }
-  #poster-toggle .pt-seg { padding: 5px 9px; }
-}
-@media (orientation: landscape) and (max-height: 520px) {
-  /* Phone landscape — short viewport. Hide the bottom-mid waveform
-     to keep the 3D asset visible above the fold; the rest of the
-     HUD still reads as a frame. */
-  #poster-hud { padding: 10px 14px; gap: 8px; }
-  #poster-hud .ph-bottom-mid { display: none; }
-  #poster-hud .ph-prose { font-size: 8.5px; }
-}
 
 #about-panel .ab-hero {
   padding: 22px 22px 14px;
@@ -8005,7 +7645,7 @@ body.mode-poster #viewport {
 
 #about-panel .ab-cta-sec {
   /* Now sits OUTSIDE .ab-body so it pins to the bottom of the flex
-     column panel — content above scrolls, CTAs always visible. The
+     column panel â€” content above scrolls, CTAs always visible. The
      top border replaces the section divider that used to live on
      .ab-pillars-sec's bottom edge; opaque-ish background ensures the
      scroll content underneath doesn't bleed through if a scrollbar
@@ -8058,7 +7698,7 @@ body.mode-poster #viewport {
 
   /* Anchor the panel to the TOP, directly under the trigger pill, rather
      than centring it. On short phones (iPhone SE 568 / 13 Mini 667), a
-     centred panel with max-height: 100dvh − 60 − safe-areas grew tall
+     centred panel with max-height: 100dvh âˆ’ 60 âˆ’ safe-areas grew tall
      enough that its bottom edge bled into the floating #mobile-bottombar
      pill at the bottom (78 px tall + 14 px offset + safe-area-bottom).
      Top-anchoring + capping the height to leave explicit room for the
@@ -8079,7 +7719,7 @@ body.mode-poster #viewport {
     transform: translate(0, 0) scale(0.96);
     /* Cap to whichever is SMALLER: the geometric calc that clears the
        bottombar, OR ~62dvh. The 62dvh cap is the one that matters on
-       short phones (iPhone SE / 13 Mini class) — without it the panel
+       short phones (iPhone SE / 13 Mini class) â€” without it the panel
        was filling ~74 % of the viewport because content overflowed the
        calc max-height and pinned the panel at its ceiling. With the
        cap, the panel feels like a half-screen sheet across all phone
@@ -8109,10 +7749,10 @@ body.mode-poster #viewport {
    - The right edge is held by the dock pill; centring the trigger
      visually splits attention with the dock.
    - About panel itself anchors top-left in this viewport, so the
-     trigger and its disclosure should live in the same zone — the
+     trigger and its disclosure should live in the same zone â€” the
      panel reads as "expanding out of the trigger" rather than
      teleporting across the screen.
-   iPad / phone-portrait / desktop keep the centred trigger — those
+   iPad / phone-portrait / desktop keep the centred trigger â€” those
    viewports don't have the same horizontal tension. */
 @media (orientation: landscape) and (max-height: 520px) {
   #about-trigger {
