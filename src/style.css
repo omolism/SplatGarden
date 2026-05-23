@@ -4010,6 +4010,28 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   background: #111;
   border-radius: 8px;
   overflow: hidden;
+  /* aspect-ratio: auto — frame fits the image's natural height, never
+     letterboxes. The base .ah-card .ah-frame rule sets a 1/1 square,
+     which is right for the triptych (Style/Original/Result tiles)
+     where we WANT a uniform plinth — but wrong here. processCard
+     images range from square node-graphs to wide hero plates; the
+     box must follow the picture, not the other way around. Image
+     itself uses `height: auto` via .ah-pc-single .ah-frame img to
+     compute its natural height inside the now-flexible parent. */
+  aspect-ratio: auto;
+  /* Drop the flex centering inherited from .ah-frame too — with the
+     frame matching the image's natural height there's no leftover
+     space to center within, and `align-items: center` was producing
+     a sub-pixel gap on some images. */
+  display: block;
+}
+/* Iframes have no intrinsic dimensions, so they need an explicit ratio
+   on the parent frame. Re-apply 16:9 for any single-row frame whose
+   child is an iframe (Vimeo / YouTube). vimeo-fit.js still runs and
+   overrides this inline with the clip's actual ratio once the Player
+   API reports back, but 16:9 is the right starting guess pre-measure. */
+:is(.ah-card, .ts-rich) .ah-pc-fig .ah-frame:has(iframe) {
+  aspect-ratio: 16 / 9;
 }
 :is(.ah-card, .ts-rich) .ah-pc-fig figcaption {
   font-family: var(--font-ui);

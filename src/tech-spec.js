@@ -343,49 +343,57 @@ export const TECH_SPECS = [
           "Unreal Engine 5 (set dress)",
         ],
         output:    "Real-time-ready foliage · 640 triangles · stylized procedural diffuse",
-        // Process-cards layout — three chip-labeled blocks matching the
-        // design reference: hero "Real-time Ready Foliage" plate, the
-        // modeling + optimization breakdown, and the Substance Designer
-        // stylization story. File bindings rebuilt with the new
-        // properly-labeled asset set (user delivered at
-        // C:\Users\aistudio\Downloads\Daisy with filenames that ARE the
-        // captions). Frames preserve natural image aspect ratio (see
-        // .ah-pc-pair + .ah-pc-step .ah-pc-single in style.css) — no
-        // letterbox bars, no fixed-plinth crop.
+        // Step-style processCards — matches the Grape Hyacinth editorial
+        // pattern (eyebrow + bold title + prose description + media rows).
+        // Narrative arc:
+        //   01 procedural authoring → decimation pass
+        //   02 Substance Designer stylization graph
+        //   03 final in-scene render (the payoff)
+        // The hero "Real-time Ready Foliage" plate moved from the TOP
+        // (where it answered the question before the card had earned
+        // it) to the BOTTOM as a climax shot — readers walk through the
+        // making-of and then see the result. Frames now inherit natural
+        // image height (see .ah-pc-fig .ah-frame { aspect-ratio: auto }
+        // in style.css), so the wide landscape final plate no longer
+        // letterboxes inside a forced 1:1 plinth.
         processCards: [
           {
-            label: "Real-time Ready Foliage",
+            eyebrow: "01 — MODELING & OPTIMIZATION",
+            title:   "Procedural Plant + Aggressive Decimation",
+            description: "Authored procedurally in SpeedTree — a single node graph drives the whole daisy with parametric trunk, leaf, and cap rules, so scaling the scatter density never reauthors geometry. Decimation pass takes each plant from 28,557 to 640 triangles, the threshold where the Unreal Engine 5 foliage scatter stays at a stable interactive frame rate without visible silhouette loss.",
+            rows: [
+              { layout: "pair", items: [
+                { src: `${BASE}textures/daisy/daisy-modeling-speedtree.png`,  caption: "Modeling in SpeedTree" },
+                { src: `${BASE}textures/daisy/daisy-speedtree-nodegraph.png`, caption: "Procedural plant node graph" },
+              ]},
+              { layout: "single", items: [
+                { src: `${BASE}textures/daisy/daisy-optimization.jpg`, caption: "Triangle decimation · 28,557 → 640" },
+              ]},
+            ],
+          },
+          {
+            eyebrow: "02 — STYLIZATION",
+            title:   "Substance Designer Painterly Procedural",
+            description: "Diffuse and leaf atlas built procedurally in Substance Designer, inspired by 80 Level's \"Breakdown: Making 3D Landscape Look Like Painting\". The same brush-stroke language used on the Landscape master texture carries through to the foliage so the daisy band reads as part of the painting, not as a photo-real prop dropped into a painterly scene.",
+            rows: [
+              { layout: "single", items: [
+                { src: `${BASE}textures/daisy/daisy-substance-nodegraph.png`, caption: "Stylized procedural node graph" },
+              ]},
+              { layout: "pair", items: [
+                { src: `${BASE}textures/daisy/daisy-substance-before.png`, caption: "Before stylization" },
+                { src: `${BASE}textures/daisy/daisy-substance-after.png`,  caption: "After stylization" },
+              ]},
+            ],
+          },
+          {
+            eyebrow: "03 — FINAL RESULT",
+            title:   "Real-time Ready Foliage",
+            description: "640-triangle scatter cards dressed in the painterly Substance diffuse, lit by the same HDRI as the rest of the garden. The whole foreground daisy band ships at interactive frame rate on a desktop GPU without any per-frame foliage update.",
             rows: [
               { layout: "single", items: [
                 { src: `${BASE}textures/daisy/daisy-final-result.jpg`, caption: null, alt: "Stylised daisy field — final in-scene render" },
               ]},
             ],
-          },
-          {
-            label: "Modeling and Optimization",
-            rows: [
-              { layout: "pair", items: [
-                { src: `${BASE}textures/daisy/daisy-modeling-speedtree.png`,  caption: "Modeling in SpeedTree" },
-                { src: `${BASE}textures/daisy/daisy-speedtree-nodegraph.png`, caption: "Procedural Plant Generation in SpeedTree" },
-              ]},
-              { layout: "single", items: [
-                { src: `${BASE}textures/daisy/daisy-optimization.jpg`, caption: "Optimization · 28,557 → 640 triangles" },
-              ]},
-            ],
-            note: "To maintain stable and usable FPS performance, all foliage assets need to be carefully optimized.",
-          },
-          {
-            label: "Substance Designer Stylization Workflow",
-            rows: [
-              { layout: "single", items: [
-                { src: `${BASE}textures/daisy/daisy-substance-nodegraph.png`, caption: "Substance Designer Stylized Procedural Node Graph" },
-              ]},
-              { layout: "pair", items: [
-                { src: `${BASE}textures/daisy/daisy-substance-before.png`, caption: "Before Procedural Stylization" },
-                { src: `${BASE}textures/daisy/daisy-substance-after.png`,  caption: "After Procedural Stylization" },
-              ]},
-            ],
-            note: "Another exploration of stylized workflows in Substance Designer, inspired by the article \"Breakdown: Making 3D Landscape Look Like Painting\" from 80 Level — a procedural approach to creating stylized textures.",
           },
         ],
         note:      "Real-time-ready foliage authored procedurally in SpeedTree, then aggressively decimated (28,557 → 640 triangles) so the scattered plant cards survive an interactive FPS budget without visible quality loss. A Substance Designer stylization graph produces the painterly diffuse + leaf atlas — the same procedural-painterly look as the Landscape texture pipeline, inspired by 80 Level's \"Making 3D Landscape Look Like Painting\" breakdown.",
