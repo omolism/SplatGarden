@@ -4007,9 +4007,33 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   gap: 6px;
 }
 :is(.ah-card, .ts-rich) .ah-pc-fig .ah-frame {
-  background: #111;
+  /* Checkerboard plinth — the universal DCC convention for "this image
+     has alpha" (Photoshop, Substance Painter, Marmoset all use it).
+     PNGs with alpha (like Daffodil's BaseColor — the UV-mask-cropped
+     painterly diffuse) used to reveal the card's dark surface through
+     their transparent pixels, which looked like a rendering glitch.
+     Now the alpha is presented as DESIGN INFORMATION on a subtle
+     2-tone checker. Opaque images (JPGs, videos, regular PNGs) cover
+     the checker entirely so visually there's zero change for them —
+     this only activates where alpha actually exists. Two near-black
+     greys (#161616 / #1c1c1c) keep the checker quiet against the
+     card's dark surface; size 16px reads as "texture preview" without
+     calling attention to itself. */
+  background-color: #161616;
+  background-image:
+    linear-gradient(45deg,  #1c1c1c 25%, transparent 25%, transparent 75%, #1c1c1c 75%),
+    linear-gradient(45deg,  #1c1c1c 25%, transparent 25%, transparent 75%, #1c1c1c 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 8px 8px;
   border-radius: 8px;
   overflow: hidden;
+  /* Subtle hairline border — the diagrams from Houdini / Unreal /
+     Substance often have pure-black backgrounds that bleed into the
+     card's own dark surface, losing frame definition. A 1px low-alpha
+     border re-establishes the edge without adding visual chrome.
+     Bumped from 0.06 → 0.08 per the audit — at 0.06 the edge was
+     invisible on regular (non-retina) monitors. */
+  border: 1px solid rgba(255, 255, 255, 0.08);
   /* aspect-ratio: auto — frame fits the image's natural height, never
      letterboxes. The base .ah-card .ah-frame rule sets a 1/1 square,
      which is right for the triptych (Style/Original/Result tiles)
@@ -4024,6 +4048,15 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
      space to center within, and `align-items: center` was producing
      a sub-pixel gap on some images. */
   display: block;
+}
+/* Iframe (Vimeo / YouTube) frames flatten the checker — the iframe's
+   own AA edges + rounded corners revealed the checker pattern at
+   pixel-level seams. Video plates always read better against solid
+   black anyway. The :has() selector keeps this scoped to frames that
+   actually contain a video — image frames keep their checker. */
+:is(.ah-card, .ts-rich) .ah-pc-fig .ah-frame:has(iframe) {
+  background-color: #0b0b0b;
+  background-image: none;
 }
 /* Iframes have no intrinsic dimensions, so they need an explicit ratio
    on the parent frame. Re-apply 16:9 for any single-row frame whose
@@ -4066,13 +4099,110 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   align-items: start;
 }
 :is(.ah-card, .ts-rich) .ah-pc-pair .ah-pc-fig .ah-frame {
-  /* No fixed aspect — frame fits the image */
+  /* No fixed aspect by default — frame fits the image */
 }
 :is(.ah-card, .ts-rich) .ah-pc-pair .ah-pc-fig .ah-frame img {
   width: 100%;
   height: auto;
   display: block;
   object-fit: initial;
+}
+/* OPT-IN equal-height mode — when the pair row declares an
+   `aspectRatio` (e.g. "16 / 9" / "4 / 3"), both frames lock to that
+   ratio so the two cells line up at exactly the same height. Image
+   uses object-fit: cover to fill — natural-aspect preservation is
+   traded for visual rhythm. Use this when the two source images have
+   wildly different aspects (e.g. a portrait viewport beside a 2:1
+   landscape node-graph): without it the cells end up ragged-bottom.
+   The .ah-pc-fig also stretches so the (frame + caption) column
+   matches its sibling — caption position stays consistent. */
+:is(.ah-card, .ts-rich) .ah-pc-pair[style*="--pair-aspect"] {
+  align-items: stretch;
+}
+:is(.ah-card, .ts-rich) .ah-pc-pair[style*="--pair-aspect"] .ah-pc-fig {
+  height: 100%;
+}
+:is(.ah-card, .ts-rich) .ah-pc-pair[style*="--pair-aspect"] .ah-pc-fig .ah-frame {
+  aspect-ratio: var(--pair-aspect);
+}
+:is(.ah-card, .ts-rich) .ah-pc-pair[style*="--pair-aspect"] .ah-pc-fig .ah-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* QUAD rows — four items in a single row (e.g. PBR texture map sets:
+   BaseColor / Normal / ORM / ScatterMask). Always equal-height —
+   cells share the --quad-aspect CSS var (default 1/1 from JS).
+   object-fit: cover so different-aspect maps still align. */
+:is(.ah-card, .ts-rich) .ah-pc-quad {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  align-items: stretch;
+}
+:is(.ah-card, .ts-rich) .ah-pc-quad .ah-pc-fig {
+  height: 100%;
+}
+:is(.ah-card, .ts-rich) .ah-pc-quad .ah-pc-fig .ah-frame {
+  aspect-ratio: var(--quad-aspect, 1 / 1);
+}
+:is(.ah-card, .ts-rich) .ah-pc-quad .ah-pc-fig .ah-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+:is(.ah-card, .ts-rich) .ah-pc-quad .ah-pc-fig figcaption {
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+}
+/* Tablet / narrow desktop: 4-up gets cramped under ~620px container
+   width. Fall to 2x2 — still keeps the "set of maps" gestalt. */
+@media (max-width: 620px) {
+  :is(.ah-card, .ts-rich) .ah-pc-quad {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+}
+
+/* In-section bullet list — sits at the END of a processCard, BEFORE
+   any `note` paragraph. Used by Vine's WPO blueprint section to
+   describe the controls exposed by that specific blueprint. Same
+   visual language as .ah-keypoints (the global wrap-up bullet list)
+   so the asset card reads with one consistent bullet style — readers
+   don't have to learn two. */
+:is(.ah-card, .ts-rich) .ah-pc-points {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+}
+:is(.ah-card, .ts-rich) .ah-pc-points li {
+  position: relative;
+  padding-left: 14px;
+  margin-bottom: 8px;
+  font-family: var(--font-ui);
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text-mid);
+  letter-spacing: 0.005em;
+}
+:is(.ah-card, .ts-rich) .ah-pc-points li::before {
+  content: "•";
+  position: absolute;
+  left: 2px;
+  top: 0;
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.4;
+}
+:is(.ah-card, .ts-rich) .ah-pc-points li strong {
+  color: var(--text);
+  font-weight: 600;
+}
+:is(.ah-card, .ts-rich) .ah-pc-points li:last-child {
+  margin-bottom: 0;
 }
 :is(.ah-card, .ts-rich) .ah-pc-note {
   margin-top: 12px;
@@ -4085,8 +4215,25 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   letter-spacing: 0.005em;
 }
 @media (max-width: 600px) {
+  /* Default pair behaviour on phone: stack vertically — gives each
+     image full drawer width and more room for detail. */
   :is(.ah-card, .ts-rich) .ah-pc-pair {
     grid-template-columns: 1fr;
+  }
+  /* Equal-height (aspectRatio) pairs stay SIDE-BY-SIDE on phone — the
+     whole point of declaring an aspect-ratio on a pair is to keep
+     before/after visually aligned in one row. Stacking them defeats
+     that pairing. The cells are smaller on phone but still equal
+     height + same row, which honours the "用justify的形式在同一行,
+     相同height" intent. Slightly tighter gap + caption sizing below
+     so the smaller cells don't feel cramped. */
+  :is(.ah-card, .ts-rich) .ah-pc-pair[style*="--pair-aspect"] {
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  :is(.ah-card, .ts-rich) .ah-pc-pair[style*="--pair-aspect"] .ah-pc-fig figcaption {
+    font-size: 9.5px;
+    letter-spacing: 0.005em;
   }
 }
 
@@ -4180,10 +4327,61 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
    so the rich content sits a little lower than the item's note.
    ============================================================ */
 .ts-rich {
-  margin-top: 12px;
+  /* Drawer parity with the hover-card surface — without this the rich
+     content reads as bare list content stuffed under a divider line,
+     while the hover card frames the same content as a magazine spread.
+     A 1px-lighter background + radius + soft inset shadow gives the
+     rich content its own editorial container inside the drawer item.
+     The asset-hover-card itself doesn't need this (the card surface
+     IS the container); .ts-rich is the drawer-only twin. */
+  margin-top: 14px;
+  padding: 14px 14px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
+}
+
+/* ============================================================
+   Editorial line-breaking — apply across every text-bearing class
+   inside the asset-hover card AND the tech-spec drawer rich content.
+
+   Two CSS properties cooperate:
+
+   1. `hanging-punctuation: last allow-end` — terminal punctuation
+      (period, comma, full-width 。 ， 、 etc.) is allowed to hang
+      PAST the line edge rather than starting the next visual line.
+      This prevents the "lonely comma at line start" effect, which is
+      a real readability bug in Chinese typography (where 标点禁则
+      / kinsoku rules forbid it) and a polish issue in English too.
+
+   2. `text-wrap: pretty` — newer browsers (Chrome 117+, Safari 18+)
+      use a smarter line-break algorithm that minimises widows and
+      orphans, balancing the last few lines so a single short word
+      doesn't dangle on its own. Older browsers ignore it gracefully.
+
+   Scoped via :is() to every text element that wraps inside a card.
+   Skipped on chip rows + footers (no wrapping; single-line content). */
+:is(.ah-card, .ts-rich) :is(
+  .ah-pc-eyebrow,
+  .ah-pc-title,
+  .ah-pc-desc,
+  .ah-pc-note,
+  .ah-pc-points li,
+  .ah-keypoints li,
+  .ah-pc-fig figcaption,
+  .ah-sec-title,
+  .ah-note
+),
+.ah-card .ah-bullets li,
+#tech-spec .ts-item-note,
+#tech-spec .ts-item-sub,
+#tech-spec .ts-zone-val,
+.ts-compare .cmp-cap {
+  hanging-punctuation: last allow-end;
+  text-wrap: pretty;
 }
 /* Sections inside .ts-rich are layout-only — no border / wide padding
    like the asset-card uses. The drawer's .ts-item already provides the
@@ -4260,6 +4458,52 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 @media (min-width: 481px) and (max-width: 900px) {
   .ts-compare .cmp-captions {
     gap: 16px;
+  }
+  /* QUAD layout — 4 maps in a row at iPad-class widths is ~110px per
+     cell inside the drawer (and tight even in the hover-card). Fall
+     to 2x2 here; phones already get 2x2 via the 620px rule on .ah-pc-
+     quad. This extends 2x2 coverage to iPad portrait + small laptop. */
+  :is(.ah-card, .ts-rich) .ah-pc-quad {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+  /* Step typography eases off a touch at iPad widths so desktop sizes
+     don't read oversized inside the 460px drawer / 600px hover-card. */
+  :is(.ah-card, .ts-rich) .ah-pc-title {
+    font-size: 15px;
+  }
+  :is(.ah-card, .ts-rich) .ah-pc-desc {
+    font-size: 11.5px;
+  }
+  /* Drawer rich-content container — smaller inset padding so the
+     pair / quad cells inside keep their effective row width. */
+  .ts-rich {
+    padding: 12px 12px 14px;
+    gap: 14px;
+  }
+}
+
+/* Phone LANDSCAPE — short viewport. Goal: keep the rich content
+   visible above the fold without forcing the user past 2 paragraphs
+   of description first. Tighten section spacing + ts-rich padding
+   aggressively; the cards still read fine because the content is
+   the same, just packed tighter. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .ts-rich {
+    margin-top: 10px;
+    padding: 10px 12px 12px;
+    gap: 12px;
+  }
+  :is(.ah-card, .ts-rich) .ah-pc-eyebrow {
+    margin-bottom: 6px;
+  }
+  :is(.ah-card, .ts-rich) .ah-pc-title {
+    margin-bottom: 8px;
+  }
+  :is(.ah-card, .ts-rich) .ah-pc-desc {
+    font-size: 11px;
+    line-height: 1.5;
+    margin-bottom: 12px;
   }
 }
 

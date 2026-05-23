@@ -179,16 +179,58 @@ function renderProcessCard(card) {
       }).join("");
       return `<div class="ah-pc-row ah-pc-compare${pairClass}" style="--cmp-aspect: ${aspect};">${inner}</div>`;
     }
-    const layout = r.layout === "pair" ? "ah-pc-pair" : "ah-pc-single";
+    // Layout primitives:
+    //   single — one media item, full row width, natural aspect
+    //   pair   — 2 items, side-by-side. Opt-in equal-height via
+    //            `aspectRatio` on the row (--pair-aspect CSS var)
+    //   quad   — 4 items in a row (used for texture-map showcases —
+    //            BaseColor / Normal / ORM / ScatterMask etc.). Stacks
+    //            to 2x2 on phones via the .ah-pc-quad media query in
+    //            style.css. Equal-height by default; aspect override
+    //            via row.aspectRatio (defaults to 1:1 — texture maps
+    //            are typically square).
+    let layout;
+    if      (r.layout === "pair") layout = "ah-pc-pair";
+    else if (r.layout === "quad") layout = "ah-pc-quad";
+    else                          layout = "ah-pc-single";
     const items  = (r.items || []).map(renderProcessCardItem).join("");
-    return `<div class="ah-pc-row ${layout}">${items}</div>`;
+    // Both pair and quad rows can OPT IN to equal-height cells by
+    // declaring an `aspectRatio` on the row (e.g. "16 / 9" / "1 / 1").
+    // The CSS keys off `style*="--pair-aspect"` for pair rows and
+    // `--quad-aspect` for quad rows so the modes stay independent.
+    let aspectStyle = "";
+    if (r.layout === "pair" && r.aspectRatio) {
+      aspectStyle = ` style="--pair-aspect: ${escapeHtml(r.aspectRatio)};"`;
+    } else if (r.layout === "quad") {
+      // quad ALWAYS has an aspect (defaults to 1/1) so cells line up.
+      const qa = r.aspectRatio || "1 / 1";
+      aspectStyle = ` style="--quad-aspect: ${escapeHtml(qa)};"`;
+    }
+    return `<div class="ah-pc-row ${layout}"${aspectStyle}>${items}</div>`;
   }).join("");
+
+  // In-section bullet list — used by Vine's "WPO Dynamic Material
+  // Blueprint" step where the bullets (UV Directional Masking / Vertex
+  // Color Control / WPO / etc.) describe controls SPECIFIC to that
+  // step's blueprint screenshot. Distinct from the global `keyPoints`
+  // field which renders once at the bottom of the asset card.
+  // Schema: same as keyPoints — array of { key, value } objects with
+  // optional key (renders as bold leader before the value).
+  const points = Array.isArray(card.points) && card.points.length
+    ? `<ul class="ah-pc-points">
+         ${card.points.map(p => {
+           if (!p || !p.value) return "";
+           const k = p.key ? `<strong>${escapeHtml(p.key)}:</strong> ` : "";
+           return `<li>${k}${escapeHtml(p.value)}</li>`;
+         }).join("")}
+       </ul>`
+    : "";
 
   const note = card.note
     ? `<div class="ah-pc-note">${escapeHtml(card.note)}</div>`
     : "";
 
-  return `<section class="${sectionClass}">${header}${rows}${note}</section>`;
+  return `<section class="${sectionClass}">${header}${rows}${points}${note}</section>`;
 }
 
 export function renderProcessCards(cards) {
@@ -237,13 +279,20 @@ export function renderCard(it) {
       <div class="ah-chain">${tc}</div>
     </section>` : ""}
 
-    ${renderProcessCards(it.processCards)}
-
     ${it.simVideo ? renderSimVideo(it.simVideo) : ""}
 
     ${Array.isArray(it.embed)
         ? it.embed.map(e => renderEmbed(e)).join("")
         : (it.embed ? renderEmbed(it.embed) : "")}
+
+    ${/* processCards render AFTER embeds — Daffodil keeps its existing
+        VAT+OSC video at the top, then the rich Houdini Simulation /
+        Texturing process cards appear below it. Per user direction
+        "加在现在daffodil VAT OSC 内容的下面". Grape Hyacinth + Additional
+        Foliage have no separate `embed` field so this ordering doesn't
+        affect them — their processCards still render right after the
+        Keywords zone. */
+      renderProcessCards(it.processCards)}
 
     ${(media.style || media.original || media.result) ? `<section class="ah-section ah-media-row">
       <div class="ah-sec-title">Texture Stylization</div>
