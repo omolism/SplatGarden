@@ -320,9 +320,21 @@ export function createScanModifier() {
                 float w_b = sin(phase - 0.6 + nSigned * 1.2) * exp(-t * 0.7) * ringMask;
                 vec3 chroma = vec3(pow(abs(w_r), 2.0), pow(abs(w_g), 2.0), pow(abs(w_b), 2.0));
 
-                // Per-splat colour is intentionally NOT modified — Wave & Tint
-                // now acts purely as a positional ripple so the underlying
-                // splat RGB stays clean. (Originally tinted with uColor here.)
+                // Optional per-splat tint on the wave crest. uColor is
+                // (1,1,1) when the user hasn't opted into Color tint (the
+                // checkbox in FX → Core), so the multiplier collapses to
+                // identity and this line is a no-op — splat RGB stays
+                // clean and the project's monochrome rule holds out of the
+                // box. When the user toggles Color tint ON and picks a
+                // colour, the wave-shaped factor mixes uColor into the
+                // multiplier on the ripple crest, so the tint pulses with
+                // the ripple instead of flat-painting the whole splat.
+                // tintAmt peaks at the crest and falls off with the
+                // wave's exponential decay, so the colour settles back
+                // to the original splat as the ripple dies.
+                float tintAmt  = clamp(abs(wave), 0.0, 1.0);
+                vec3  tintMult = mix(vec3(1.0), ${inputs.uColor}, tintAmt * 0.9);
+                rgba.rgb      *= tintMult;
 
                 // Subtle "pop" in size on the wave crest
                 float pop = clamp(pow(abs(wave), 3.0), 0.0, 1.0);

@@ -2555,7 +2555,28 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   #loading .ld-corner { display: none; }
 }
 
-/* ============ lil-gui â€” monochrome glass override ============ */
+/* When the Tech Breakdown drawer is open, the SplatGarden Studio panel
+ * sits at the same right-edge column and overlaps the drawer content.
+ * Translate it off-screen so the drawer reads cleanly, with a soft slide
+ * matching the drawer's own 0.22s entrance. pointer-events drops to
+ * none so a stray click into the hidden region doesn't poke a control
+ * the user can't see. The Studio slides back when the drawer closes. */
+body.tech-spec-open .lil-gui.root {
+  transform: translateX(calc(100% + 36px)) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: transform 0.22s ease, opacity 0.22s ease !important;
+}
+/* Same treatment for the left-side scene panel sidebar so the drawer
+ * gets the full canvas width to itself when expanded. */
+body.tech-spec-open #scene-panel {
+  transform: translateX(calc(-100% - 36px));
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.22s ease, opacity 0.22s ease;
+}
+
+/* ============ lil-gui monochrome glass override ============ */
 .lil-gui {
   --background-color:        rgba(18, 18, 20, 0.55) !important;
   --title-background-color:  rgba(255, 255, 255, 0.04) !important;

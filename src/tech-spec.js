@@ -92,26 +92,30 @@ export const TECH_SPECS = [
         ref:  "Kerbl et al., SIGGRAPH 2023 · rendered in-browser via @sparkjsdev/spark",
         note: "The render primitive: per-splat ellipsoidal Gaussians + spherical-harmonic view-dependent colour. The composed garden ends up as a single .splat asset, rasterised in real time by Spark on Three.js + WebGL 2.",
       },
+      // The pipeline that turns the captured Unreal scene into the
+      // shipping .splat used to live as four separate items (Capture,
+      // Pose reconstruction, Splat training parallel, Splat
+      // optimization). Each was a single short paragraph, which the
+      // drawer rendered as four un-foldable prose blocks taking up
+      // significant vertical real estate before the reader could
+      // even see the Artistic 3DGS card below. Consolidated into
+      // one accordion-foldable card whose keyPoints carry the same
+      // four stages as bullet rows — same information, ~1/4 the
+      // expanded height when closed, and the source reference for
+      // the COLMAP loader is preserved in the footer.
       {
-        name:   "Capture",
-        ref:    "Multi-camera capture rig",
-        note:   "The whole Unreal scene is photographed at a multi-camera array, and every frame feeds the downstream pose-solver and trainers.",
-      },
-      {
-        name:   "Pose reconstruction",
-        ref:    "COLMAP Structure-from-Motion · 990 cameras recovered",
-        note:   "COLMAP solves intrinsics + extrinsics for every capture frame; the resulting 990 camera poses feed both trainers (and double as the Training Cameras overlay in Tech Spec).",
-        source: "src/colmap-loader.js:50",
-      },
-      {
-        name: "Splat training (parallel)",
-        ref:  "Postshot · Lichtfeld Studio",
-        note: "Two trainers fit the captured frames into a 3D Gaussian Splat at the same time. Postshot is the artist-driven path; Lichtfeld is the studio's in-house pipeline. We compare outputs and hand the cleaner one off to the next stage for optimization.",
-      },
-      {
-        name: "Splat optimization",
-        ref:  "GSOP · Houdini",
-        note: "The trainer output runs through Houdini's GSOP (Gaussian Splat Operators) toolset for cleanup + decimation: outlier splats are pruned, redundant low-opacity points are merged, and the splat count is brought down to ≈ 3M without a visible quality loss. Ships as public/SplatGarden_PC.splat.",
+        name:      "Capture and training pipeline",
+        ref:       "Multi-camera capture · COLMAP poses · parallel training · Houdini GSOP cleanup",
+        toolchain: ["Multi-camera rig", "COLMAP", "Postshot", "Lichtfeld Studio", "Houdini GSOP"],
+        output:    "Optimized 3DGS · ≈ 3M splats · ships as public/SplatGarden_PC.splat",
+        note:      "How the dressed Unreal scene becomes the splat you're looking at: photographed at the rig, solved into 990 camera poses by COLMAP, fitted in parallel by Postshot and Lichtfeld Studio, then decimated by Houdini's Gaussian Splat Operators to fit a real-time budget.",
+        keyPoints: [
+          { key: "Capture",         value: "The whole Unreal scene is photographed at a multi-camera array; every frame feeds the downstream pose solver and trainers." },
+          { key: "Pose reconstruction", value: "COLMAP solves intrinsics and extrinsics for every capture frame; the resulting 990 camera poses feed both trainers and double as the Training Cameras overlay in Tech Spec." },
+          { key: "Parallel training",   value: "Two trainers fit the captured frames into a 3D Gaussian Splat at the same time. Postshot is the artist-driven path; Lichtfeld is the studio's in-house pipeline. The cleaner output moves on to optimization." },
+          { key: "Optimization",        value: "Houdini's GSOP (Gaussian Splat Operators) toolset prunes outlier splats and merges redundant low-opacity points, bringing the count down to about 3M without a visible quality loss." },
+        ],
+        source:    "src/colmap-loader.js:50",
       },
       {
         // Deployment story — bridges the trainer output (Postshot's

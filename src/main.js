@@ -623,6 +623,19 @@ for (const [name, on] of techSpec.assetVisible) {
 }
 techSpec.onAssetToggle = (name, on) => assetHover.setItemVisible(name, on);
 
+// When the Tech Breakdown drawer opens, the lil-gui "SplatGarden Studio"
+// panel on the right-rail occupies the SAME viewport edge and the two
+// overlap visually (drawer is 460px wide, gui is anchored at right:18px).
+// They serve different intents anyway — the drawer is a focused reading
+// surface, the gui is a controls surface — so only one needs to be on
+// screen at a time. body.tech-spec-open is the gate; CSS in style.css
+// translates the gui off-screen + drops pointer-events while the class
+// is on. Mirrors how body.intro-playing locks pointer-events during the
+// cinematic intro.
+techSpec.onOpenChange = (open) => {
+  document.body.classList.toggle("tech-spec-open", open);
+};
+
 // Credits, intro overlay, onboarding pointers — first-visit cinematic.
 // Credits is toggled from the lil-gui "Credits" checkbox (added below
 // under the Tech Spec folder). The other two are driven by the camera
