@@ -94,7 +94,7 @@ function renderToolchain(items) {
 // Process-card renderer — supports TWO styles for rich design-walkthrough
 // cards. The renderer detects which style to use from the card's fields.
 //
-// STYLE A — chip-labeled (compact, used by Additional Foliage):
+// STYLE A — chip-labeled (compact, used by Foliage):
 //   { label: "Modeling and Optimization",
 //     rows: [{layout, items}], note: "bottom paragraph" }
 //   Renders: chip header · rows with captions BELOW images · optional note
@@ -115,7 +115,7 @@ function renderToolchain(items) {
 //     caption: "…", aspectRatio: "16/9" }        → <iframe>
 //
 // Style detection: presence of `eyebrow` OR `title` → Style B; else
-// Style A. This keeps existing chip-style cards (Additional Foliage)
+// Style A. This keeps existing chip-style cards (Foliage)
 // untouched while allowing the new step style for Grape Hyacinth.
 
 function renderProcessCardItem(item /* captionAbove unused — always below */) {

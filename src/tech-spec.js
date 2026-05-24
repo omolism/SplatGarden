@@ -169,7 +169,7 @@ export const TECH_SPECS = [
           aspectRatio: "2048 / 452",
         },
         // Step-style processCards — matches Grape Hyacinth / Daffodil /
-        // Additional Foliage pattern. Three numbered sections:
+        // Foliage pattern. Three numbered sections:
         //   01 — TEXTURE STYLIZATION  hero stylized-landscape plate
         //                             explains the pipeline overview
         //   02 — DIRT                 original + reference pair, then
@@ -278,22 +278,27 @@ export const TECH_SPECS = [
         ],
         output:    "Houdini FLIP particle simulation · final pass rendered in Karma",
         note:      "Garden-wide particle pass. A contained Houdini FLIP simulation whose velocity field is art-directed by image-traced guide curves, then colour-transferred onto the particles post-solve. The final pass is rendered in Karma alongside the dressed garden.",
-        // Step-style processCards mirroring the Gazebo / Statue shape:
-        //   01 — FINAL RENDER hero playback (Karma)
-        //   02 — BREAKDOWN    one composite Vimeo clip stacking
-        //                     Volume Trail (top) + Volume velocity
-        //                     (bottom) — the source video is already
-        //                     a 2-up portrait composite at 960×1080,
-        //                     so it goes in as a single layout with
-        //                     the literal 960/1080 aspect (vimeo-fit
-        //                     refines once the Player API confirms).
-        //   03 — KEY PROCESS  grouped bullets (only one group:
-        //                     "Houdini Simulation") describing the
-        //                     contained FLIP setup. Inline **bold**
-        //                     surfaces the named Houdini nodes /
-        //                     concepts (FLIP, Volume Velocity from
-        //                     Curves, Attribute Copy) within the
-        //                     bullet prose.
+        // Step-style processCards — show → show → show → tell:
+        //   01 — FINAL RENDER  hero playback (Karma offline render).
+        //   02 — BREAKDOWN     one composite Vimeo clip stacking
+        //                      Volume Trail (top) + Volume velocity
+        //                      (bottom) — the source video is already
+        //                      a 2-up portrait composite at 960×1080,
+        //                      so it goes in as a single layout with
+        //                      the literal 960/1080 aspect (vimeo-fit
+        //                      refines once the Player API confirms).
+        //   03 — XR-STAGE VIEW load-test playback of the FLIP particle
+        //                      sim on the on-set XR LED stage that the
+        //                      final piece targets — "where the work
+        //                      lives" context after the hero + sim
+        //                      breakdown, before the closing bullets.
+        //   04 — KEY PROCESS   grouped bullets (only one group:
+        //                      "Houdini Simulation") describing the
+        //                      contained FLIP setup. Inline **bold**
+        //                      surfaces the named Houdini nodes /
+        //                      concepts (FLIP, Volume Velocity from
+        //                      Curves, Attribute Copy) within the
+        //                      bullet prose.
         processCards: [
           {
             eyebrow:     "01 · FINAL RENDER",
@@ -324,7 +329,26 @@ export const TECH_SPECS = [
             ],
           },
           {
-            eyebrow:     "03 · KEY PROCESS",
+            // XR-Stage View sits after the breakdown because it's the
+            // "where it lives" beat: same sim, but seen playing back
+            // on the on-set LED volume that the final piece targets.
+            // The hero Karma render up top answers "what does it look
+            // like?"; this answers "where does it deploy?". Closes the
+            // visual sequence before Key Process drops the text bullets.
+            eyebrow:     "03 · XR-STAGE VIEW",
+            title:       "Particle Load Test",
+            description: "Real-time load test of the FLIP particle sim playing back on the on-set XR LED stage that the final piece targets.",
+            rows: [
+              { layout: "single", items: [{
+                iframeSrc:   "https://player.vimeo.com/video/1195059511?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
+                caption:     "Particle Load Test",
+                alt:         "FLIP particle sim load test on the on-set XR LED stage",
+                aspectRatio: "16 / 9",
+              }]},
+            ],
+          },
+          {
+            eyebrow:     "04 · KEY PROCESS",
             title:       "Houdini Simulation Setup",
             description: "How the garden FLIP particle sim is built up step by step in Houdini.",
             // Single group — matches the reference design where all
@@ -827,7 +851,7 @@ export const TECH_SPECS = [
         ],
       },
       {
-        name:      "Additional Foliage",
+        name:      "Foliage",
         location:  "Foreground daisy band",
         // X shifted from 1.171 → -1.829 (−3) per user direction —
         // slides the hotspot from the right-edge daisy cluster across
