@@ -31,6 +31,7 @@
 // ---------------------------------------------------------------------------
 
 import { renderCard as renderAssetCard } from "./asset-hover.js";
+import { wireCompareFrame } from "./tech-spec.js";
 import { haptic }    from "./haptic.js";
 import { playSound } from "./sounds.js";
 import { fitVimeoFrames } from "./vimeo-fit.js";
@@ -723,6 +724,16 @@ export class MobileUI {
       // sheet's close so users get one consistent dismiss path.
       node.querySelector('[data-act="close"]')?.addEventListener("click", () => this.sheet.close());
       this.sheet.show("asset", it.name, node);
+      // Wire any A/B compare slider that landed in the rendered markup.
+      // This was previously only happening on the desktop floating
+      // .ah-card path (asset-hover.js _show) and the Tech Breakdown
+      // drawer (tech-spec.js openOverlay) — the mobile-sheet rendering
+      // was a third entry point that loaded the same markup but never
+      // attached the pointerdown handlers, so on phones the slider
+      // looked correct but stayed frozen at 50%. Calling
+      // wireCompareFrame here closes that gap; the function itself is
+      // idempotent (data-cmpWired guard) so repeat opens are safe.
+      node.querySelectorAll(".ts-compare .cmp-frame").forEach(wireCompareFrame);
       // Auto-fit any Vimeo iframes to their clip's actual ratio so
       // there are no letterbox bars inside the bottom-sheet card.
       // Must run AFTER the sheet attaches the node — the iframe needs
