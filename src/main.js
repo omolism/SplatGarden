@@ -3688,7 +3688,32 @@ async function loadSplat() {
       // a pure renderer (no shader divergence between layers with shared
       // hit-point uniforms in different object-spaces).
       window.__retargetInteractiveLayer?.();
+
+      // Hide the primary so the new upload reads as the headline scene.
+      // The user clicked "Use My Own" — they want to see their splat,
+      // not the SplatGarden scene with their splat hidden behind it.
+      // The primary stays in `sceneLayers` (just .visible = false), so
+      // an eye-toggle in the Scene panel brings it back.
+      if (typeof splat !== "undefined" && splat) {
+        const primaryLayer = sceneLayers.layers?.find?.((l) => l.mesh === splat);
+        if (primaryLayer) sceneLayers.setVisible(primaryLayer.id, false);
+      }
+
+      // Reframe the camera onto the new splat's bounding box. Postshot /
+      // Inria exports each have their own coordinate space, so a fresh
+      // upload typically lands well outside the SplatGarden viewing
+      // volume — without this reframe the user toggles "Use My Own" and
+      // sees nothing because the camera is still pointed at the original
+      // scene. Mirrors the initial load's reframe logic in loadSplat().
+      const { center: c, radius: r } = built;
+      if (c && Number.isFinite(r)) {
+        camera.position.copy(c).add(new THREE.Vector3(0, r * 0.4, r * 1.8));
+        controls.target.copy(c);
+        controls.update();
+      }
+
       statusEl.textContent = `+ ${options.fileName || "splat"}`;
+      window.__toast?.(`Loaded ${options.fileName || "splat"} — primary hidden`);
 
       // Bundled-scene-specific overlays (Training Cameras / Data Labels /
       // Daffodil + Grape Hyacinth hotspots) don't match a user-uploaded
