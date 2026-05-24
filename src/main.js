@@ -774,6 +774,101 @@ function hideLoading() {
   requestAnimationFrame(() => document.body.classList.add("ui-ready"));
 }
 
+// ---------------------------------------------------------------------------
+// UI helpers shared across the rest of the boot — Snapshot button, toast,
+// debug state. Live here because every consumer below this point can rely
+// on them, and they don't depend on anything constructed later (renderer is
+// already initialised at line ~366; effectParams is module-scope from the
+// effects import; camera + controls are set up earlier in this file).
+// ---------------------------------------------------------------------------
+
+// Toast — tiny, lazy, single-instance status line at bottom-right.
+// Used by the snapshot button ("Snapshot saved"), the FX color toggle,
+// preset switches, and anything else that wants to confirm a change
+// without stealing focus. Re-using a single DOM element means rapid-fire
+// toasts just refresh the message + reset the dismiss timer.
+let _toastEl    = null;
+let _toastTimer = null;
+window.__toast = function toast(msg, durationMs = 1500) {
+  if (!_toastEl) {
+    _toastEl = document.createElement("div");
+    _toastEl.id = "ui-toast";
+    _toastEl.setAttribute("role", "status");
+    _toastEl.setAttribute("aria-live", "polite");
+    document.body.appendChild(_toastEl);
+  }
+  _toastEl.textContent = msg;
+  // Force a reflow before toggling .show so the CSS transition re-fires
+  // on rapid repeats (otherwise back-to-back identical toasts would skip
+  // the animation).
+  _toastEl.classList.remove("show");
+  void _toastEl.offsetWidth;
+  _toastEl.classList.add("show");
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => _toastEl.classList.remove("show"), durationMs);
+};
+
+// Snapshot — read the current canvas as a PNG data URL and trigger a
+// browser download. Works because the renderer was constructed with
+// `preserveDrawingBuffer: true` (line ~366), which keeps the framebuffer
+// readable after composition. The Spark renderer runs at the start of
+// every frame and composes into the same canvas, so toDataURL captures
+// what the user is actually looking at without a forced extra render.
+window.__captureSnapshot = function captureSnapshot() {
+  try {
+    const canvasEl = renderer?.domElement;
+    if (!canvasEl) {
+      window.__toast?.("Snapshot unavailable");
+      return;
+    }
+    const dataUrl = canvasEl.toDataURL("image/png");
+    const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    const link = document.createElement("a");
+    link.download = `splatgarden-${ts}.png`;
+    link.href = dataUrl;
+    // Anchor must be in the DOM for some browsers to honour download.
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.__toast?.("Snapshot saved");
+  } catch (err) {
+    console.error("Snapshot failed:", err);
+    window.__toast?.("Snapshot failed");
+  }
+};
+
+// Read-only state snapshot for analytics / URL-state serialization /
+// "what was the user looking at when the bug happened" debugging. Accessed
+// via `window.__splatgardenState` in DevTools. Camera pose is the most
+// useful field — it round-trips into the existing #v=... deep-link
+// format. The getter form means each read returns a FRESH snapshot.
+Object.defineProperty(window, "__splatgardenState", {
+  configurable: true,
+  get() {
+    return {
+      camera: {
+        position: camera?.position?.toArray?.() ?? null,
+        target:   controls?.target?.toArray?.() ?? null,
+      },
+      fx: {
+        effect:  effectParams?.effect,
+        colorOn: effectParams?.colorOn,
+        color:   effectParams?.color,
+      },
+      layers: {
+        splat: effectParams?.splatLayer,
+        quad:  effectParams?.quadLayer,
+        voxel: effectParams?.voxelLayer,
+      },
+      perf: (() => {
+        try { return localStorage.getItem("splatgarden:perf") || "balanced"; }
+        catch { return "balanced"; }
+      })(),
+      timestamp: Date.now(),
+    };
+  },
+});
+
 // Status-text crossfade — when the human-readable part of #status
 // changes (e.g., "Playing camera move…" → "Camera move complete"),
 // flash the element with a quick fade + slide so the change reads as
@@ -864,6 +959,15 @@ async function createSplat(options) {
   const m = new SplatMesh(options);
   // Postshot / Inria export convention — flip 180° around X for Y-up world.
   m.quaternion.set(1, 0, 0, 0);
+  // Spark's `m.initialized` resolves once the worker has finished parsing
+  // and uploading splat data to the GPU. On a 3M-splat scene this takes
+  // 2-4 s on a phone and 0.5-1.5 s on desktop — long enough that a static
+  // "Decoding splat…" message reads as a hang. We swap to "Initialising
+  // renderer…" right before the await so the splash advances at least
+  // once during the wait; the byte-progress bar already finished
+  // animating its determinate fill on fetch completion, so this is the
+  // last text the user sees before the canvas paints.
+  setLoading("Initialising renderer…");
   await m.initialized;
   const localBox = m.getBoundingBox(true);
   const bbox     = localBox.clone().applyMatrix4(m.matrixWorld);
@@ -1084,13 +1188,41 @@ async function loadSplat() {
     else statusEl.textContent = "Cinematic still loading, try again in a moment";
   });
 
-  // Insert both global-action pills into the lil-gui title row, in order:
-  // Replay (the affirmative "play me") sits LEFT of Reset (the corrective
-  // "undo my fiddling") so the more common user intent — re-watching the
-  // cinematic — is closer to the eye.
+  // "Snap" — PNG snapshot of the current canvas. Sits between Replay
+  // and Reset because, narratively, it's the third member of the
+  // "global one-click" group: Replay sells the scene, Snap captures
+  // it, Reset clears the slate. toDataURL() reads the WebGL backbuffer
+  // — we have to force a fresh draw immediately before reading so the
+  // capture matches what's on screen right now (the renderer's
+  // backbuffer is normally already consumed by composition; calling
+  // render() once with preserveDrawingBuffer-equivalent semantics via
+  // the existing renderer instance keeps the readback in sync).
+  const snapBtn = document.createElement("button");
+  snapBtn.className = "gui-reset-btn gui-snap-btn";
+  snapBtn.type = "button";
+  snapBtn.title = "Save a PNG snapshot of the current view";
+  snapBtn.setAttribute("aria-label", "Save snapshot");
+  snapBtn.innerHTML = `
+    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor"
+         stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M5 7h2l2-3h6l2 3h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/>
+      <circle cx="12" cy="13" r="4"/>
+    </svg>
+    <span>Snap</span>
+  `;
+  snapBtn.addEventListener("click", () => {
+    if (typeof window.__captureSnapshot === "function") window.__captureSnapshot();
+  });
+
+  // Insert all three global-action pills into the lil-gui title row, in
+  // order: Replay (the affirmative "play me") · Snap (the keepsake) ·
+  // Reset (the corrective "undo my fiddling"). The common user intent —
+  // re-watching the cinematic — stays closest to the eye, and the
+  // destructive action sits at the far right.
   const titleEl = gui.domElement.querySelector(".title");
   if (titleEl) {
     titleEl.appendChild(replayBtn);
+    titleEl.appendChild(snapBtn);
     titleEl.appendChild(resetBtn);
   }
   // Top-level "Cinematic FX" — promotes the character-defining post-FX

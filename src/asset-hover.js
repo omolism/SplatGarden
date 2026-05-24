@@ -442,7 +442,7 @@ export class AssetHoverManager {
     const IS_TOUCH = document.body.classList.contains("touch");
     const IS_PHONE_MODE = IS_TOUCH && document.body.classList.contains("mobile");
 
-    this.dots = this.items.map(it => {
+    this.dots = this.items.map((it, idx) => {
       // Promoted from <div> to <button> so VoiceOver / screen readers
       // announce it as a proper interactive control. The aria-label
       // reads the asset name aloud; visually nothing changes (the
@@ -455,6 +455,10 @@ export class AssetHoverManager {
       dot.type = "button";
       dot.className = "asset-hotspot";
       dot.setAttribute("aria-label", `Asset · ${it.name}`);
+      // Per-dot stagger index → CSS uses --i * 50ms for the entrance
+      // animation-delay so the dots fade in one after another instead of
+      // appearing as a synchronised blob. Reads as choreography.
+      dot.style.setProperty("--i", String(idx));
       dot.innerHTML = `
         <span class="ahot-ring"></span>
         <span class="ahot-burst" aria-hidden="true"></span>

@@ -1275,6 +1275,9 @@ export function buildGUI(controller) {
     Object.assign(params, PRESETS[name]);
     controller.applyParams();
     gui.controllersRecursive().forEach((c) => c.updateDisplay());
+    // Surface the preset name as a micro-toast so a change from a deep
+    // panel still reads as a deliberate state shift.
+    window.__toast?.(`Preset: ${name}`);
   });
 
   const fCore = fFX.addFolder("Core");
@@ -1291,6 +1294,10 @@ export function buildGUI(controller) {
   fCore.add(params, "colorOn").name("Color tint").onChange((on) => {
     if (on) colorPicker.show(); else colorPicker.hide();
     controller.applyParams();
+    // Tiny toast so the on/off flip feels acknowledged. window.__toast
+    // is defined in main.js after the boot helpers section; check before
+    // calling so HMR / standalone use of this module doesn't crash.
+    window.__toast?.(on ? "Color tint on" : "Color tint off");
   });
   colorPicker = fCore.addColor(params, "color").name("Color").onChange(() => controller.applyParams());
   if (!params.colorOn) colorPicker.hide();
