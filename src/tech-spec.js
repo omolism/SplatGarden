@@ -92,28 +92,27 @@ export const TECH_SPECS = [
         ref:  "Kerbl et al., SIGGRAPH 2023 · rendered in-browser via @sparkjsdev/spark",
         note: "The render primitive: per-splat ellipsoidal Gaussians + spherical-harmonic view-dependent colour. The composed garden ends up as a single .splat asset, rasterised in real time by Spark on Three.js + WebGL 2.",
       },
-      // The pipeline that turns the captured Unreal scene into the
-      // shipping .splat used to live as four separate items (Capture,
-      // Pose reconstruction, Splat training parallel, Splat
-      // optimization). Each was a single short paragraph, which the
-      // drawer rendered as four un-foldable prose blocks taking up
-      // significant vertical real estate before the reader could
-      // even see the Artistic 3DGS card below. Consolidated into
-      // one accordion-foldable card whose keyPoints carry the same
-      // four stages as bullet rows — same information, ~1/4 the
-      // expanded height when closed, and the source reference for
-      // the COLMAP loader is preserved in the footer.
+      // Upstream stages that turn the dressed Unreal scene into a
+      // trainable input plus the post-training cleanup. The training
+      // step itself is intentionally NOT a keyPoint here because the
+      // Artistic 3DGS card below carries that beat visually (Postshot
+      // screenshots covering raw radiance field → cleanup → camera
+      // trajectory) and a text bullet would duplicate the story.
+      // Originally lived as four separate single-paragraph items
+      // (Capture, Pose reconstruction, Splat training parallel, Splat
+      // optimization) that ate vertical real estate before the reader
+      // could reach Artistic 3DGS; consolidated here so the section
+      // reads as a clean three-item list.
       {
-        name:      "Capture and training pipeline",
-        ref:       "Multi-camera capture · COLMAP poses · parallel training · Houdini GSOP cleanup",
-        toolchain: ["Multi-camera rig", "COLMAP", "Postshot", "Lichtfeld Studio", "Houdini GSOP"],
+        name:      "Capture and reconstruction pipeline",
+        ref:       "Multi-camera capture · COLMAP poses · Houdini GSOP cleanup",
+        toolchain: ["Multi-camera rig", "COLMAP", "Houdini GSOP"],
         output:    "Optimized 3DGS · ≈ 3M splats · ships as public/SplatGarden_PC.splat",
-        note:      "How the dressed Unreal scene becomes the splat you're looking at: photographed at the rig, solved into 990 camera poses by COLMAP, fitted in parallel by Postshot and Lichtfeld Studio, then decimated by Houdini's Gaussian Splat Operators to fit a real-time budget.",
+        note:      "How the dressed Unreal scene becomes the splat you're looking at: photographed at the multi-camera rig, solved into 990 camera poses by COLMAP, then (after training, which the Artistic 3DGS card walks through) decimated by Houdini's Gaussian Splat Operators to fit a real-time budget.",
         keyPoints: [
-          { key: "Capture",         value: "The whole Unreal scene is photographed at a multi-camera array; every frame feeds the downstream pose solver and trainers." },
+          { key: "Capture",             value: "The whole Unreal scene is photographed at a multi-camera array; every frame feeds the downstream pose solver and trainers." },
           { key: "Pose reconstruction", value: "COLMAP solves intrinsics and extrinsics for every capture frame; the resulting 990 camera poses feed both trainers and double as the Training Cameras overlay in Tech Spec." },
-          { key: "Parallel training",   value: "Two trainers fit the captured frames into a 3D Gaussian Splat at the same time. Postshot is the artist-driven path; Lichtfeld is the studio's in-house pipeline. The cleaner output moves on to optimization." },
-          { key: "Optimization",        value: "Houdini's GSOP (Gaussian Splat Operators) toolset prunes outlier splats and merges redundant low-opacity points, bringing the count down to about 3M without a visible quality loss." },
+          { key: "Optimization",        value: "After training, Houdini's GSOP (Gaussian Splat Operators) toolset prunes outlier splats and merges redundant low-opacity points, bringing the count down to about 3M without a visible quality loss." },
         ],
         source:    "src/colmap-loader.js:50",
       },
