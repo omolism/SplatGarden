@@ -36,16 +36,26 @@ const BASE = import.meta.env.BASE_URL;
 
 export const TECH_SPECS = [
   // ============== Observer-first ordering ==============
-  // Overview — one-screen anchor: what is this, in one sentence.
-  // L3 3DGS  — what the viewer is actually LOOKING AT (rendering primitive
-  //            + capture + training). Leads because observers ask "what is
-  //            this?" before "how did the team organise to build it?"
-  // L2 Production — the per-asset authoring that produced the captured scene.
-  // L1 R&D   — the research / tooling layer behind the assets. Last because
-  //            it's furthest from what's on screen — interesting once the
-  //            reader has understood the result + the assets that fed it.
-  // (The numeric `layerNum` fields keep their original L1/L2/L3 values for
-  //  semantic stability — the reorder is presentational only.)
+  // Mirrors the canonical 3-stage pipeline figure shipped on the web
+  // intro page — Asset making → Scene assembly → 3DGS capture — but
+  // presented BACKWARDS so the drawer leads with what the viewer is
+  // actually looking at right now (the splat) and unwinds to the
+  // upstream stages.
+  //
+  // Overview     — one-screen anchor: what is this, in one sentence.
+  // L3 3DGS      — what the viewer is actually LOOKING AT (rendering
+  //                primitive + capture + training). Leads because
+  //                observers ask "what is this?" before "how did the
+  //                team build it?".
+  // L2 Production — the per-asset authoring that produced the captured
+  //                scene. The L1 R&D layer that used to follow has
+  //                been retired in favour of the official 3-stage
+  //                narrative; tooling notes (AI Texture Stylization,
+  //                OpenUSD subforms) now live inside the per-asset
+  //                cards that actually consume them, and the live USD
+  //                showcase lives in the 3DGS/USD panel on screen.
+  // (The numeric `layerNum` fields keep their original L2 / L3 values
+  //  for semantic stability — the reorder is presentational only.)
   {
     section:   "Overview",
     group:     "summary",
@@ -60,7 +70,7 @@ export const TECH_SPECS = [
         // view). Static text + commas remain literal so only the
         // numbers animate.
         output:    "≈ <span class=\"ticker\" data-target=\"3000000\" data-format=\"compact\">0</span> splats · <span class=\"ticker\" data-target=\"990\">0</span> capture frames · <span class=\"ticker\" data-target=\"16.67\" data-decimals=\"2\">0</span>s authored flythrough",
-        note:      "A Unreal-authored garden, captured at a multi-camera rig, reconstructed with COLMAP, trained in parallel by Postshot and Lichtfeld Studio, optimised with Houdini GSOP, and rendered in real time via Spark on Three.js + WebGL 2. The breakdown below walks the pipeline backwards. It starts with the rendering primitive you're looking at right now, then the assets that produced it, then the R&D layer that authored those assets.",
+        note:      "A Unreal-authored garden, captured at a multi-camera rig, reconstructed with COLMAP, trained in parallel by Postshot and Lichtfeld Studio, optimised with Houdini GSOP, and rendered in real time via Spark on Three.js + WebGL 2. The breakdown below walks the pipeline backwards. It starts with the rendering primitive you're looking at right now, then unwinds to the per-asset authoring that produced the captured scene.",
       },
     ],
   },
@@ -898,36 +908,6 @@ export const TECH_SPECS = [
         location:  "Near gazebo",
         toolchain: ["SpeedTree", "Unreal Engine 5 (set dress)"],
         note:      "Procedural tree authored in SpeedTree, dressed into the Unreal scene before the env capture.",
-      },
-    ],
-  },
-
-  {
-    section:   "R&D",
-    group:     "layer",
-    layerNum:  1,
-    desc:      "Research and interop layer. The custom AI texture tool plus the OpenUSD spec for our alternative render subforms.",
-    toolchain: ["IP-Adapter", "ControlNet", "AdaIN", "Diffusion", "OpenUSD", "UsdGeomPointInstancer"],
-    items: [
-      {
-        name:      "AI Texture Stylization",
-        ref:       "Diffusion-based painterly tool with controllable color preservation",
-        toolchain: ["IP-Adapter", "ControlNet (Tile / Canny)", "AdaIN", "Diffusion"],
-        output:    "Painterly textures · pre-approved palette preserved",
-        note:      "Custom tool driving the painterly look on Daffodil and Landscape. It exposes two artist-selectable modes: Full Style Transfer (color, texture, and tone from a reference) and Texture-Only Transfer (auto-grayscale plus AdaIN, preserves the original color palette). Per-channel histogram matching and patch-wise AdaIN run post-generation to deterministically correct residual color drift. Artist knobs include ControlNet mode, ControlNet strength, IP-Adapter strength, inference steps, and guidance scale. PyTorch 2.11 / CUDA 13.0 on an NVIDIA RTX PRO 6000 Blackwell (96 GB VRAM) delivers 4K in around 20 s at 20 inference steps, driven from a Gradio interface.",
-        compare: {
-          before: null,
-          after:  null,
-          labelA: "Original",
-          labelB: "Stylized",
-        },
-      },
-      {
-        name:      "OpenUSD subforms",
-        ref:       "Billboard + Voxel as UsdGeomPointInstancer prims",
-        toolchain: ["UsdGeomPointInstancer", "UsdGeomPlane", "UsdGeomCube", "UsdGeomSphere", "primvars:displayColor"],
-        output:    "USD-compatible alternative renderings of the same splat data",
-        note:      "Two alternative render representations of the splat, each expressed as a USD PointInstancer prim. The Billboard layer uses proto = UsdGeomPlane (per-instance camera-facing billboards), with a Quad subform (full square) and a Circle subform (unit-disc discard for soft round impostors). The Voxel layer buckets splats into a uniform grid with averaged colour per cell, rendered as proto = UsdGeomCube or proto = UsdGeomSphere depending on the subform. All variants carry per-instance positions, orientations, scales, and a primvars:displayColor array. Toggle live via the GUI's 3DGS/USD folder.",
       },
     ],
   },

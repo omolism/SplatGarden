@@ -1,24 +1,20 @@
 # SplatGarden
 
-A 3D Gaussian Splatting web viewer for an asset-pipeline showcase. A Houdini / Unreal Engine garden, captured at a multi-camera rig, reconstructed with COLMAP, trained in parallel by Postshot and Lichtfeld Studio, and rendered in the browser via Spark on Three.js + WebGL 2.
+A 3D Gaussian Splatting web viewer for an asset-pipeline showcase. A Houdini and Unreal Engine 5 garden, captured at a multi-camera rig, reconstructed with COLMAP, trained in parallel by Postshot and Lichtfeld Studio, optimised with Houdini GSOP, and rendered in the browser via Spark on Three.js + WebGL 2.
+
+**Live**: https://omolism.github.io/SplatGarden-WebViewer/
+
+## Pipeline
+
+Three stages match the canonical intro figure on the web:
 
 ```
-Houdini · Unreal Engine
-                │
-                ▼
-       Multi-camera capture
-                │
-                ▼
-           COLMAP SfM
-                │
-                ▼
-     Postshot ‖ Lichtfeld Studio       (parallel trainers, cross-compared)
-                │
-                ▼
-   Spark + Three.js + WebGL 2          (in-browser playback)
+01 Asset making     PCG · AI texture stylization · VAT bake · Houdini SIM
+02 Scene assembly   Unreal Engine 5 · MediaPipe hand-tracking
+03 3DGS capture     Multi-cam rig (990 poses) · COLMAP · Postshot ‖ Lichtfeld
+                    → SplatGarden_PC.splat (3M Gaussians, ~92 MB)
+                    → SplatGarden_Mobile.spz (same data, ~45 MB, phones)
 ```
-
----
 
 ## Run
 
@@ -28,290 +24,48 @@ npm run dev          # http://127.0.0.1:5173
 npm run build && npm run preview
 ```
 
-On first load the viewer auto-plays the camera move and overlays a title sequence + onboarding pointers. Subsequent visits skip the cinematic; the flag is stored at `localStorage["splatgarden:visited:v1"]`. The lil-gui Tech Spec folder includes a `↻ Replay Intro` button that clears the flag and reloads.
+## Keyboard
 
----
-
-## Assets shipped
-
-| Path | Purpose |
+| Key | Surface |
 |---|---|
-| `public/manifest.json` | List of splats to auto-load on startup. The first entry is the primary layer. |
-| `public/SplatGarden_PC.splat` | Default scene — gazebo / garden trained from the Unreal capture (3M splats). |
-| `public/Shot4B_GS-FX_Camera_V01.fbx` | Authored camera trajectory (24 fps, 600 frames). The viewer plays frames 100–500 (≈ 16.67 s) as the intro. |
-| `public/colmap/images.bin` | 990 training-camera poses reconstructed by COLMAP. |
-| `public/Skybox.hdr` | Equirectangular HDR environment (4.4 MB). |
-| `public/textures/landscape/` | Ground-tile pipeline frames — original / AI-stylized base colour / Houdini COPNET height / NormalMap-Online normal. Surfaced inside the Landscape asset hover card. |
+| `T` | Tech Breakdown drawer |
+| `H` | Quick Guide |
+| `K` | Viewpoint Tuner |
+| `P` | Profiler |
+| `V / C / R` | Add / overwrite Center / reset viewpoint |
+| `1 / 2 / 3` | Front / Center / Zoom viewpoints |
+| `W A S D + Q E` | Flythrough (`Shift` = 3×) |
 
-Splats are tracked through Git LFS (see `.gitattributes`). The CI workflow caches the LFS object store between runs so subsequent builds don't re-pay the ~96 MB bandwidth cost.
+The right-rail lil-gui hosts: 3DGS/USD layer switcher, FX, Performance preset, Customize (Post-FX · HDR Sky · Particles · Hand tracking), Cinematic FX, Camera Movement.
 
-Every device — desktop, iPad, phone — loads `SplatGarden_PC.splat` at full quality. The older Mobile-variant fork (and its `maxSplats` cap fallback) was removed: the download wasn't materially shorter on touch, but the detail loss was perceptible, so the optimization was net-negative.
+Phones get a floating bottom-bar (`Tour · Effects · Studio · Info · Share`) and a `Battery` default profile (DPR 1.0, no bloom, no particles).
 
----
+## Mobile bandwidth
 
-## Panels
+`pickSplatUrl()` in `main.js` HEAD-probes `public/SplatGarden_Mobile.spz` on phones and falls back to `.splat` if the SPZ is unshipped. Regenerate via:
 
-### lil-gui (right rail)
-One unified side panel anchored to `top: 18px, right: 18px`. The **3DGS / USD** section is embedded as the topmost folder; everything else (Customize, Cinematic FX, Tech Spec, Camera Movement) sits below.
-
-### 3DGS / USD (top of lil-gui)
-Eye-icon visibility toggles, subform pills, and inline size sliders for the three render representations. Multiple representations can be visible at once.
-
-```
-[👁] Splat       Anisotropic 3D Gaussian
-                 Gaussian | Point      Point Size  [───o───]
-[👁] Billboard   PointInstancer › Plane
-                 Quad     | Circle     Billboard Size  [─o─────]
-[👁] Voxel       PointInstancer › Cube · Sphere
-                 Cube     | Sphere     Voxel Size  [─o─────]
+```bash
+node scripts/generate-spz-v3.mjs
 ```
 
-| Layer | Subform | USD analogue |
-|---|---|---|
-| **Splat** | Gaussian | Anisotropic 3D Gaussian (RGB · scales · quaternion · alpha) |
-| **Splat** | Point | Gaussian centres collapsed to isotropic points (size = `Point Size` slider; only visible in Point mode) |
-| **Billboard** | Quad | `UsdGeomPointInstancer › UsdGeomPlane` — camera-facing billboard |
-| **Billboard** | Circle | Same plane, fragment-shader discard outside the unit disc with AA edge |
-| **Voxel** | Cube | `UsdGeomPointInstancer › UsdGeomCube` — averaged colour per cell |
-| **Voxel** | Sphere | `UsdGeomPointInstancer › UsdGeomSphere` — icosphere prototype, same per-instance arrays |
+The script uses Spark's own `transcodeSpz`, so the output version always matches the runtime (`0.1.10` → SPZ v3, `2.x` → v4). External tools work too if pinned to the matching version. See `_archive/README.md` if a SPZ stops loading after a Spark upgrade.
 
-A `⤓ Use My Own` button in the panel header opens a drop overlay that replaces the primary splat. Tapping any subform pill (Circle / Sphere / Point) **auto-enables that layer** if it was off — one-tap interaction rather than the old "flip toggle, then pick subform" two-step. Manually toggling a layer also pops a museum-style **annotation card** with the layer's USD schema and a short plain-English description (see *USD layer annotation card* under Asset hotspots).
+## Deploy
 
-On phones the Studio panel reorganises into an **AR-compact grid**: each layer becomes a single horizontal row (`[toggle] · Name · [right-aligned subform pills]`) with the size slider on a second row spanning the full panel width — so all three sliders share the same start + end X for a single common alignment lane across rows.
+GitHub Pages via `.github/workflows/deploy-pages.yml`. The workflow sets `VITE_BASE=/SplatGarden-WebViewer/` so subpath asset URLs resolve under the project page. No Git LFS (the previous LFS-cache step in the legacy repo is no longer needed).
 
-### Scene panel (top-left)
-Multi-splat layer list. Every `.splat` in `public/manifest.json` shows up as a row with an eye-icon toggle and splat count. The first loaded splat is the primary — effects, voxel, quad, and annotation bindings stay attached to it. Drag any `.splat / .ply / .spz / .ksplat` onto the viewport, or use `+ Add`, to append a secondary layer. Header `−` collapses the list, leaving the title visible.
-
-### Pipeline drawer (T)
-Right-side slide-in documenting how the scene was made. Organized into three layers:
-
-| Layer | Contents |
-|---|---|
-| **L1 R&D** | AI Texture Stylization (IP-Adapter + ControlNet + AdaIN + Diffusion) and OpenUSD subforms (`UsdGeomPointInstancer` with Plane / Cube / Sphere prototypes). |
-| **L2 Production** | Per-asset cards with toolchain chip rows: Scene assembly (Unreal + Perforce), Gazebo, Vine, Daffodil, Grape Hyacinth, Tree, Landscape. Each card carries a Hotspot ON/OFF pill that gates the in-scene marker. |
-| **L3 3DGS** | The render primitive (Kerbl et al., SIGGRAPH 2023), multi-camera capture, COLMAP SfM, Postshot + Lichtfeld Studio parallel training. |
-
-The Pipeline drawer is purely documentation — it doesn't toggle 3D overlays.
-
-### Viewpoints (sidebar, top-left)
-Numbered hotspots in 3D plus a sidebar list. Smooth eased camera tween between poses.
-
-- `1` Front · `2` Center · `3` Zoom
-- `V` — arm "add viewpoint" (next click on the splat anchors it)
-- `C` — overwrite the Center viewpoint with the current camera pose
-- `R` — reset framing
-- `W A S D` + `Q E` — flythrough; `Shift` = 3× boost
-
-Front is a baked absolute pose in `src/annotations.js`. Center is patched to COLMAP cam #582 once the COLMAP loader resolves. Zoom is a close-up on the Grape Hyacinth. Storage key is `splatgarden:viewpoints:v10:<splat-url>`.
-
-### Viewport Tuner (K)
-Floating panel that shows the live camera position + target and lets you commit the current pose into any seeded viewpoint slot. Header carries a `−` minimize button; clicking the header (or the button) collapses the body. Includes a "Copy snippet" button that emits a `THREE.Vector3` fragment ready to paste into `seedDefaults`.
-
-### Quick Guide (H)
-Bottom-center card listing the player-facing essentials only — drag/scroll, 1–3 viewpoints, WASD, T (Pipeline), H (toggle this guide). Auto-pops after the intro and dismisses after a few seconds; press `H` to summon back, `Esc` to close.
-
-### Credits panel
-Toggled by the `Credits` checkbox under the lil-gui Tech Spec folder. Sections: **Team · Special Thanks · Software · Tech Stack**. Draggable from the header bar; closes when clicked outside the panel.
-
-### Mobile UI (phone only)
-The old top-right hamburger has been retired. Phones get a **floating capsule bottom-bar** with five tabs:
+## Source layout
 
 ```
-[ Tour ][ Effects ][ ⬤ Studio ][ Info ][ Share ]
-            (centre slot — primary action, larger icon + ring)
+public/         SplatGarden_PC.splat · SplatGarden_Mobile.spz · Shot4B FBX
+                Skybox.hdr · colmap/ · textures/ (all WebP)
+src/            main.js orchestrator + per-feature modules
+                (effects, postfx, tech-spec, asset-hover, scene-layers,
+                 mobile-ui, handtracking, intro-overlay, …)
+scripts/        one-off asset transcoders (PNG→WebP, SPLAT→SPZ)
+_archive/       off-ship references not copied into dist/
 ```
-
-| Tab | Opens |
-|---|---|
-| **Tour** | Viewpoint list + camera-movement controls (Play / Pause, Replay) merged into one sheet. |
-| **Effects** | Curated click-effect chips + Post-process master toggle + "Open Studio · Advanced" (re-parents the full lil-gui into the sheet). |
-| **Studio** (centre) | Slides up the 3DGS / USD layer panel — toggles + subform pills + size sliders. Same DOM that's embedded in the lil-gui folder on desktop, re-parented at open time. |
-| **Info** | FPS, splat count, Pipeline drawer, Quick Guide, Credits. |
-| **Share** | One-shot `navigator.share` (falls back to clipboard). |
-
-The bottom-bar sheets and the Studio panel are all the same floating glass card design (heavy frosted glass, 22 px corner radius, soft drop shadow) so the four primary tabs share one consistent visual language. On phones the Hand Tracking panel is hidden by default, the heavier post-process passes (Bloom, Underwater) default off, and Echo Trails auto-engage on click is skipped.
-
-A `body.phone-device` class is set once at startup from `IS_TOUCH && !IS_IPAD`. Unlike the reactive `.mobile` / `.tablet` classes (which flip when an iPhone rotates into landscape and the viewport crosses 768 px), `.phone-device` is hardware-bound — used to hide keyboard-hint chrome and the bottom-left status strip on any phone regardless of orientation.
-
-### Profiler (P)
-Per-phase frame-time breakdown: splat update, velocity step, particles, compose, overlay, HUD.
-
----
-
-## Camera Movement (intro cinematic)
-
-The FBX flythrough drives the scene camera off the animated node when active. Play / Pause / Stop with a live timeline label (`12.50s / 16.67s · F 300 / 400`) and a **draggable scrub bar** beneath — drag anywhere on the bar (pointer-capture handles the finger sliding off) to seek; a YouTube-style thumb knob appears on hover / during drag. If the user grabs the bar while the move is playing, playback pauses for the duration of the drag and resumes from the new time on release; grabbing while paused leaves the playhead at the scrubbed frame. The first-visit auto-play overlays a title sequence + lower-third phase callouts (`CAPTURE → POSE → TRAIN → RENDER`) and ends with onboarding pointers.
-
-Five staggered phases run over the clip duration:
-
-```
-   t   0          ¼            ½         0.625        0.825
-       │──────────│────────────│──────────│────────────│
-   ↓ Gaussian   Quad fades   Quad →    Point →     Quad fades
-     → Point    in (square)  Circle    Gaussian    out (circle)
-                            in place   (overlap
-                                       window)
-```
-
-- Sub-form (Gaussian↔Point) and layer-visibility lerps use exp-decay at rate 1.2/s.
-- **Lens distortion pulse**: `lensFisheye = 0.26 * sin(πt/duration)` — full bell across the clip, peak 0.26 at midpoint. `lensOn` + `postEnable` are force-on for the duration, both restored on Stop / Finish.
-- **Training Cameras fade-in/out** (first-visit only): the 990 COLMAP frustums fade in around tNorm 0.22, hold full opacity through the POSE phase (`0.27–0.50`), and slowly fade out by `0.65`. Synced to the "990 camera poses solved with COLMAP" lower-third caption.
-
----
-
-## Asset hotspots
-
-Per-asset floating markers projected from world coordinates in `src/tech-spec.js`. Hovering a dot anchors a poster-style info card next to it; clicking pins it and tweens the camera to a close-up. Six live hotspots ship out of the box: **Gazebo · Vine · Daffodil · Grape Hyacinth · Landscape**, plus the asset-pipeline placeholder Tree (no worldPos by design — documentation-only).
-
-Each card can carry:
-
-- Toolchain chip row
-- Vimeo embed (Gazebo, Vine, Daffodil, Grape Hyacinth, Landscape)
-- Before / after compare widget (drag the handle to wipe)
-- Texture stylization triptych — style reference · original · result (Landscape, Daffodil)
-- Pipeline image strip — sequenced texture pipeline frames (Landscape: AI base colour → Houdini COPNET height → NormalMap-Online normal)
-- Notes, key features, output, source
-
-The card is **draggable from the header** so it can be repositioned out of the way of the asset it's describing. Visibility is gated by the Tech Spec `Enable` master toggle plus the per-asset ON/OFF pill in the Pipeline drawer.
-
-### USD layer annotation card
-Toggling a layer in the 3DGS / USD panel pops a separate **museum-style annotation** centred above the right rail. Layout follows the iOS Outer Hebrides weather-widget reference: eyebrow caption · big title + hero value · plain-English intro · 2 × 2 icon-and-value tile grid · italic "why we built this" body. Also draggable; auto-dismisses after ≈ 7.5 s.
-
----
-
-## Cinematic FX
-
-Top-level lil-gui folder grouping the character-defining effects so they're separate from colour-grading.
-
-| Effect | Knobs |
-|---|---|
-| Lens Distortion | Fisheye blend / FOV / Distortion / Zoom / Dispersion / Center / Anamorphic squeeze. Auto-animates `fisheye = 0.26 · sin(πt)` during camera-move playback. |
-| Underwater | Caustic strength + scale, tint RGB + amount, wave shimmer, darken |
-| Kaleidoscope | Segments / rotation speed / zoom / mix / center |
-| Painterly | Style picker (Monet / Matisse / Seurat) with per-style detail folders that auto-open on selection |
-
-## Customize
-
-### FX
-Eight GPU shader effects in a single `dyno.Dyno` branched on a uniform `int` — switching never recompiles.
-
-1. Wave & Tint
-2. Dissolve & Reform
-3. Scan Line
-4. Spiral Smear
-5. Vortex Drift
-6. Chaotic Particles
-7. Slime Molds
-8. Feather Roots
-
-**Effector Mode** — sphere effector for the Dissolve shader. Press + drag drives a spatial-mask centre.
-**Brush Mode** — press + drag continuously paints the active effect. OrbitControls is locked while on.
-
-### Post-Process
-Master `Enable` kills every pass at once. Bloom defaults off. Colour-grading and polish passes only — the character-defining effects live in the top-level **Cinematic FX** folder.
-
-| Pass | Knobs |
-|---|---|
-| Bloom | Strength / Radius / Threshold |
-| Tonemap | None / Reinhard / Cineon / ACES |
-| Colour | Exposure / Contrast / Saturation |
-| Echo Trails | Bell-curve auto-ramp on click (disabled automatically on touch devices) |
-| Warp FX | Domain-warped fractal overlay |
-| Vignette / Chromatic Aberration / Film Grain | Standard knobs |
-
-Defaults: `exposure 1.10 · contrast 1.08 · saturation 1.15`.
-
-### HDR Sky
-Folder containing an `Enable` toggle, a `Rotation` slider (0–360°, drives `scene.backgroundRotation.y` / `environmentRotation.y`), and a `⤓ Use My Own HDRI` drop trigger. The default `public/Skybox.hdr` is loaded lazily on first activation.
-
-### Particles
-Two-layer GPGPU pipeline. Renders in a separate scene after the composer, bypassing post-FX. Off by default.
-
-| Subsystem | Role |
-|---|---|
-| Velocity Field | 256² half-float RGBA ping-pong — diffuse + advect + decay |
-| GPGPU Particles | 64² (4096) additive point sprites, pos + vel ping-pong RTs |
-
-Knobs: Point Size · Field Strength · Damping · Gravity Y · Alpha · Color Cool / Hot (sakura palette default). The `Seed from USD Voxels` button respawns every particle at a voxel-cell centre and expands the spawn AABB to the scene bounds.
-
-### Hand tracking (panel, bottom-left, hidden during intro + on phones)
-MediaPipe HandLandmarker (`tasks-vision 0.10.35`).
-
-- Single hand — pinch = drag-orbit, quick pinch-tap = click-FX
-- Two hands — spread / contract = zoom; parallel drag = pan
-
----
-
-## File layout
-
-```
-public/
-  manifest.json                       # list of splats to auto-load on startup
-  SplatGarden_PC.splat                # default 3DGS scene (3M splats)
-  Shot4B_GS-FX_Camera_V01.fbx         # camera move (frames 100-500 played)
-  Skybox.hdr
-  colmap/
-    images.bin                        # 990 training-camera poses
-    cameras.bin, frames.bin, rigs.bin
-  textures/                           # all textures shipped as .webp (q=85)
-    landscape/                        # ground tile pipeline frames (Landscape hotspot)
-    daffodil/                         # Daffodil PBR set + AI Stylization A/B plates
-    grapehyacinth/                    # Grape Hyacinth bud / leaves A/B compare
-    daisy/                            # Additional Foliage / Daisy breakdown
-    vine/                             # Vine WPO blueprint screenshot
-
-src/
-  main.js                             # scene, renderer, animation loop, hooks
-  mobile-ui.js                        # phone bottom-bar + sheets + Studio panel
-  scene-layers.js                     # multi-splat layer panel
-  usd-layers.js                       # 3DGS/USD toggle panel (embeds in lil-gui + mobile Studio)
-  usd-annotations.js                  # museum-style annotation card on layer toggle
-  tech-spec.js                        # Pipeline drawer data + renderer
-  asset-hover.js                      # hotspots + draggable poster-style info card
-  annotations.js                      # viewpoints + camera tween
-  viewpoint-tuner.js                  # K-key live pose tuner
-  key-hints.js                        # H-key Quick Guide (desktop + touch variants)
-  credits.js                          # team + special thanks + software + tech stack
-  intro-overlay.js                    # first-visit title sequence + phase captions
-  onboarding-pointers.js              # first-visit Studio / Tech Spec pointers
-  effects.js                          # 8 click effects + lil-gui structure
-  postfx.js                           # EffectComposer pipeline
-  velocity-field.js                   # velocity-field ping-pong
-  gpgpu-particles.js                  # additive point-sprite particles
-  colmap-loader.js                    # images.bin parser + frustum builder
-  datalabels.js                       # surveillance-card overlay
-  handtracking.js                     # MediaPipe-driven control scheme
-  quadizer.js, voxelizer.js           # USD-PointInstancer-style overlays
-  profiler.js                         # frame-time bars (P)
-  style.css                           # UI tokens + panel styles
-
-index.html
-vite.config.js
-package.json
-```
-
----
-
-## Deployment
-
-GitHub Pages via `.github/workflows/deploy-pages.yml`. The workflow builds with `VITE_BASE: /SplatGarden-WebViewer/` so `import.meta.env.BASE_URL` resolves correctly under the sub-path. Splat files travel through Git LFS.
-
-`vite.config.js` reads `VITE_BASE` from the environment and throws if `CF_PAGES` is detected (Cloudflare Pages is intentionally disabled — the splat exceeds the 25 MB per-file limit).
-
-LFS free-tier bandwidth is 1 GB/month. The default 92 MB splat means ~10 fresh visits per month at full quality. Monitor in the repo's settings → Git LFS tab, or move splats to R2 / Backblaze if traffic grows.
-
----
 
 ## Roadmap
 
-- Asset hover card media — populate `media:` fields with real lookdev video, before/after textures, and AI-stylization comparisons for the remaining assets (Landscape now ships with the full triptych + pipeline strip; Gazebo / Vine / Daffodil / Grape Hyacinth have embeds but still placeholder triptychs).
-- Tree `worldPos` — last asset item without a floating dot. Documentation-only by design until lookdev is finalised.
-- Clipping plane / cross-section — expose alternative subforms (point cloud / Voxel / Quad) on the cut surface.
-- Pipeline scrubber — bottom timeline morphing `COLMAP points → Gaussians → Quad → Voxel → final 3DGS`.
-- Per-cluster stylization — apply post-FX only to a selected region of splats.
-- MP4 export from camera path.
-- WebXR (Quest / Vision Pro).
-- URL-state deep links — `?vp=2&panel=pipeline` for direct linking.
-- glTF / mesh composite — render a USD prop alongside the splat with shared depth (`KHR_gaussian_splatting`).
-- Sound design — UI clicks + camera-move whoosh + ambient pad (highest-ROI showcase polish still unshipped).
-- Asset reactivity on click — the camera flies to the hotspot, but the asset itself doesn't acknowledge the tap. A 300 ms radial pulse from the hotspot's world position would tighten the cause-and-effect loop.
+Sound design · MP4 export from camera path · WebXR (Quest / Vision Pro) · URL-state deep links beyond viewpoints · glTF mesh composite via `KHR_gaussian_splatting` · per-cluster stylization · click pulse on asset hotspots · Spark `2.x` upgrade (unlocks SPZ v4 + new renderer features).
