@@ -512,7 +512,15 @@ const fpsControls = new FPSControls({
   onEnter: () => {
     controls.enabled = false;
     document.body.classList.add("fps-active");
-    window.__toast?.("First-person on — WASD to move, Shift to sprint, Esc to release");
+    // Touch users get a different control vocabulary, so the entry
+    // toast has to say so — telling them "WASD" is useless on a
+    // phone. The IS_TOUCH flag was computed at boot from the same
+    // `(pointer: coarse)` media query that drives body.touch.
+    if (IS_TOUCH) {
+      window.__toast?.("First-person on — left side walks, right side looks", 3500);
+    } else {
+      window.__toast?.("First-person on — WASD to move, Shift to sprint, Esc to release", 3500);
+    }
   },
   onExit: () => {
     controls.enabled = true;

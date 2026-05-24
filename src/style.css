@@ -6245,6 +6245,93 @@ body.phone-device #ui-toast {
 }
 
 /* ============================================================
+ * FPS first-person walking — virtual joystick visuals
+ * ============================================================
+ * The joystick lives in the DOM (not the canvas) because the
+ * canvas owns the WebGL context and is touch-event-only. Spawned
+ * dynamically by fps-controls.js when a touch lands on the left
+ * half of the canvas; positioned via transform: translate() so
+ * the browser composites on the GPU and touchmove never triggers
+ * layout. Removed on touchend. Two elements: the "base" ring
+ * pinned at the anchor, and the "stick" disc that follows the
+ * finger clamped to a 60 px radius.
+ *
+ * Visual language: monochrome whites with low alpha, hairline
+ * borders, no shadows. Matches the project's editorial palette so
+ * the joystick reads as part of the UI vocabulary rather than a
+ * game-engine overlay. */
+.fps-joy-base,
+.fps-joy-stick {
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 1250;
+  border-radius: 50%;
+  /* The element is anchored at the centre of its bounding box via
+   * margin so transform: translate() lands on the touch position. */
+}
+.fps-joy-base {
+  width: 132px;
+  height: 132px;
+  margin: -66px 0 0 -66px;
+  border: 1px solid rgba(255, 255, 255, 0.30);
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: fps-joy-fade-in 0.18s ease-out;
+}
+.fps-joy-stick {
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: fps-joy-fade-in 0.18s ease-out;
+}
+@keyframes fps-joy-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Optional: a faint "drag here to walk / look" hint that lives on
+ * the canvas only while FPS is active and no joystick is touched.
+ * Cheap discoverability for first-time touch users — they see
+ * the affordance instead of having to guess. */
+body.fps-active.touch::before,
+body.fps-active.touch::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 50vw;
+  pointer-events: none;
+  z-index: 1240;
+  /* Subtle gradient hint at the divider line — fades to fully
+   * transparent at the screen edges so the canvas reads cleanly,
+   * and is brightest at the centre seam between walk + look zones. */
+  background: linear-gradient(90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0) 60%,
+    rgba(255, 255, 255, 0.03) 100%);
+  animation: fps-hint-fade 5s ease-out forwards;
+}
+body.fps-active.touch::after {
+  left: 50vw;
+  transform: scaleX(-1);  /* mirror the gradient so both sides darken inward */
+}
+body.fps-active.touch::before {
+  left: 0;
+}
+@keyframes fps-hint-fade {
+  0%   { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ============================================================
  * First-paint reveal — full-viewport black veil between canvas
  * (z-index 0) and loading splash (z-index 10+). Created in JS
  * at boot so it's already painted before the splash hides;
