@@ -7500,6 +7500,22 @@ body.touch .lil-gui.root .children {
    finishes (body.intro-playing is removed in main.js). */
 body.intro-playing #about-trigger { opacity: 0; pointer-events: none; }
 
+/* While hand tracking is active, hide the trigger pill: the gesture HUD
+   (#hand-gesture-hud) is fixed at top-center too and at z-index 1700 it
+   covers the trigger (1490). Beyond the visual stacking, the conflict
+   is informational — both elements compete for the head-up slot but
+   serve different modes: About is an onboarding CTA for new visitors,
+   the gesture HUD is real-time feedback for someone already deep in
+   gesture interaction. Once the user has opted into hand tracking they
+   are by definition past onboarding, so the trigger is noise during
+   that session. Pill returns the moment hand tracking is toggled off.
+   Mirrors the existing body.intro-playing pattern above. */
+body:has(#hand-toggle.active) #about-trigger {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.22s ease;
+}
+
 /* When the About panel is open, hide the trigger pill: the panel's own
    header ("ABOUT THIS PROJECT") sits ~8 px below the trigger ("About
    this project") on phone portrait, and the near-identical text in
