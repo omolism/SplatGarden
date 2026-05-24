@@ -361,10 +361,17 @@ export const TECH_SPECS = [
         //                      the Figma reference, which shows
         //                      Key Process → bullets without any subhead
         //                      between.
+        // Eyebrows match the Figma reference verbatim — chip-style
+        // titles ("Final Render", "Breakdown", "Large Display View",
+        // "Key Process") without 01/02/03/04 numbering. No description
+        // prose under any section header either; the Figma layouts the
+        // sections as title → media → next title, with bullets only on
+        // Key Process. Captions under the videos are preserved where
+        // they're carrying information the Figma reference doesn't
+        // spell out otherwise (the four breakdown-panel labels).
         processCards: [
           {
-            eyebrow:     "01 · FINAL RENDER",
-            description: "Final pass of the FLIP particle simulation rendered against the dressed garden scene in Karma.",
+            eyebrow:     "Final Render",
             rows: [
               { layout: "single", items: [{
                 iframeSrc:   "https://player.vimeo.com/video/1195047170?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
@@ -375,8 +382,7 @@ export const TECH_SPECS = [
             ],
           },
           {
-            eyebrow:     "02 · BREAKDOWN",
-            description: "A four-panel breakdown of the contained FLIP setup. Source Layers shows the input geometry the sim reads from (≈ 17.7 M particle count at peak). Volume Trail visualises the FLIP velocity field. FLIP Simulation & Color Transfer is the in-progress sim with color attributes already transferred onto the particles. Volume velocity is the volume-velocity-from-curves field driving the flow.",
+            eyebrow:     "Breakdown",
             rows: [
               { layout: "single", items: [{
                 iframeSrc:   "https://player.vimeo.com/video/1195047168?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
@@ -388,21 +394,10 @@ export const TECH_SPECS = [
           },
           {
             // Large Display View — the "where it lives" beat: same sim,
-            // playing back on the LED volume that the final piece targets.
-            // Originally labelled XR-Stage View in the data; renamed to
-            // match the Figma reference's "Large Display View" wording
-            // (the user's intent is closer to "this is how it looks on
-            // a huge display" than to the XR / VR connotation). The
-            // hero Karma render up top answers "what does it look
-            // like?"; this answers "where does it deploy?". Closes the
-            // visual sequence before Key Process drops the text bullets.
-            //
-            // No title / description on this card — the eyebrow plus
-            // the caption "Particle Load Test" under the video already
-            // names the beat completely, and the reference Figma
-            // intentionally leaves the prose slot empty so the video
-            // owns the breath of the section.
-            eyebrow:     "03 · LARGE DISPLAY VIEW",
+            // playing back on the LED volume that the final piece
+            // targets. No description per the Figma; the video carries
+            // the section on its own.
+            eyebrow:     "Large Display View",
             rows: [
               { layout: "single", items: [{
                 iframeSrc:   "https://player.vimeo.com/video/1195059511?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
@@ -413,21 +408,11 @@ export const TECH_SPECS = [
             ],
           },
           {
-            // Key Process closes the card with the four-line Houdini
-            // glossary. No title / description on top of the eyebrow —
-            // the eyebrow ("04 · KEY PROCESS") IS the section name, and
-            // the group's own "Houdini Simulation" subhead introduces
-            // the bullets directly underneath. The reference Figma
-            // shows this same minimal stack: header → subhead →
-            // bullets, with no descriptive prose between them.
-            //
-            // Single ungrouped block — the FLIP pipeline reads as one
-            // coherent sequence (collision tuning → velocity field
-            // shaping → color transfer) rather than parallel sub-systems
-            // like Gazebo's Simulation Mask + Velocity from Pyro pair,
-            // so a single bullet list under the eyebrow tells the story
-            // cleanly. The Figma reference shows the same flat shape.
-            eyebrow:     "04 · KEY PROCESS",
+            // Key Process closes the card with the three-line Houdini
+            // glossary. Eyebrow is plain "Key Process" per the Figma;
+            // bullets sit directly under it with no descriptive prose
+            // and no inner subhead.
+            eyebrow:     "Key Process",
             groups: [
               {
                 items: [
@@ -724,117 +709,45 @@ export const TECH_SPECS = [
         name:      "Daffodil",
         location:  "Near gazebo",
         worldPos:  [0.08, -0.773, 2.226],
-        toolchain: ["Houdini", "VAT bake", "Unreal Engine 5 (set dress)", "Python · OSC · MediaPipe", "AI texture stylization"],
-        output:    "Mesh + VAT animation · interactively driven in Unreal",
-        note:      "Animated procedurally in Houdini and VAT-baked, then set-dressed in Unreal. Inside the Unreal session, Python · OSC · MediaPipe drives the rig live (hand gesture → OSC → blueprint). Diffuse texture passes through the AI Texture Stylization tool from L1.",
-        // Existing VAT + OSC interaction video stays at its current
-        // position (top of the card body, right after Keywords).
-        // processCards now render AFTER embeds per the updated order
-        // in asset-hover.js / tech-spec.js, so the new Houdini Simulation
-        // + Texturing process cards slot in BELOW this video.
-        embed: {
-          src:   "https://player.vimeo.com/video/1191203670?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
-          label: "VAT + OSC interaction",
-          title: "VAT",
-        },
-        // Step-style process cards — matches Landscape's pattern (top
-        // embed is the implicit hero render; numbered sections start at
-        // 01 and tell the breakdown story). Three sections:
-        //   01 Houdini Simulation — KineFX + Vellum growth animation
-        //   02 Stylization — AI Stylized + Substance Painter
-        //   03 PBR Pipeline — full PBR map set
+        toolchain: ["Houdini", "KineFX", "Vellum", "Substance Painter", "AI Stylization"],
+        // Per the Figma reference: only the content shown in the
+        // mockup remains. The previous VAT + OSC embed, the Houdini
+        // Simulation video pair, the redundant compare sliders, the
+        // intermediate "Substance Painter + AI Stylized Tool" compare,
+        // the `output` line, and the 4-row keyPoints all dropped —
+        // none of them appear in the Figma. What's left is the single
+        // Houdini-growth top bullet, the chip-titled "AI Stylized +
+        // Substance Painter" section with its two-stage image set and
+        // PBR map quad, and the three Daffodil texture pipeline
+        // bullets at the bottom of that section.
+        note:      "In Houdini, KineFX and Vellum were used to create a natural, organic growth animation for the daffodil, preparing it for interaction.",
         processCards: [
           {
-            eyebrow:     "01 · HOUDINI SIMULATION",
-            description: "In Houdini, KineFX and Vellum were used to create a natural, organic growth animation for the daffodil, preparing it for interaction.",
+            eyebrow: "AI Stylized + Substance Painter",
             rows: [
-              // Two videos side-by-side at matched 16:9 — user-provided
-              // Vimeo URLs. Equal-height via the pair aspectRatio opt-in
-              // so the 1920×1080 sources line up cleanly even on phones
-              // (the [style*=--pair-aspect] override keeps them in a row
-              // at narrow widths instead of stacking).
-              { layout: "pair", aspectRatio: "16 / 9", items: [
-                {
-                  iframeSrc: "https://player.vimeo.com/video/1194883065?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
-                  caption: "Close up Stamen",
-                  alt: "Daffodil close-up stamen Houdini simulation",
-                },
-                {
-                  iframeSrc: "https://player.vimeo.com/video/1194883066?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
-                  caption: "Daffodil Animation",
-                  alt: "Daffodil full growth Houdini simulation",
-                },
+              // Original ↔ AI Stylized pair — daffodil renders side by
+              // side. Figma shows static columns, so this is a `pair`
+              // layout (not a compare slider). Captions name each side.
+              { layout: "pair", aspectRatio: "3 / 4", items: [
+                { src: `${BASE}textures/daffodil/daffodil-original-render.webp`, caption: "Original" },
+                { src: `${BASE}textures/daffodil/daffodil-ai-render.webp`,        caption: "AI Stylized" },
               ]},
-            ],
-          },
-          {
-            // Combined STYLIZATION + PBR PIPELINE — the previous split
-            // (sections 02 + 03) put the SP refined render and its PBR
-            // maps in different cards even though they describe the
-            // same end-state output, which made the reader scroll back
-            // and forth to connect "the textured daffodil" with "the
-            // 4 maps that produced it". New shape keeps the whole
-            // stylization story in one card and uses A/B compare
-            // sliders for the actual transformation beats: drag once
-            // to see the AI stylization, drag again at the texture
-            // level. The SP refined daffodil then anchors the bottom
-            // with its PBR map set inline, so the reader sees the
-            // final shaded result and the maps that built it in the
-            // same eye-pass.
-            eyebrow:     "02 · STYLIZATION",
-            title:       "AI Stylized + Substance Painter",
-            description: "Diffuse runs through a two-stage stylization pipeline. Substance Painter paints the base color, the in-house AI texture stylization tool converts that base into a painterly version, and then back into Substance Painter for refinement and the full PBR map set.",
-            rows: [
-              // Headline compare — same daffodil pose, drag reveals
-              // the AI-stylized painterly look replacing the original
-              // shading. Aspect locked to 3:4 so the two cells align
-              // exactly under the wipe handle (the source renders
-              // have slightly different native aspect ratios; the
-              // compare slider requires identical framing to read).
-              { layout: "compare", aspectRatio: "3 / 4", items: [
-                {
-                  before: `${BASE}textures/daffodil/daffodil-original-render.webp`,
-                  after:  `${BASE}textures/daffodil/daffodil-ai-render.webp`,
-                  labelA: "Original",
-                  labelB: "AI Stylized",
-                },
+              // Base-color swatches in the same Original ↔ AI Stylized
+              // order, sitting directly below their corresponding
+              // renders so the comparison reads top-to-bottom in two
+              // matched pairs.
+              { layout: "pair", aspectRatio: "1 / 1", items: [
+                { src: `${BASE}textures/daffodil/daffodil-original-swatch.webp`, caption: "Original" },
+                { src: `${BASE}textures/daffodil/daffodil-ai-swatch.webp`,        caption: "AI Stylized" },
               ]},
-              // Texture-level compare — the same transformation viewed
-              // at the diffuse-map data level. Square aspect since the
-              // swatches are 1:1 native. Sub-heading separates this
-              // beat from the render compare above so the reader sees
-              // "shaded result" and "underlying texture" as parallel
-              // proofs of the same stylization pass.
-              { heading: "Base color texture", layout: "compare", aspectRatio: "1 / 1", items: [
-                {
-                  before: `${BASE}textures/daffodil/daffodil-original-swatch.webp`,
-                  after:  `${BASE}textures/daffodil/daffodil-ai-swatch.webp`,
-                  labelA: "Original",
-                  labelB: "AI Stylized",
-                },
+              // Substance Painter + AI Stylized Tool block — SP-refined
+              // daffodil + the four PBR maps it produces. Figma puts
+              // them in one wide row; the schema doesn't support a
+              // 1+4 row, so we split into a single render + a quad
+              // immediately below, both under the same row heading.
+              { heading: "Substance Painter + AI Stylized Tool", layout: "single", items: [
+                { src: `${BASE}textures/daffodil/daffodil-sp-final.webp`, caption: null },
               ]},
-              // Second transformation compare — AI Stylized ↔ SP+AI
-              // refined final. Completes the two-step pipeline story
-              // (Original → AI Stylized → SP+AI refined): the first
-              // compare above shows the AI stylization landing on the
-              // base; this one shows the Substance Painter refinement
-              // pass adding brush detail and edge break-up on top.
-              // Same 3:4 aspect as compare 1 so the two transformation
-              // beats line up visually as a parallel pair of "before/
-              // after" reveals.
-              { heading: "Substance Painter + AI Stylized Tool", layout: "compare", aspectRatio: "3 / 4", items: [
-                {
-                  before: `${BASE}textures/daffodil/daffodil-ai-render.webp`,
-                  after:  `${BASE}textures/daffodil/daffodil-sp-final.webp`,
-                  labelA: "AI Stylized",
-                  labelB: "SP Refined",
-                },
-              ]},
-              // PBR map set sits inline below the refined render so
-              // the reader can scan render-then-maps in one motion.
-              // 4 maps at desktop, collapses to 2x2 at narrow widths.
-              // No row heading here — visually flows with the SP row
-              // above as the same "refined output" group.
               { layout: "quad", aspectRatio: "1 / 1", items: [
                 { src: `${BASE}textures/daffodil/daffodil-basecolor.webp`,   caption: "BaseColor" },
                 { src: `${BASE}textures/daffodil/daffodil-normal.webp`,      caption: "Normal" },
@@ -842,21 +755,9 @@ export const TECH_SPECS = [
                 { src: `${BASE}textures/daffodil/daffodil-scattermask.webp`, caption: "ScatterMask" },
               ]},
             ],
-            // Three-step pipeline summary anchored at the end of the
-            // card. Mirrors the user's reference design where the
-            // "Daffodil texture pipeline" bullets sit directly under
-            // the image rows. Distinct from the global per-asset
-            // keyPoints below (which describe the broader Houdini +
-            // SP + AI stack); these three lines focus on the SP/AI
-            // loop specifically.
             groups: [
               {
                 heading: "Daffodil texture pipeline",
-                // Bullets match the Figma reference verbatim — no inline
-                // bold, and the "Substance Painter → exported as base
-                // color map" arrow keeps the two-step beat that the
-                // earlier comma flattened. Tool names stay plain text
-                // because the Figma renders them without emphasis.
                 items: [
                   "Base color painted in Substance Painter → exported as base color map",
                   "AI stylization tool generates a stylized version from the export",
@@ -865,12 +766,6 @@ export const TECH_SPECS = [
               },
             ],
           },
-        ],
-        keyPoints: [
-          { key: "Houdini",           value: "KineFX rig + Vellum cloth solver produce a natural, organic growth animation, then baked to a Vertex Animation Texture (VAT) for real-time playback in Unreal." },
-          { key: "Substance Painter", value: "Base color painted in Substance Painter → exported as the source diffuse." },
-          { key: "AI stylization",    value: "The AI texture stylization tool from L1 generates a painterly version from the Substance Painter export." },
-          { key: "Refinement",        value: "AI-stylized base goes back into Substance Painter for detail painting and the full PBR set (Normal · ORM · ScatterMask)." },
         ],
       },
       {
