@@ -1048,14 +1048,25 @@ export function renderCompare(c) {
 
 // Wire the drag-to-wipe interaction on a single compare frame.
 //
-// Listeners live on the FRAME itself (not the tiny 2 px handle), so the
-// grab target is the whole 16:9 area — much more forgiving. pointerdown
-// also snaps the split to where the user clicked, so single-click works
-// the same as drag. setPointerCapture on the frame routes pointermove
-// events through even if the cursor drifts off the card, which means
-// the compare slider keeps tracking inside draggable parents (the asset
-// hover card has its own pointer handlers, but they early-return for
-// targets outside .ah-head).
+// Listeners live on the FRAME for pointerdown (so the grab target is the
+// whole frame area, not just the 2 px handle) and on DOCUMENT for the
+// follow-up pointermove / pointerup / pointercancel. The document-level
+// follow-up matters specifically on iOS Safari when the compare frame
+// sits inside an overflow:auto parent — which the asset hover card is
+// (#asset-hover-card { overflow-y: auto }). In that arrangement
+// setPointerCapture on the frame silently fails to keep tracking once
+// the finger leaves the frame's bounding box (small compare frames are
+// only a few hundred px wide on phone), so pointermove events stop
+// arriving on the frame and the slider stays stuck at the initial tap
+// position. Routing the follow-up through document.addEventListener
+// removes the capture-on-frame dependency entirely.
+//
+// Also: an explicit touchstart with `{ passive: false }` calling
+// preventDefault belt-and-suspenders against iOS's gesture-commit
+// heuristic. CSS already declares `touch-action: none` on .cmp-frame,
+// but in scrollable parents iOS will sometimes commit a pan gesture in
+// the first few pixels of movement before the pointerdown handler
+// runs; the explicit touchstart preventDefault closes that window.
 export function wireCompareFrame(frame) {
   // Idempotent — _show() re-runs this every time the card rebuilds, so
   // bail if we've already wired this frame.
@@ -1080,30 +1091,50 @@ export function wireCompareFrame(frame) {
     apply();
   };
 
-  let dragging = false;
+  // Per-frame pointer state. activePid scopes the document listeners
+  // to the pointer that started on this specific frame, so two
+  // adjacent compare frames don't interfere with each other.
+  let activePid = null;
+
+  const onMove = (e) => {
+    if (activePid === null || e.pointerId !== activePid) return;
+    setAt(e.clientX);
+    e.preventDefault();
+  };
+
+  const onUp = (e) => {
+    if (activePid === null) return;
+    if (e && e.pointerId !== undefined && e.pointerId !== activePid) return;
+    activePid = null;
+    document.removeEventListener("pointermove",   onMove);
+    document.removeEventListener("pointerup",     onUp);
+    document.removeEventListener("pointercancel", onUp);
+  };
+
   frame.addEventListener("pointerdown", (e) => {
     // Left button / primary touch only — and don't fight other handlers
     // (e.g., the asset card's text-selection on the body).
     if (e.button !== undefined && e.button !== 0) return;
-    dragging = true;
-    try { frame.setPointerCapture(e.pointerId); } catch {}
+    activePid = e.pointerId;
     setAt(e.clientX);
     e.preventDefault();
     e.stopPropagation();
+    // Document-level follow-up — survives the finger leaving the
+    // frame's bounding box on phones, which the previous
+    // frame.setPointerCapture pattern could not when the frame sat
+    // inside an overflow:auto parent (asset hover card).
+    document.addEventListener("pointermove",   onMove);
+    document.addEventListener("pointerup",     onUp);
+    document.addEventListener("pointercancel", onUp);
   });
-  frame.addEventListener("pointermove", (e) => {
-    if (!dragging) return;
-    setAt(e.clientX);
+
+  // Explicit touchstart preventDefault (non-passive) — see header
+  // comment. Without this, iOS may commit to a scroll gesture in the
+  // first few pixels of touch movement before pointerdown's
+  // preventDefault has a chance to claim the gesture.
+  frame.addEventListener("touchstart", (e) => {
     e.preventDefault();
-  });
-  const endDrag = (e) => {
-    if (!dragging) return;
-    dragging = false;
-    try { frame.releasePointerCapture(e.pointerId); } catch {}
-  };
-  frame.addEventListener("pointerup",     endDrag);
-  frame.addEventListener("pointercancel", endDrag);
-  frame.addEventListener("pointerleave",  endDrag);
+  }, { passive: false });
 }
 
 const HOTSPOT_VIS_STORAGE_KEY = "splatgarden:hotspot-visibility:v1";
