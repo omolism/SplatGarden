@@ -709,44 +709,76 @@ export const TECH_SPECS = [
         name:      "Daffodil",
         location:  "Near gazebo",
         worldPos:  [0.08, -0.773, 2.226],
-        toolchain: ["Houdini", "KineFX", "Vellum", "Substance Painter", "AI Stylization"],
-        // Per the Figma reference: only the content shown in the
-        // mockup remains. The previous VAT + OSC embed, the Houdini
-        // Simulation video pair, the redundant compare sliders, the
-        // intermediate "Substance Painter + AI Stylized Tool" compare,
-        // the `output` line, and the 4-row keyPoints all dropped —
-        // none of them appear in the Figma. What's left is the single
-        // Houdini-growth top bullet, the chip-titled "AI Stylized +
-        // Substance Painter" section with its two-stage image set and
-        // PBR map quad, and the three Daffodil texture pipeline
-        // bullets at the bottom of that section.
+        toolchain: ["Houdini", "VAT bake", "Unreal Engine 5 (set dress)", "Python · OSC · MediaPipe", "AI texture stylization"],
+        // Top-level prose is the Figma's lead bullet about the Houdini
+        // growth animation. Everything else the Figma doesn't surface
+        // as text (asset `output` line, the four-row keyPoints, the
+        // per-card descriptions, the "Base color texture" sub-heading)
+        // is dropped — but every video, compare slider and image stays
+        // in place. The user wanted the text limited to what's in the
+        // Figma WITHOUT cutting media.
         note:      "In Houdini, KineFX and Vellum were used to create a natural, organic growth animation for the daffodil, preparing it for interaction.",
+        // VAT + OSC interaction Vimeo (full clip kept; only the
+        // surrounding text was trimmed).
+        embed: {
+          src:   "https://player.vimeo.com/video/1191203670?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
+          label: "VAT + OSC interaction",
+          title: "VAT",
+        },
         processCards: [
           {
-            eyebrow: "AI Stylized + Substance Painter",
+            // Houdini Simulation pair — videos stay; eyebrow + description
+            // dropped because the Figma surfaces that text as the top
+            // bullet above (in `note`), not as a labelled section here.
             rows: [
-              // Original ↔ AI Stylized pair — daffodil renders side by
-              // side. Figma shows static columns, so this is a `pair`
-              // layout (not a compare slider). Captions name each side.
-              { layout: "pair", aspectRatio: "3 / 4", items: [
-                { src: `${BASE}textures/daffodil/daffodil-original-render.webp`, caption: "Original" },
-                { src: `${BASE}textures/daffodil/daffodil-ai-render.webp`,        caption: "AI Stylized" },
+              { layout: "pair", aspectRatio: "16 / 9", items: [
+                {
+                  iframeSrc: "https://player.vimeo.com/video/1194883065?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
+                  caption: "Close up Stamen",
+                  alt: "Daffodil close-up stamen Houdini simulation",
+                },
+                {
+                  iframeSrc: "https://player.vimeo.com/video/1194883066?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
+                  caption: "Daffodil Animation",
+                  alt: "Daffodil full growth Houdini simulation",
+                },
               ]},
-              // Base-color swatches in the same Original ↔ AI Stylized
-              // order, sitting directly below their corresponding
-              // renders so the comparison reads top-to-bottom in two
-              // matched pairs.
-              { layout: "pair", aspectRatio: "1 / 1", items: [
-                { src: `${BASE}textures/daffodil/daffodil-original-swatch.webp`, caption: "Original" },
-                { src: `${BASE}textures/daffodil/daffodil-ai-swatch.webp`,        caption: "AI Stylized" },
+            ],
+          },
+          {
+            // AI Stylized + Substance Painter — eyebrow lifted from the
+            // old `title` field so the chip-style title matches the
+            // Figma exactly. The old "02 · STYLIZATION" numbering and
+            // the "Diffuse runs through a two-stage stylization
+            // pipeline…" description are dropped. All three compare
+            // sliders + the PBR quad stay; only the "Base color
+            // texture" row heading is dropped because the Figma
+            // doesn't surface that label.
+            eyebrow:     "AI Stylized + Substance Painter",
+            rows: [
+              { layout: "compare", aspectRatio: "3 / 4", items: [
+                {
+                  before: `${BASE}textures/daffodil/daffodil-original-render.webp`,
+                  after:  `${BASE}textures/daffodil/daffodil-ai-render.webp`,
+                  labelA: "Original",
+                  labelB: "AI Stylized",
+                },
               ]},
-              // Substance Painter + AI Stylized Tool block — SP-refined
-              // daffodil + the four PBR maps it produces. Figma puts
-              // them in one wide row; the schema doesn't support a
-              // 1+4 row, so we split into a single render + a quad
-              // immediately below, both under the same row heading.
-              { heading: "Substance Painter + AI Stylized Tool", layout: "single", items: [
-                { src: `${BASE}textures/daffodil/daffodil-sp-final.webp`, caption: null },
+              { layout: "compare", aspectRatio: "1 / 1", items: [
+                {
+                  before: `${BASE}textures/daffodil/daffodil-original-swatch.webp`,
+                  after:  `${BASE}textures/daffodil/daffodil-ai-swatch.webp`,
+                  labelA: "Original",
+                  labelB: "AI Stylized",
+                },
+              ]},
+              { heading: "Substance Painter + AI Stylized Tool", layout: "compare", aspectRatio: "3 / 4", items: [
+                {
+                  before: `${BASE}textures/daffodil/daffodil-ai-render.webp`,
+                  after:  `${BASE}textures/daffodil/daffodil-sp-final.webp`,
+                  labelA: "AI Stylized",
+                  labelB: "SP Refined",
+                },
               ]},
               { layout: "quad", aspectRatio: "1 / 1", items: [
                 { src: `${BASE}textures/daffodil/daffodil-basecolor.webp`,   caption: "BaseColor" },
