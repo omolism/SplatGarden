@@ -136,10 +136,28 @@ export class UsdLayers {
     // Movement). Our content is just the rows + the secondary
     // "Use My Own" action below them; a tiny multi-select cue sits
     // above the rows so the toggle-switch behaviour reads explicitly.
+    // Persist the per-upload max-range value across reloads so a user
+    // who knows their pipeline ships big bboxes doesn't have to retype
+    // the cap every visit. Empty value (or NaN after parse) → no cap,
+    // auto-detected radius wins.
+    const MAX_RANGE_KEY = "splatgarden:uploadMaxRange";
+    let savedRange = "";
+    try { savedRange = localStorage.getItem(MAX_RANGE_KEY) || ""; } catch {}
+
     this.el.innerHTML = `
       <div class="usd-hint">Toggle layers · stack freely · only Splat takes mouse interactions</div>
       <ul class="usd-row-list"></ul>
-      <button class="usd-upload" title="Replace the primary splat by dropping a .splat / .ply / .spz / .ksplat">⤓ Use My Own</button>
+      <div class="usd-upload-row">
+        <label class="usd-max-range" title="Cap the auto-reframe radius when loading your own splat. Useful when an export has outlier points that would otherwise push the camera too far away. Leave blank for auto-detected.">
+          <span class="usd-max-range-label">Max range (m)</span>
+          <input type="number" class="usd-max-range-input"
+                 min="0.1" max="500" step="0.1"
+                 inputmode="decimal"
+                 placeholder="auto"
+                 value="${savedRange}">
+        </label>
+        <button class="usd-upload" title="Replace the primary splat by dropping a .splat / .ply / .spz / .ksplat">⤓ Use My Own</button>
+      </div>
     `;
     mountEl.appendChild(this.el);
 
@@ -149,6 +167,32 @@ export class UsdLayers {
       e.stopPropagation();
       this.onUploadRequest?.();
     });
+
+    // Max-range input — drives the camera reframe cap for "Use My Own".
+    // Value is persisted to localStorage and mirrored on window so
+    // addSplatLayer (in main.js) can read it without a callback hop.
+    // Parse fence: empty / NaN / non-positive → no cap (auto wins).
+    const maxRangeInput = this.el.querySelector(".usd-max-range-input");
+    const syncMaxRange = () => {
+      const raw = maxRangeInput?.value?.trim() ?? "";
+      const parsed = raw === "" ? NaN : parseFloat(raw);
+      if (Number.isFinite(parsed) && parsed > 0) {
+        window.__uploadMaxRange = parsed;
+        try { localStorage.setItem(MAX_RANGE_KEY, raw); } catch {}
+      } else {
+        window.__uploadMaxRange = null;
+        try { localStorage.removeItem(MAX_RANGE_KEY); } catch {}
+      }
+    };
+    // Initialise window value from the saved string so a reload that
+    // hits a queued upload picks up the user's cap immediately.
+    syncMaxRange();
+    maxRangeInput?.addEventListener("input",  syncMaxRange);
+    maxRangeInput?.addEventListener("change", syncMaxRange);
+    // Don't let typing into the input fire the panel's click-anywhere
+    // handlers (lil-gui folder toggle, etc.).
+    maxRangeInput?.addEventListener("click",     (e) => e.stopPropagation());
+    maxRangeInput?.addEventListener("pointerdown", (e) => e.stopPropagation());
 
     // Behavioural hint: the small "stack freely" caption is only meta-
     // information until the user has actually clicked a toggle. Once

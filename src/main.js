@@ -3705,7 +3705,22 @@ async function loadSplat() {
       // volume — without this reframe the user toggles "Use My Own" and
       // sees nothing because the camera is still pointed at the original
       // scene. Mirrors the initial load's reframe logic in loadSplat().
-      const { center: c, radius: r } = built;
+      //
+      // window.__uploadMaxRange (set by the "Max range (m)" input in
+      // the 3DGS / USD panel) caps the auto-detected radius. Use case:
+      // exports with stray outlier splats produce a bbox that's 10×
+      // larger than the actual scene, which without the cap would push
+      // the camera into the void. A user-set range of, say, 5 m forces
+      // the reframe to behave as if the scene is at most 5 m across,
+      // even if the raw bbox claims 50.
+      const { center: c, radius: rRaw } = built;
+      let r = rRaw;
+      const maxRange = Number(window.__uploadMaxRange);
+      let capped = false;
+      if (Number.isFinite(maxRange) && maxRange > 0 && Number.isFinite(rRaw) && rRaw > maxRange) {
+        r = maxRange;
+        capped = true;
+      }
       if (c && Number.isFinite(r)) {
         camera.position.copy(c).add(new THREE.Vector3(0, r * 0.4, r * 1.8));
         controls.target.copy(c);
@@ -3713,7 +3728,10 @@ async function loadSplat() {
       }
 
       statusEl.textContent = `+ ${options.fileName || "splat"}`;
-      window.__toast?.(`Loaded ${options.fileName || "splat"} — primary hidden`);
+      const rangeNote = capped
+        ? ` — framed at ${r.toFixed(1)} m (capped from ${rRaw.toFixed(1)} m)`
+        : (Number.isFinite(rRaw) ? ` — framed at ${rRaw.toFixed(1)} m` : "");
+      window.__toast?.(`Loaded ${options.fileName || "splat"}${rangeNote}`);
 
       // Bundled-scene-specific overlays (Training Cameras / Data Labels /
       // Daffodil + Grape Hyacinth hotspots) don't match a user-uploaded

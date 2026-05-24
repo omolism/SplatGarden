@@ -5444,6 +5444,63 @@ body.mobile #onboarding-pointers { display: none !important; }
   background: rgba(255, 255, 255, 0.04);
 }
 #usd-layers-panel.folded .usd-upload { display: none; }
+#usd-layers-panel.folded .usd-upload-row { display: none; }
+
+/* Max-range input + Use My Own button — laid out side by side so the
+ * upload button and its companion cap sit on one row. Input is small
+ * because most users won't touch it (auto is the right default);
+ * the label is a mono sub-cap so it reads as a setting, not a primary
+ * affordance. */
+#usd-layers-panel .usd-upload-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 6px 0 10px;
+}
+#usd-layers-panel .usd-max-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  cursor: help;
+}
+#usd-layers-panel .usd-max-range-input {
+  width: 56px;
+  padding: 3px 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--hair-strong);
+  border-radius: 3px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-align: right;
+  /* Strip Chrome / Firefox spinner buttons — the numeric input still
+   * works fine with keyboard / paste / typing, and the spinner UI
+   * fights the editorial-monochrome look. */
+  appearance: textfield;
+  -webkit-appearance: textfield;
+  -moz-appearance: textfield;
+}
+#usd-layers-panel .usd-max-range-input::-webkit-outer-spin-button,
+#usd-layers-panel .usd-max-range-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+#usd-layers-panel .usd-max-range-input:focus {
+  outline: none;
+  border-color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.07);
+}
+#usd-layers-panel .usd-upload-row .usd-upload {
+  margin: 0;
+}
 #usd-layers-panel .usd-row-list {
   list-style: none;
   margin: 0;
