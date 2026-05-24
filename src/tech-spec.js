@@ -109,6 +109,47 @@ export const TECH_SPECS = [
         ref:  "GSOP · Houdini",
         note: "The trainer output runs through Houdini's GSOP (Gaussian Splat Operators) toolset for cleanup + decimation: outlier splats are pruned, redundant low-opacity points are merged, and the splat count is brought down to ≈ 3M without a visible quality loss. Ships as public/SplatGarden_PC.splat.",
       },
+      {
+        // Deployment story — bridges the trainer output (Postshot's
+        // raw Gaussian field) to what actually ships in the browser.
+        // Same pipeline originally targeted Unreal Engine 5 (see the
+        // SIGGRAPH 2026 poster "Deploying World Models in Real Time:
+        // Artistic 3DGS via USD Voxelization"); this web viewer is
+        // the browser port. Two processCards: 01 walks the training
+        // stages visually (the three Postshot screenshots cover the
+        // raw initialization → cleanup → residual sparse point
+        // cloud); 02 shows the USD-voxel + point-cloud composite
+        // that the 3DGS/USD panel re-exposes as live layers.
+        name:      "Artistic 3DGS · USD voxelization",
+        ref:       "Postshot training → USD voxel + point-cloud overlay → real-time deployment",
+        toolchain: ["Postshot", "USD PointInstancer", "LiDAR Point Cloud", "Spark · web playback"],
+        output:    "Real-time 3DGS with USD-deployable structure + atmosphere layers",
+        note:      "The trained splat is the seed for an artistic deployment pipeline. Postshot's cleanup brings a chaotic initial radiance field down to a usable Gaussian field; USD voxelization then composites the cleaned splat with a complementary point-cloud overlay so collision-bearing voxels carry structure while transparent points carry atmospheric scatter. The same dual-layer system originally targeted Unreal Engine 5 — this browser viewer is the web port of the same approach, with the voxel and point-cloud surfaces re-exposed in the 3DGS / USD panel.",
+        processCards: [
+          {
+            eyebrow:     "01 · TRAINING",
+            description: "Postshot's optimizer starts from a chaotic radiance-field initialization and progressively shapes the Gaussian field against the 990 COLMAP-recovered camera poses. The cleanup pass prunes outlier splats; the residual sparse point cloud is what anchors the dense field.",
+            rows: [
+              { layout: "pair", aspectRatio: "16 / 9", items: [
+                { src: `${BASE}textures/3dgs/3dgs-before-cleanup.webp`, caption: "Before Cleanup" },
+                { src: `${BASE}textures/3dgs/3dgs-after-cleanup.webp`,  caption: "After Cleanup" },
+              ]},
+              { layout: "single", items: [
+                { src: `${BASE}textures/3dgs/3dgs-pointcloud.webp`, caption: "Pointcloud" },
+              ]},
+            ],
+          },
+          {
+            eyebrow:     "02 · DEPLOYMENT",
+            description: "USD voxelization composites the trained splat with a complementary point-cloud overlay. The voxel layer (USD PointInstancer) carries solid structure for collision and geometry; the point-cloud layer adds atmospheric scatter and a stylised skybox feel. Both surfaces are toggleable in the 3DGS / USD panel of this viewer.",
+            rows: [
+              { layout: "single", items: [
+                { src: `${BASE}textures/3dgs/3dgs-pointcloud-overlay.webp`, caption: "PointCloud Overlay on 3DGS" },
+              ]},
+            ],
+          },
+        ],
+      },
     ],
   },
 
