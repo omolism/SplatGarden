@@ -1660,6 +1660,46 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
 }
 #tech-spec .ts-item:first-child { border-top: none; padding-top: 4px; }
 
+/* Asset-level accordion. Each .ts-item-asset starts collapsed so the
+ * Production list reads as a clean index of asset titles; the reader
+ * clicks a title to expand the card. The head row gets a cursor + a
+ * subtle hover hint + a caret on the right, mirroring how the section
+ * head (.ts-sec-head) already telegraphs its click behaviour. The body
+ * hides via display:none on the .collapsed parent. Non-asset items
+ * don't get this treatment — they render inline as before. */
+#tech-spec .ts-item-asset > .ts-item-head {
+  cursor: pointer;
+  user-select: none;
+}
+#tech-spec .ts-item-asset > .ts-item-head:hover .ts-item-name {
+  color: #fff;
+}
+#tech-spec .ts-item-asset > .ts-item-head:focus-visible {
+  outline: 1px solid var(--hair-strong);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+#tech-spec .ts-item-caret {
+  align-self: flex-start;
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--text-dim);
+  transition: transform 0.18s ease;
+}
+/* Collapsed state rotates the caret like the section caret pattern,
+ * and hides the wrapped body. The head row stays visible. */
+#tech-spec .ts-item-asset.collapsed > .ts-item-head > .ts-item-caret {
+  transform: rotate(-90deg);
+}
+#tech-spec .ts-item-asset.collapsed > .ts-item-body {
+  display: none;
+}
+/* Expanded body — small padding-top so the head doesn't crowd the
+ * first body row. */
+#tech-spec .ts-item-asset > .ts-item-body {
+  padding-top: 2px;
+}
+
 /* 1. Title row */
 #tech-spec .ts-item-head {
   display: flex;

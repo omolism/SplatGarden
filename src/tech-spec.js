@@ -994,13 +994,32 @@ function renderItem(it, visMap) {
        </button>`
     : "";
 
-  // 1. Title row — big asset name + optional location chip + hotspot toggle
-  const head = `
-    <header class="ts-item-head">
-      <h3 class="ts-item-name">${it.name}</h3>
-      ${it.location ? `<span class="ts-item-loc">${it.location}</span>` : ""}
-      ${toggle}
-    </header>`;
+  // 1. Title row — big asset name + optional location chip + hotspot toggle.
+  // Asset items (those with a toolchain) get a folding accordion so the
+  // long Production list reads as a scannable index of asset names; the
+  // reader clicks a title to expand its full card. Non-asset items
+  // (Overview pillars, the short L3 prose entries) are short enough that
+  // hiding them adds friction without saving scroll, so they stay open.
+  // The caret + role="button" + tabindex + aria-expanded markup live
+  // ONLY on asset items; the click handler in TechSpec ignores
+  // anything else, and the hotspot toggle inside the head already
+  // stopPropagation()s so it doesn't accidentally fold the card.
+  const head = isAsset
+    ? `<header class="ts-item-head"
+              role="button"
+              tabindex="0"
+              aria-expanded="false"
+              title="Click to expand">
+         <h3 class="ts-item-name">${it.name}</h3>
+         ${it.location ? `<span class="ts-item-loc">${it.location}</span>` : ""}
+         ${toggle}
+         <span class="ts-item-caret" aria-hidden="true">▾</span>
+       </header>`
+    : `<header class="ts-item-head">
+         <h3 class="ts-item-name">${it.name}</h3>
+         ${it.location ? `<span class="ts-item-loc">${it.location}</span>` : ""}
+         ${toggle}
+       </header>`;
 
   // 2. Sub-line — short technical tagline (ref). Sits right under the title.
   const sub = it.ref ? `<div class="ts-item-sub">${it.ref}</div>` : "";
@@ -1058,7 +1077,17 @@ function renderItem(it, visMap) {
   // 6. Source — small mono footer with hairline rule above
   const source = it.source ? `<div class="ts-item-src">${it.source}</div>` : "";
 
-  return `<li class="ts-item${isAsset ? " ts-item-asset" : ""}">${head}${sub}${chain}${output}${note}${compare}${rich}${source}</li>`;
+  // Asset items wrap their body in `.ts-item-body` so the accordion toggle
+  // has one hide target. They also start with `.collapsed` so the drawer
+  // first reads as a clean list of asset titles, and the reader clicks
+  // a title to expand its card. Non-asset items render the body inline
+  // (no wrapper, no collapse) — they're short enough that folding adds
+  // friction without saving scroll.
+  const body = `${sub}${chain}${output}${note}${compare}${rich}${source}`;
+  if (isAsset) {
+    return `<li class="ts-item ts-item-asset collapsed">${head}<div class="ts-item-body">${body}</div></li>`;
+  }
+  return `<li class="ts-item">${head}${body}</li>`;
 }
 
 export function renderCompare(c) {
@@ -1260,6 +1289,51 @@ export class TechSpec {
         const sec = h.closest(".ts-sec");
         sec.classList.toggle("collapsed");
       });
+    });
+
+    // Asset-level accordion. Each .ts-item-asset has a clickable
+    // .ts-item-head; clicking (or Enter / Space on a focused head)
+    // toggles `.collapsed` on the item to show / hide its body. The
+    // hotspot ON/OFF pill inside the head already stopPropagation()s
+    // so it won't accidentally fold the card. Delegated on this.el
+    // so the listener survives any future re-render.
+    //
+    // Clicks inside the body (compare slider, embed, etc.) must NOT
+    // bubble up and fold the card — that would be infuriating. We
+    // identify "header click" strictly via `e.target.closest('.ts-item-head')`
+    // AND we walk up to the nearest `.ts-item-asset`; if that's not
+    // the same node as the head's parent, ignore (defensive).
+    const toggleItem = (item, btn) => {
+      const now = item.classList.toggle("collapsed");
+      btn.setAttribute("aria-expanded", now ? "false" : "true");
+      btn.setAttribute("title", now ? "Click to expand" : "Click to collapse");
+      // If we just expanded an item that contains compare frames, the
+      // drag handles were wired at construction time so they still work
+      // — no re-wiring needed (display:none doesn't detach listeners).
+    };
+    this.el.addEventListener("click", (e) => {
+      // Ignore clicks that originated on an interactive child of the
+      // head (the hotspot toggle button); stopPropagation in that
+      // handler already prevents this from firing, but we double-check
+      // in case some future child forgets.
+      if (e.target?.closest?.('[data-act="toggle-hotspot"]')) return;
+      const head = e.target?.closest?.(".ts-item-asset > .ts-item-head");
+      if (!head || !this.el.contains(head)) return;
+      const item = head.parentElement;
+      toggleItem(item, head);
+    });
+    this.el.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      // Only act when the head ITSELF has focus — not when focus is on
+      // the hotspot button nested inside it. Otherwise Enter on the
+      // button would fire both the button's native click AND a
+      // preventDefault-blocked accordion toggle, masking the toggle's
+      // click handler.
+      if (!(e.target instanceof HTMLElement)) return;
+      if (!e.target.classList.contains("ts-item-head")) return;
+      if (!e.target.parentElement?.classList.contains("ts-item-asset")) return;
+      e.preventDefault();
+      toggleItem(e.target.parentElement, e.target);
     });
 
     // Sticky TOC at the top of the drawer — table of contents pill row
