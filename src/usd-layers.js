@@ -25,6 +25,13 @@ const EYE_OFF  = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" st
 //           prims (billboard plane, voxel cube/sphere)
 // visKey is the boolean field on the params object; layerKey is the
 // string the EffectController.setLayerVis() expects.
+// `interactive` flags which layer carries mouse interactions (FX click
+// triggers, hover hotspots, raycast). Only the Splat layer is wired
+// into the raycaster + per-splat FX modifier; the USD Billboard and
+// Voxel layers are view-only re-projections of the same point cloud
+// and don't carry the per-instance event surface. Surfaced in the row
+// UI as a small "view-only" tag so the user understands why clicking
+// on a Voxel mesh doesn't fire FX.
 const ROWS = [
   {
     id: "splat",
@@ -46,6 +53,7 @@ const ROWS = [
       { val: "Point",    label: "Point"    },
     ],
     badge: "Anisotropic 3D Gaussian",
+    interactive: true,
   },
   {
     id: "billboard",
@@ -64,6 +72,7 @@ const ROWS = [
       { val: "circle", label: "Circle" },
     ],
     badge: "PointInstancer › Plane",
+    interactive: false,
   },
   {
     id: "voxel",
@@ -83,6 +92,7 @@ const ROWS = [
       { val: "sphere", label: "Sphere" },
     ],
     badge: "PointInstancer › Cube · Sphere",
+    interactive: false,
   },
 ];
 
@@ -127,7 +137,7 @@ export class UsdLayers {
     // "Use My Own" action below them; a tiny multi-select cue sits
     // above the rows so the toggle-switch behaviour reads explicitly.
     this.el.innerHTML = `
-      <div class="usd-hint">Toggle layers · stack freely</div>
+      <div class="usd-hint">Toggle layers · stack freely · only Splat takes mouse interactions</div>
       <ul class="usd-row-list"></ul>
       <button class="usd-upload" title="Replace the primary splat by dropping a .splat / .ply / .spz / .ksplat">⤓ Use My Own</button>
     `;
@@ -176,6 +186,20 @@ export class UsdLayers {
     this.params[row.visKey] = !!on;
     this.controller?.setLayerVis(row.layerKey, !!on);
     if (on) this.onLayerActivate?.(row.layerKey);
+    // Surface the mouse-interaction constraint when it actually
+    // matters. Three cases worth telling the user about:
+    //   1. Splat → OFF      : interactions go away entirely. Warn.
+    //   2. Splat → ON       : interactions come back. Confirm quietly.
+    //   3. Billboard/Voxel → ON while Splat is OFF : they enabled a
+    //      view-only layer with no Splat fallback; still no clicks.
+    // Toast helper is exposed on window from main.js. Optional chain
+    // keeps this safe during HMR / standalone imports.
+    if (row.id === "splat") {
+      if (on) window.__toast?.("Splat layer on — mouse interactions live");
+      else    window.__toast?.("Splat layer off — mouse clicks and hotspots paused");
+    } else if (on && this.params.splatLayer === false) {
+      window.__toast?.(`${row.name} is view-only — turn Splat on for mouse interactions`);
+    }
     this._render();
   }
 
@@ -226,8 +250,18 @@ export class UsdLayers {
                      value="${sizeVal}">
               <span class="usd-size-val">${sizeVal.toFixed(decimals)}</span>
             </label>` : "";
+      // "view-only" tag for non-interactive rows. The Splat layer is
+      // the one wired into the raycaster + FX modifier; Billboard and
+      // Voxel are pure visual re-projections and clicking on them
+      // doesn't trigger FX or hotspots. The tag is a small monochrome
+      // pill with a tooltip explaining the why — surfaced inline so
+      // the limitation is discoverable from the panel rather than via
+      // trial-and-error in the canvas.
+      const interactivityTag = row.interactive === false
+        ? `<span class="usd-noninteract" title="View-only — mouse clicks and hover hotspots only work on the Splat layer.">view only</span>`
+        : "";
       html += `
-        <li class="usd-row ${on ? "" : "hidden-row"}" data-id="${row.id}">
+        <li class="usd-row ${on ? "" : "hidden-row"} ${row.interactive === false ? "non-interactive" : ""}" data-id="${row.id}">
           <div class="usd-row-main">
             <button class="usd-toggle ${on ? "on" : ""}" data-act="toggle"
                     role="switch" aria-checked="${on}"
@@ -235,6 +269,7 @@ export class UsdLayers {
               <span class="usd-toggle-knob"></span>
             </button>
             <span class="usd-name">${row.name}</span>
+            ${interactivityTag}
             <span class="usd-badge" title="${row.badge}">${row.badge}</span>
           </div>
           <div class="usd-row-sub">

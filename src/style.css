@@ -5572,6 +5572,25 @@ body.mobile #onboarding-pointers { display: none !important; }
   padding: 0;
   white-space: nowrap;
 }
+/* "view-only" tag — small monochrome pill on non-interactive rows
+ * (Billboard, Voxel) telling the reader those layers don't take mouse
+ * clicks or hover hotspots. Sits inline between the row name and the
+ * tech badge; reads as metadata, not as a control. Hover surfaces
+ * the full explanation via the title tooltip. */
+#usd-layers-panel .usd-noninteract {
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--hair-strong);
+  padding: 2px 6px;
+  border-radius: 2px;
+  white-space: nowrap;
+  cursor: help;
+}
+#usd-layers-panel .usd-row.hidden-row .usd-noninteract { opacity: 0.4; }
 
 #usd-layers-panel .usd-row-sub {
   display: flex;
