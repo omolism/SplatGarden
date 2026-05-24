@@ -1475,6 +1475,55 @@ export class TechSpec {
     this.onOpenChange?.(false);
   }
 
+  /**
+   * Open the drawer scrolled to the given asset and expand its
+   * accordion. Used by the URL-hash deep-link (`#asset=Foliage`) so a
+   * shared link can land the reader directly on a specific asset card
+   * instead of the top of the drawer. Match is case-insensitive on the
+   * asset's display name; unknown names fall back to opening the drawer
+   * at the default scroll position. Returns true if a matching asset
+   * was found, false otherwise.
+   */
+  openToAsset(assetName) {
+    if (!this.open) this.openOverlay();
+    if (!assetName) return false;
+    const needle = String(assetName).trim().toLowerCase();
+    if (!needle) return false;
+    // Locate the .ts-item-asset whose name h3 matches. We walk the live
+    // DOM rather than the TECH_SPECS data because the click-to-expand
+    // and scroll-into-view operations are DOM-side anyway, and the data
+    // model has no element handle. requestAnimationFrame defers the
+    // scroll/expand until after openOverlay's class flip has rendered
+    // so the geometry is settled.
+    requestAnimationFrame(() => {
+      const items = this.el.querySelectorAll(".ts-item-asset");
+      for (const li of items) {
+        const nameEl = li.querySelector(".ts-item-name");
+        const name   = nameEl?.textContent?.trim().toLowerCase() ?? "";
+        if (name === needle) {
+          // Expand if currently collapsed.
+          if (li.classList.contains("collapsed")) {
+            li.classList.remove("collapsed");
+            const head = li.querySelector(".ts-item-head");
+            head?.setAttribute("aria-expanded", "true");
+            head?.setAttribute("title", "Click to collapse");
+          }
+          // Smooth-scroll the drawer body so the asset header lands near
+          // the top, just below the sticky TOC pill row.
+          const bodyEl = this.el.querySelector(".ts-body");
+          if (bodyEl) {
+            const bodyRect = bodyEl.getBoundingClientRect();
+            const liRect   = li.getBoundingClientRect();
+            const offset   = (liRect.top - bodyRect.top) + bodyEl.scrollTop - 12;
+            bodyEl.scrollTo({ top: Math.max(0, offset), behavior: "smooth" });
+          }
+          return;
+        }
+      }
+    });
+    return true;
+  }
+
   _loadVisibility() {
     try {
       const raw = localStorage.getItem(HOTSPOT_VIS_STORAGE_KEY);

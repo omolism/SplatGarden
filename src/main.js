@@ -363,6 +363,22 @@ let _sceneCollapseCtrl = null;   // wired below after SceneLayers is built
 // preserveDrawingBuffer enables canvas.toDataURL() for the A/B Compare
 // snapshot path. Minor GPU cost; the headline cost was already paid by
 // post-FX render targets.
+// Renderer-preference feature flag — Spark 0.1.10 is WebGL 2-only, but
+// the Spark roadmap includes a WebGPU backend. Reading `?renderer=webgpu`
+// from the URL lets us opt-in once Spark exposes the path without
+// shipping a follow-up build. Today the flag is logged for visibility
+// and falls back to WebGL 2; the URL param + window-exposed pref means
+// a future WebGPU enablement is a single SparkRenderer-options change.
+const RENDERER_PREF = (() => {
+  try {
+    const v = new URLSearchParams(window.location.search).get("renderer");
+    return v === "webgpu" ? "webgpu" : "webgl2";
+  } catch { return "webgl2"; }
+})();
+window.__rendererPref = RENDERER_PREF;
+if (RENDERER_PREF === "webgpu") {
+  console.info("[renderer] WebGPU requested via ?renderer=webgpu URL param. Spark 0.1.10 doesn't expose WebGPU yet, falling back to WebGL 2. The flag is recorded on window.__rendererPref for future activation.");
+}
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, preserveDrawingBuffer: true });
 // Pixel-ratio policy. The old cap of `min(dpr, 2)` matched native iPad/Retina
 // pixel density, but the user reported the iPad Air emulator in Chrome
@@ -1498,6 +1514,28 @@ async function loadSplat() {
     controls.target.copy(_deepLinkPose.target);
     controls.update();
     window.__deepLinkLanded = true;
+  }
+
+  // ---- Deep-link Tech Breakdown asset via URL hash -----------------------
+  // Format: #asset=Foliage   (case-insensitive; spaces preserved)
+  // Co-exists with #v=... — the two are combined with `&`, e.g.
+  // `#v=1,2,3,4,5,6&asset=Foliage` opens the drawer to Foliage AFTER the
+  // camera lands at the requested pose. Empty / unknown asset names
+  // silently no-op so a stale link doesn't break the boot.
+  function _parseAssetHash() {
+    const m = (location.hash || "").match(/[#&]asset=([^&]+)/i);
+    if (!m) return null;
+    try { return decodeURIComponent(m[1]).trim(); }
+    catch { return null; }
+  }
+  const _deepLinkAsset = _parseAssetHash();
+  if (_deepLinkAsset) {
+    // Defer the drawer open by one rAF so it lands AFTER the UI choreography
+    // has settled (otherwise the entrance animations fight the auto-scroll).
+    requestAnimationFrame(() => {
+      try { techSpec.openToAsset(_deepLinkAsset); }
+      catch (err) { console.warn("Asset deep-link failed:", err); }
+    });
   }
   // Expose a helper any UI can call to copy the current pose as a share link.
   window.__copyViewLink = async function _copyViewLink() {
