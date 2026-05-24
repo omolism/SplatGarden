@@ -847,11 +847,16 @@ window.__toast = function toast(msg, durationMs = 1500) {
 };
 
 // Snapshot — read the current canvas as a PNG data URL and trigger a
-// browser download. Works because the renderer was constructed with
-// `preserveDrawingBuffer: true` (line ~366), which keeps the framebuffer
-// readable after composition. The Spark renderer runs at the start of
-// every frame and composes into the same canvas, so toDataURL captures
-// what the user is actually looking at without a forced extra render.
+// browser download. The renderer was constructed with
+// `preserveDrawingBuffer: true` (line ~366), but in practice the backbuffer
+// is often EMPTY between setAnimationLoop ticks — toDataURL fires
+// synchronously from the click handler, which runs in the gap between
+// frames, and many browsers / drivers return a cleared (black) buffer
+// when read in that window. The fix is to explicitly render a fresh
+// frame inside the click handler, immediately before toDataURL, so the
+// canvas reflects the current scene + FX + postfx state at the moment
+// the user pressed Snap. We mirror the same dispatch logic the main
+// render loop uses (postfx if Post-Process is on, otherwise direct).
 window.__captureSnapshot = function captureSnapshot() {
   try {
     const canvasEl = renderer?.domElement;
@@ -859,6 +864,32 @@ window.__captureSnapshot = function captureSnapshot() {
       window.__toast?.("Snapshot unavailable");
       return;
     }
+    // Force a fresh composite of the scene + post-FX + particle / tech
+    // overlays into the canvas backbuffer. Wrapped in try/catch each so
+    // a flaky pass (e.g., postfx pipeline mid-rebuild during a setting
+    // change) doesn't prevent the snapshot — we still want the user to
+    // get *something* even if one overlay is temporarily unavailable.
+    try {
+      if (typeof postfx !== "undefined" && postfx?.params?.postEnable !== false) {
+        postfx.render(0);
+      } else {
+        renderer.render(scene, camera);
+      }
+    } catch (e) { console.warn("Snapshot main render failed:", e); }
+    const prevAutoClear = renderer.autoClear;
+    renderer.autoClear = false;
+    try {
+      if (typeof gpgpuParticles !== "undefined" && gpgpuParticles?.points?.visible) {
+        renderer.render(particleScene, camera);
+      }
+    } catch (e) { console.warn("Snapshot particle overlay skipped:", e); }
+    try {
+      if (typeof techOverlayScene !== "undefined" && techOverlayScene?.children?.length > 0) {
+        renderer.render(techOverlayScene, camera);
+      }
+    } catch (e) { console.warn("Snapshot tech overlay skipped:", e); }
+    renderer.autoClear = prevAutoClear;
+
     const dataUrl = canvasEl.toDataURL("image/png");
     const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
     const link = document.createElement("a");
