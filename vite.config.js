@@ -26,4 +26,30 @@ export default defineConfig({
   },
   // Don't bundle the giant splat file
   assetsInclude: ["**/*.splat", "**/*.ply", "**/*.spz", "**/*.ksplat"],
+  build: {
+    rollupOptions: {
+      output: {
+        // Vendor splitting — break the single 1.6 MB monolith into
+        // logically-cacheable chunks so browsers can fetch them in
+        // parallel, and a redeploy that touches only our src/ doesn't
+        // bust the cache for the much larger three / spark vendor code.
+        //
+        // MediaPipe is loaded via a dynamic import() inside
+        // handtracking.js (_ensureModel), so Rollup automatically
+        // emits its chunk separately and the main bundle no longer
+        // pays for it on first paint. The IS_PHONE Battery default
+        // also leaves hand tracking off out of the gate on mobile,
+        // so the MediaPipe chunk is genuinely deferred until the
+        // user opts in via the Hand toggle.
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return undefined;
+          if (id.includes("@mediapipe"))    return "mediapipe";
+          if (id.includes("@sparkjsdev"))   return "spark";
+          if (id.includes("/three/"))       return "three";
+          if (id.includes("/lil-gui/"))     return "lil-gui";
+          return "vendor";
+        },
+      },
+    },
+  },
 });

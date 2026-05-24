@@ -66,12 +66,41 @@ import { loadColmapImages, buildColmapFrustums, colmapCameraPosition, colmapCame
 // concatenation is safe.
 const BASE = import.meta.env.BASE_URL;
 const SPLAT_URL = `${BASE}SplatGarden_PC.splat`;
-// (The optional mobile-only variant + SPLAT_MOBILE_URL constant were
-// removed alongside SplatGarden_Mobile.splat to free LFS bandwidth.
-// No code path was loading it after the mobile-variant fork was retired
-// per the "no reason to sacrifice detail" user direction. Re-add the
-// constant + the asset under /public if a future explicit-pick UI ever
-// re-introduces a smaller asset for metered connections.)
+// Mobile variant — same 3 M splats, just re-encoded as SPZ (Niantic's
+// open-sourced compressed format). SPZ typically lands at 30-40% of the
+// uncompressed .splat size with no visible quality loss, so phones over
+// a metered link feel the difference but the showcase still ships every
+// splat the desktop sees. NOT a downsampled "mobile-quality" variant —
+// that fork was retired ("no reason to sacrifice detail") and this slot
+// stays purely about bandwidth, not fidelity.
+//
+// Shipping is OPTIONAL. If the .spz file is not present in /public the
+// HEAD probe in pickSplatUrl() below 404s and the loader gracefully
+// falls back to SPLAT_URL — every device still works, only the mobile
+// bandwidth win goes unrealised. Generate the .spz from the same
+// SplatGarden_PC.splat using either:
+//   • Niantic's open-source SPZ CLI (https://github.com/nianticlabs/spz)
+//   • PlayCanvas SuperSplat → File → Export → SPZ
+const SPLAT_MOBILE_URL = `${BASE}SplatGarden_PC.spz`;
+
+// Resolve the splat URL to load. Phones get a HEAD probe on the SPZ
+// variant first; if it 404s we fall back to the full .splat. The probe
+// adds ~50-200 ms but only runs on IS_PHONE, and it's lost in the noise
+// of the multi-second splat download that follows. Desktop / iPad skip
+// the probe entirely (the "iPad === PC" project direction means tablet
+// users get the same full-fidelity asset as desktop).
+async function pickSplatUrl() {
+  if (!IS_PHONE) return SPLAT_URL;
+  try {
+    const r = await fetch(SPLAT_MOBILE_URL, { method: "HEAD" });
+    if (r.ok) {
+      console.info(`[splat] phone variant available, using ${SPLAT_MOBILE_URL}`);
+      return SPLAT_MOBILE_URL;
+    }
+  } catch { /* network / CORS — fall through to default */ }
+  console.info(`[splat] phone variant unavailable, falling back to ${SPLAT_URL}`);
+  return SPLAT_URL;
+}
 
 // Map a URL's extension to Spark's SplatFileType enum value. Used so
 // the mobile variant can be either .splat or .spz / .ply / .ksplat
@@ -195,7 +224,7 @@ const statusEl     = document.getElementById("status");
 // the helper is wired.
 shareBtn?.addEventListener("click", () => {
   if (typeof window.__copyViewLink === "function") window.__copyViewLink();
-  else statusEl.textContent = "Scene still loading — try again in a moment";
+  else statusEl.textContent = "Scene still loading, try again in a moment";
 });
 const handToggle   = document.getElementById("hand-toggle");
 const handVideo    = document.getElementById("hand-video");
@@ -372,9 +401,20 @@ const PERF_PROFILES = {
   balanced: { dprCap: null, bloom: false, particles: false },   // null = device-default
   max:      { dprCap: 3.0,  bloom: true,  particles: true  },
 };
+// Default profile is phone-aware. IS_PHONE devices start in "battery"
+// so first-time mobile visitors get DPR 1.0 + no bloom + no particles
+// out of the box (their hardware fights the fan otherwise, and a 3M
+// splat at full retina + bloom on a budget Android = single-digit FPS).
+// Desktop / iPad keep the original "balanced" default so the showcase
+// still lands at the intended fidelity on capable hardware. User can
+// always opt into Max Quality through the Performance dropdown; the
+// override persists across sessions via the same localStorage key, so
+// repeat phone visitors who explicitly bumped past Battery don't get
+// snapped back to it on every page load.
+const _perfDefault = IS_PHONE ? "battery" : "balanced";
 let _perfPref;
-try { _perfPref = localStorage.getItem(PERF_PREF_KEY) || "balanced"; } catch { _perfPref = "balanced"; }
-if (!(_perfPref in PERF_PROFILES)) _perfPref = "balanced";
+try { _perfPref = localStorage.getItem(PERF_PREF_KEY) || _perfDefault; } catch { _perfPref = _perfDefault; }
+if (!(_perfPref in PERF_PROFILES)) _perfPref = _perfDefault;
 const _perfProfile = PERF_PROFILES[_perfPref];
 
 const _hostDpr    = window.devicePixelRatio || 1;
@@ -843,15 +883,13 @@ async function urlExists(url) {
 async function loadSplat() {
   setLoading("Fetching splat…");
 
-  // Quality-first asset selection — every device gets the full PC
-  // asset (SplatGarden_PC.splat, ~3 M splats). The old mobile-variant
-  // fork + maxSplats cap was removed per user request: the download
-  // time wasn't materially shorter on touch (both files travel the
-  // same connection, both are tens of MB), but the detail loss WAS
-  // perceptible, so the optimization was net-negative. The Mobile
-  // variant file was also removed from /public to save LFS bandwidth.
-  const assetUrl  = SPLAT_URL;
-  const assetType = "splat";
+  // Asset selection — every device sees the full 3 M splats. On phones
+  // we additionally probe for an SPZ-compressed variant (same data, ~3×
+  // smaller payload); see pickSplatUrl() above. If the .spz file is not
+  // shipped, phones gracefully fall back to the desktop .splat. Detail
+  // loss is zero either way — only the bytes-over-the-wire differ.
+  const assetUrl  = await pickSplatUrl();
+  const assetType = splatTypeFromUrl(assetUrl);
 
   // Stream-fetch so the splash bar shows a real %. A 96 MB asset over a
   // 4G link takes 7+ seconds; the original indeterminate slide animation
@@ -1027,7 +1065,7 @@ async function loadSplat() {
   `;
   replayBtn.addEventListener("click", () => {
     if (typeof window.__replayIntro === "function") window.__replayIntro();
-    else statusEl.textContent = "Cinematic still loading — try again in a moment";
+    else statusEl.textContent = "Cinematic still loading, try again in a moment";
   });
 
   // Insert both global-action pills into the lil-gui title row, in order:
@@ -1266,12 +1304,12 @@ async function loadSplat() {
     const url  = location.origin + location.pathname + location.search + hash;
     try {
       await navigator.clipboard.writeText(url);
-      statusEl.textContent = "Link copied — paste to share this exact viewpoint";
+      statusEl.textContent = "Link copied. Paste to share this exact viewpoint";
     } catch {
       // Fallback for non-secure contexts or denied clipboard permission:
       // shove it in the address bar so the user can copy manually.
       history.replaceState(null, "", hash);
-      statusEl.textContent = "Link updated in address bar — copy from there";
+      statusEl.textContent = "Link updated in address bar. Copy from there";
     }
   };
 
@@ -1651,7 +1689,7 @@ async function loadSplat() {
       scene.environment = hdrTex;
       hdrParams.hdr     = true;
       hdrCtrl.updateDisplay();
-      hdrStatusEl.textContent = `Loaded — ${file.name}`;
+      hdrStatusEl.textContent = `Loaded: ${file.name}`;
       setTimeout(hideHdrDrop, 600);
     } catch (err) {
       hdrStatusEl.textContent = "Decode failed: " + (err?.message ?? err);
@@ -1736,7 +1774,7 @@ async function loadSplat() {
     try {
       const buf = await file.arrayBuffer();
       await replaceSplatMesh({ fileBytes: new Uint8Array(buf), fileName: file.name });
-      splatStatusEl.textContent = `Loaded — ${file.name}`;
+      splatStatusEl.textContent = `Loaded: ${file.name}`;
       setTimeout(hideSplatDrop, 600);
     } catch (err) {
       splatStatusEl.textContent = "Load failed: " + (err?.message ?? err);
@@ -1821,8 +1859,8 @@ async function loadSplat() {
   camTimeline.innerHTML = `
     <div class="ct-row">
       <span class="ct-label">CAMERA MOVE</span>
-      <span class="ct-time">— / —</span>
-      <span class="ct-frame">— / —</span>
+      <span class="ct-time">0 / 0</span>
+      <span class="ct-frame">0 / 0</span>
     </div>
     <div class="ct-bar"><div class="ct-fill"></div></div>
   `;
@@ -2574,7 +2612,7 @@ async function loadSplat() {
   const voxelSeedActions = {
     seedFromVoxels: () => {
       if (!voxelizer || !voxelizer.cellPositions || !voxelizer.cellCount) {
-        statusEl.textContent = "Voxel layer has no data yet — enable Voxel layer first";
+        statusEl.textContent = "Voxel layer has no data yet. Enable Voxel layer first";
         return;
       }
       // 10% margin around voxel AABB so drift doesn't respawn at boundary.
@@ -2609,7 +2647,7 @@ async function loadSplat() {
       gui.controllersRecursive().forEach(c => {
         if (c.property === "enable" && c.object === gpParticleParams) c.updateDisplay();
       });
-      statusEl.textContent = `Seeded ${gpgpuParticles.N} particles from ${voxelizer.cellCount} voxels — voxel layer hidden`;
+      statusEl.textContent = `Seeded ${gpgpuParticles.N} particles from ${voxelizer.cellCount} voxels. Voxel layer hidden.`;
     },
   };
   fGpParticles.add(voxelSeedActions, "seedFromVoxels").name("Seed from USD Voxels");

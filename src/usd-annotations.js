@@ -91,27 +91,27 @@ const ANNOTATIONS = {
     eyebrow: "3DGS · NATIVE",
     title:   "Splat",
     hero:    "Gaussian",
-    intro:   "What you're seeing is the real splat — millions of tiny coloured Gaussians, the format the scene was actually trained as.",
+    intro:   "What you're seeing is the real splat. These are millions of tiny coloured Gaussians, the format the scene was actually trained as.",
     facts: [
       { icon: "gaussian", k: "Primitive",  v: "Anisotropic 3D Gaussian" },
       { icon: "palette",  k: "Per-splat",  v: "Pos · Scale · Rot · SH · α" },
       { icon: "train",    k: "Trainers",   v: "Postshot ‖ Lichtfeld" },
       { icon: "stack",    k: "Capture",    v: "~990 camera frames" },
     ],
-    body:    "This is the home format. Every other render in the panel is the same 3M-point cloud re-expressed as something USD-friendly — useful for pipelines that don't read raw splats yet.",
+    body:    "This is the home format. Every other render in the panel is the same 3M-point cloud re-expressed as something USD-friendly, which is useful for pipelines that don't read raw splats yet.",
   },
   quad: {
     eyebrow: "USD · POINT INSTANCER",
     title:   "Billboard",
     hero:    "Plane",
-    intro:   "We swap each splat for a tiny flat card that always faces you — cheap, sharp, and reads as a sticker-style render.",
+    intro:   "We swap each splat for a tiny flat card that always faces you. It is cheap, sharp, and reads as a sticker-style render.",
     facts: [
       { icon: "plane",    k: "Schema",    v: "PointInstancer" },
       { icon: "plane",    k: "Prototype", v: "UsdGeomPlane" },
       { icon: "instance", k: "Subforms",  v: "Quad · Circle" },
       { icon: "palette",  k: "Colour",    v: "primvars:displayColor" },
     ],
-    body:    "Same point cloud, USD-native. Quad keeps the full square; Circle clips each card to a soft disc so the cloud reads as round impostors — a halfway look between flat decals and full Gaussians.",
+    body:    "Same point cloud, USD-native. Quad keeps the full square; Circle clips each card to a soft disc so the cloud reads as round impostors, a halfway look between flat decals and full Gaussians.",
   },
   voxel: {
     eyebrow: "USD · POINT INSTANCER",
@@ -124,7 +124,7 @@ const ANNOTATIONS = {
       { icon: "instance", k: "Per-cell",   v: "Pos · Orient · Scale" },
       { icon: "palette",  k: "Aggregate",  v: "displayColor (cell mean)" },
     ],
-    body:    "The chunkiest of the three subforms — voxels are the easiest USD primitive to load into other DCCs, so this layer doubles as a friction-free hand-off format.",
+    body:    "The chunkiest of the three subforms. Voxels are the easiest USD primitive to load into other DCCs, so this layer doubles as a friction-free hand-off format.",
   },
 };
 

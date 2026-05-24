@@ -77,9 +77,9 @@ export class About {
           <div class="ab-eyebrow">Real-Time Visual + Simulation</div>
           <h2 class="ab-name">SplatGarden</h2>
           <p class="ab-blurb">
-            The project spans four pillars — <strong>AI Tools</strong>,
+            The project spans four pillars: <strong>AI Tools</strong>,
             <strong>3DGS</strong>, <strong>Simulation</strong>, and live
-            <strong>Interaction</strong> — under the theme
+            <strong>Interaction</strong>, all under the theme
             <em>Real-Time Visual and Simulation</em>. The team's presentation
             covers custom AI stylization tools, a newly designed browser
             viewer for experiencing 3DGS with hand-tracking interaction, the

@@ -73,6 +73,7 @@ export function renderEmbed(e) {
         <iframe
           src="${escapeHtml(e.src)}"
           title="${escapeHtml(e.title || e.label || "embedded video")}"
+          loading="lazy"
           allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
           referrerpolicy="strict-origin-when-cross-origin"
           allowfullscreen></iframe>
@@ -123,6 +124,7 @@ function renderProcessCardItem(item /* captionAbove unused — always below */) 
   const inner = isIframe
     ? `<iframe src="${escapeHtml(item.iframeSrc)}"
               title="${escapeHtml(item.alt || item.caption || "embedded video")}"
+              loading="lazy"
               allow="autoplay; fullscreen; picture-in-picture; clipboard-write; encrypted-media; web-share"
               referrerpolicy="strict-origin-when-cross-origin"
               allowfullscreen></iframe>`

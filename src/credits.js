@@ -142,7 +142,7 @@ export class Credits {
              sponsored, so the line refers to the model class, not a
              single machine. -->
         <div class="cr-hw-thanks">
-          Rendered on <strong>NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation Edition</strong> — sincere thanks to NVIDIA.
+          Rendered on <strong>NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation Edition</strong>. Sincere thanks to NVIDIA.
         </div>
       </div>
     `;

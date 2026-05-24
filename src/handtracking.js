@@ -1,4 +1,9 @@
-import { FilesetResolver, HandLandmarker } from "@mediapipe/tasks-vision";
+// MediaPipe is dynamically imported inside _ensureModel() so the main
+// bundle does not pay for ~hundreds of KB of WASM glue + landmarker
+// code until the user actually toggles hand tracking on. Combined with
+// the IS_PHONE Battery default (hand tracking off on phones out of the
+// box), this means mobile first-paint never downloads the MediaPipe
+// chunk at all unless the visitor explicitly opts in.
 
 // ---------------------------------------------------------------------------
 // HandController
@@ -142,6 +147,12 @@ export class HandController {
   async _ensureModel() {
     if (this.landmarker) return;
     this.setStatus("Loading hand model…");
+    // Dynamic import — first call fetches the MediaPipe chunk
+    // (~hundreds of KB) on demand. Vite/Rollup code-splits this into
+    // its own JS file via the manualChunks config in vite.config.js,
+    // so the main bundle never includes MediaPipe and visitors who
+    // never enable hand tracking never download it.
+    const { FilesetResolver, HandLandmarker } = await import("@mediapipe/tasks-vision");
     const vision = await FilesetResolver.forVisionTasks(WASM_CDN);
     this.landmarker = await HandLandmarker.createFromOptions(vision, {
       baseOptions: { modelAssetPath: MODEL_URL, delegate: "GPU" },

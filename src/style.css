@@ -1845,7 +1845,7 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   cursor: ew-resize;
 }
 .ts-compare .cmp-knob::before {
-  content: "â‡†";
+  content: "⇆";
   position: absolute;
   inset: 0;
   display: flex;
@@ -3941,7 +3941,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   letter-spacing: 0.005em;
 }
 :is(.ah-card, .ts-rich) .ah-keypoints li::before {
-  content: "â€¢";
+  content: "•";
   position: absolute;
   left: 2px;
   top: 0;
@@ -4189,7 +4189,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   letter-spacing: 0.005em;
 }
 :is(.ah-card, .ts-rich) .ah-pc-points li::before {
-  content: "â€¢";
+  content: "•";
   position: absolute;
   left: 2px;
   top: 0;
@@ -4241,7 +4241,7 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   letter-spacing: 0.005em;
 }
 :is(.ah-card, .ts-rich) .ah-pc-group-points li::before {
-  content: "â€¢";
+  content: "•";
   position: absolute;
   left: 2px;
   top: 0;
@@ -7116,11 +7116,21 @@ body.mobile #mobile-studio-btn { display: none; }
     width: 100vw !important;
     max-width: 100vw !important;
   }
-  /* Credits â€” near-full width, capped height with internal scroll */
+  /* Credits — near-full width, capped height with internal scroll.
+     Reserve room for the floating mobile bottombar (64px capsule that
+     sits 14px above the viewport bottom plus env(safe-area-inset-bottom)
+     on home-indicator phones, total ~78px on iPhone SE / 13 mini and
+     ~112px on iPhone 14 Pro etc). Because the panel is centered, every
+     pixel cut from max-height removes equally from top and bottom, so
+     we subtract roughly twice the bar's vertical footprint plus a
+     breathing buffer. The previous rule (100vh - 96px) let the panel's
+     lower edge slip UNDER the bottombar capsule on the SE / 13 mini
+     viewport (375x667), hiding the last list rows behind the bar.
+     The new math leaves ~22px of clearance regardless of safe-area. */
   #credits {
     width: calc(100vw - 24px);
     max-width: calc(100vw - 24px);
-    max-height: calc(100vh - 96px);
+    max-height: calc(100vh - 200px - (env(safe-area-inset-bottom, 0px) * 2));
   }
   /* Loading splash text sizing */
   .loading-splash .ld-title { font-size: clamp(40px, 12vw, 64px) !important; }

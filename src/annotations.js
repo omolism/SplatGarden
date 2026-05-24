@@ -139,7 +139,7 @@ export class AnnotationManager {
     dot.type = "button";
     dot.className = "annotation";
     dot.textContent = String(this.viewpoints.length + 1);
-    dot.setAttribute("aria-label", `Viewpoint ${this.viewpoints.length + 1} — ${name}`);
+    dot.setAttribute("aria-label", `Viewpoint ${this.viewpoints.length + 1}: ${name}`);
     dot.addEventListener("click", (ev) => {
       ev.stopPropagation();
       this.flyTo(id);

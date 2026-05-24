@@ -252,14 +252,13 @@ public/
   Skybox.hdr
   colmap/
     images.bin                        # 990 training-camera poses
-    cameras.bin, points3D.bin
-  textures/
+    cameras.bin, frames.bin, rigs.bin
+  textures/                           # all textures shipped as .webp (q=85)
     landscape/                        # ground tile pipeline frames (Landscape hotspot)
-      Ground_Original.png             # before stylization
-      Ground_Stylized_BaseColor.png   # AI Texture Stylization output
-      Ground_Stylized_Height.png      # Houdini COPNET-authored height
-      Ground_Stylized_Normal.png      # NormalMap-Online conversion
-      LandScape_Stylized.png          # overall scene-stylization reference
+    daffodil/                         # Daffodil PBR set + AI Stylization A/B plates
+    grapehyacinth/                    # Grape Hyacinth bud / leaves A/B compare
+    daisy/                            # Additional Foliage / Daisy breakdown
+    vine/                             # Vine WPO blueprint screenshot
 
 src/
   main.js                             # scene, renderer, animation loop, hooks

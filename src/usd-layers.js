@@ -129,7 +129,7 @@ export class UsdLayers {
     this.el.innerHTML = `
       <div class="usd-hint">Toggle layers · stack freely</div>
       <ul class="usd-row-list"></ul>
-      <button class="usd-upload" title="Replace the primary splat — drop a .splat / .ply / .spz / .ksplat">⤓ Use My Own</button>
+      <button class="usd-upload" title="Replace the primary splat by dropping a .splat / .ply / .spz / .ksplat">⤓ Use My Own</button>
     `;
     mountEl.appendChild(this.el);
 
@@ -231,7 +231,7 @@ export class UsdLayers {
           <div class="usd-row-main">
             <button class="usd-toggle ${on ? "on" : ""}" data-act="toggle"
                     role="switch" aria-checked="${on}"
-                    title="${on ? "Hide" : "Show"} ${row.name} (layers stack — toggle any combination)">
+                    title="${on ? "Hide" : "Show"} ${row.name} (layers stack, so toggle any combination)">
               <span class="usd-toggle-knob"></span>
             </button>
             <span class="usd-name">${row.name}</span>

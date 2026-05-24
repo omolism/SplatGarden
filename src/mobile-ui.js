@@ -641,7 +641,7 @@ export class MobileUI {
     wrap.innerHTML = `
       <div class="ms-info-grid">
         <div class="ms-info-k">FPS</div>
-        <div class="ms-info-v">${fps || "—"}</div>
+        <div class="ms-info-v">${fps || "…"}</div>
         <div class="ms-info-k">Splats</div>
         <div class="ms-info-v">${splatCount.toLocaleString()}</div>
         <div class="ms-info-k">Renderer</div>

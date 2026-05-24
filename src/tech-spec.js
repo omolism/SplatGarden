@@ -60,7 +60,7 @@ export const TECH_SPECS = [
         // view). Static text + commas remain literal so only the
         // numbers animate.
         output:    "≈ <span class=\"ticker\" data-target=\"3000000\" data-format=\"compact\">0</span> splats · <span class=\"ticker\" data-target=\"990\">0</span> capture frames · <span class=\"ticker\" data-target=\"16.67\" data-decimals=\"2\">0</span>s authored flythrough",
-        note:      "A Unreal-authored garden, captured at a multi-camera rig, reconstructed with COLMAP, trained in parallel by Postshot and Lichtfeld Studio, optimised with Houdini GSOP, and rendered in real time via Spark on Three.js + WebGL 2. The breakdown below walks the pipeline backwards — first the rendering primitive you're looking at right now, then the assets that produced it, then the R&D layer that authored those assets.",
+        note:      "A Unreal-authored garden, captured at a multi-camera rig, reconstructed with COLMAP, trained in parallel by Postshot and Lichtfeld Studio, optimised with Houdini GSOP, and rendered in real time via Spark on Three.js + WebGL 2. The breakdown below walks the pipeline backwards. It starts with the rendering primitive you're looking at right now, then the assets that produced it, then the R&D layer that authored those assets.",
       },
     ],
   },
@@ -69,7 +69,7 @@ export const TECH_SPECS = [
     section:   "3DGS",
     group:     "layer",
     layerNum:  3,
-    desc:      "Capturing the dressed Unreal scene and training it as a 3D Gaussian Splat. Postshot and Lichtfeld Studio run in parallel — two independent trainers we cross-compare to pick the cleaner result.",
+    desc:      "Capturing the dressed Unreal scene and training it as a 3D Gaussian Splat. Postshot and Lichtfeld Studio run in parallel as two independent trainers, and we cross-compare their results to pick the cleaner one.",
     toolchain: ["Multi-camera rig", "COLMAP", "Postshot", "Lichtfeld Studio", "Spark"],
     items: [
       {
@@ -80,7 +80,7 @@ export const TECH_SPECS = [
       {
         name:   "Capture",
         ref:    "Multi-camera capture rig",
-        note:   "The whole Unreal scene is photographed at a multi-camera array — every frame feeds the downstream pose-solver + trainers.",
+        note:   "The whole Unreal scene is photographed at a multi-camera array, and every frame feeds the downstream pose-solver and trainers.",
       },
       {
         name:   "Pose reconstruction",
@@ -105,12 +105,12 @@ export const TECH_SPECS = [
     section:   "Production",
     group:     "layer",
     layerNum:  2,
-    desc:      "Per-object authoring + Unreal scene assembly — everything that goes into the dressed scene before the camera turns on.",
+    desc:      "Per-object authoring plus Unreal scene assembly. Everything that goes into the dressed scene before the camera turns on.",
     toolchain: ["Houdini", "SpeedTree", "VAT bake", "Python · OSC", "Unreal Engine 5", "Perforce"],
     items: [
       {
         name: "Scene assembly",
-        ref:  "Unreal Engine 5 — every asset set-dressed into one scene",
+        ref:  "Unreal Engine 5 · every asset set-dressed into one scene",
         note: "Perforce-backed version control across artists. All set-dressed assets land here before the capture stage.",
       },
       // Landscape promoted from the end of this list to the second slot
@@ -145,9 +145,9 @@ export const TECH_SPECS = [
           "Unreal Engine 5",
         ],
         output:    "Stylized terrain · painterly base colour + Houdini COP-adjusted height + normal map",
-        note:      "Whole-scene base ground. Two materials (dirt + grass) each pass through the same AI stylization pipeline — original photographic texture + a chosen painterly style reference go in; ControlNet + IP-Adapter + AdaIN + SDXL produce a painterly base color out. Dirt is further refined in a Houdini COPNET to balance color and paint in scattered surface detail. Final terrain authored in Unreal Engine 5 and dressed into the scene before the 3DGS capture stage.",
+        note:      "Whole-scene base ground. Two materials (dirt and grass) each pass through the same AI stylization pipeline. The inputs are an original photographic texture plus a chosen painterly style reference, and the output is a painterly base color produced by ControlNet, IP-Adapter, AdaIN, and SDXL. Dirt is further refined in a Houdini COPNET to balance color and paint in scattered surface detail. Final terrain is authored in Unreal Engine 5 and dressed into the scene before the 3DGS capture stage.",
         embed: {
-          src:   "https://player.vimeo.com/video/1194203694?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
+          src:   "https://player.vimeo.com/video/1194203694?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
           label: "Final rendered landscape · in-scene",
           title: "Shot4B_MontyVersion_4.53_1",
           // True ultrawide — Vimeo's own embed markup ships at
@@ -172,7 +172,7 @@ export const TECH_SPECS = [
         // wiping between INPUT and OUTPUT in the compare row below.
         processCards: [
           {
-            eyebrow:     "01 — TEXTURE STYLIZATION",
+            eyebrow:     "01 · TEXTURE STYLIZATION",
             title:       "Painterly Ground Pipeline",
             description: "The whole-scene base ground passes through a stylized texture pipeline: photographic ground texture + chosen painterly style reference are fed into an AI stack (ControlNet edge-respecting · IP-Adapter style transfer · AdaIN color preservation · SDXL final generation), which produces the painterly base color. Dirt gets an extra Houdini COPNET pass to balance color and paint in surface detail.",
             // Hero plate is the in-scene final output (foliage-dressed
@@ -186,26 +186,26 @@ export const TECH_SPECS = [
             // public/ folder for now in case it's needed elsewhere.
             rows: [
               { layout: "single", items: [
-                { src: `${BASE}textures/landscape/landscape-final-output.png`, caption: "Final Output · stylized ground in-scene" },
+                { src: `${BASE}textures/landscape/landscape-final-output.webp`, caption: "Final Output · stylized ground in-scene" },
               ]},
             ],
           },
           {
-            eyebrow:     "02 — DIRT",
-            title:       "Dirt — Style Transfer + Houdini Refinement",
+            eyebrow:     "02 · DIRT",
+            title:       "Dirt · Style Transfer and Houdini Refinement",
             description: "Photographic dirt tile + a blue-toned painterly reference feed into the AI stack. Resulting base color goes through Houdini COPNET for color balance and detail painting.",
             rows: [
               // Inputs: original + style reference, both 1:1 squares.
               { layout: "pair", aspectRatio: "1 / 1", items: [
-                { src: `${BASE}textures/landscape/dirt-original.png`,  caption: "Original texture" },
-                { src: `${BASE}textures/landscape/dirt-reference.png`, caption: "Style reference" },
+                { src: `${BASE}textures/landscape/dirt-original.webp`,  caption: "Original texture" },
+                { src: `${BASE}textures/landscape/dirt-reference.webp`, caption: "Style reference" },
               ]},
               // A/B wipe between the photographic original and the
               // AI-stylized + COP-refined base color.
               { layout: "compare", items: [
                 {
-                  before: `${BASE}textures/landscape/dirt-original.png`,
-                  after:  `${BASE}textures/landscape/dirt-stylized-basecolor.png`,
+                  before: `${BASE}textures/landscape/dirt-original.webp`,
+                  after:  `${BASE}textures/landscape/dirt-stylized-basecolor.webp`,
                   labelA: "Before: Photographic dirt",
                   labelB: "After: AI-stylized + Houdini COP",
                 },
@@ -213,18 +213,18 @@ export const TECH_SPECS = [
             ],
           },
           {
-            eyebrow:     "03 — GRASS",
-            title:       "Grass — Style Transfer",
+            eyebrow:     "03 · GRASS",
+            title:       "Grass · Style Transfer",
             description: "Photographic grass tile + a warm-toned painterly reference feed into the same AI stack, producing the painterly grass base color used across the terrain.",
             rows: [
               { layout: "pair", aspectRatio: "1 / 1", items: [
-                { src: `${BASE}textures/landscape/grass-original.png`,  caption: "Original texture" },
-                { src: `${BASE}textures/landscape/grass-reference.png`, caption: "Style reference" },
+                { src: `${BASE}textures/landscape/grass-original.webp`,  caption: "Original texture" },
+                { src: `${BASE}textures/landscape/grass-reference.webp`, caption: "Style reference" },
               ]},
               { layout: "compare", items: [
                 {
-                  before: `${BASE}textures/landscape/grass-original.png`,
-                  after:  `${BASE}textures/landscape/grass-stylized-basecolor.png`,
+                  before: `${BASE}textures/landscape/grass-original.webp`,
+                  after:  `${BASE}textures/landscape/grass-stylized-basecolor.webp`,
                   labelA: "Before: Photographic grass",
                   labelB: "After: AI-stylized",
                 },
@@ -239,7 +239,101 @@ export const TECH_SPECS = [
           { key: "ControlNet (Canny or Tile)",     value: "Detects edge lines from the sketch and forces the generator to respect those shapes during generation." },
           { key: "IP-Adapter",                     value: "Analyzes the reference image and transfers its style, color, and mood to the output." },
           { key: "AdaIN (Adaptive Instance Norm)", value: "Transfers just colors from the original texture directly to the final output to preserve the original palette." },
-          { key: "Stable Diffusion XL (SDXL)",     value: "The core image generation AI — responsible for synthesizing the final painterly output." },
+          { key: "Stable Diffusion XL (SDXL)",     value: "The core image generation AI, responsible for synthesizing the final painterly output." },
+        ],
+      },
+      // Particles — sits adjacent to Landscape because both are
+      // garden-WIDE ambient passes (Landscape is the static base
+      // ground, Particles is the moving FLIP fluid pass that drifts
+      // across the dressed scene). Reading the two back-to-back gives
+      // the observer the "ambient layer" of the production stack
+      // before drilling into per-asset architecture (Gazebo, Statue,
+      // Vine, foliage). worldPos taken directly from the artist tool's
+      // position widget — same convention as Landscape and the rest
+      // of the Production hotspots; AssetHoverManager flips Z
+      // internally to match Three.js's -Z-forward camera.
+      {
+        name:      "Particles",
+        location:  "Garden-wide FX",
+        worldPos:  [-1.871, -0.653, 0.483],
+        // Keywords surface the Houdini FLIP stack — fluid sim with a
+        // custom velocity field driven from image-traced curves, plus
+        // VEX wrangling for the post-solve color transfer.
+        toolchain: [
+          "Houdini",
+          "Particle Simulation",
+          "FLIP Simulation",
+          "Fluid",
+          "VEX",
+        ],
+        output:    "Houdini FLIP particle simulation · final pass rendered in Karma",
+        note:      "Garden-wide particle pass. A contained Houdini FLIP simulation whose velocity field is art-directed by image-traced guide curves, then colour-transferred onto the particles post-solve. The final pass is rendered in Karma alongside the dressed garden.",
+        // Step-style processCards mirroring the Gazebo / Statue shape:
+        //   01 — FINAL RENDER hero playback (Karma)
+        //   02 — BREAKDOWN    one composite Vimeo clip stacking
+        //                     Volume Trail (top) + Volume velocity
+        //                     (bottom) — the source video is already
+        //                     a 2-up portrait composite at 960×1080,
+        //                     so it goes in as a single layout with
+        //                     the literal 960/1080 aspect (vimeo-fit
+        //                     refines once the Player API confirms).
+        //   03 — KEY PROCESS  grouped bullets (only one group:
+        //                     "Houdini Simulation") describing the
+        //                     contained FLIP setup. Inline **bold**
+        //                     surfaces the named Houdini nodes /
+        //                     concepts (FLIP, Volume Velocity from
+        //                     Curves, Attribute Copy) within the
+        //                     bullet prose.
+        processCards: [
+          {
+            eyebrow:     "01 · FINAL RENDER",
+            title:       "Particle Render in Karma",
+            description: "Final pass of the FLIP particle simulation rendered against the dressed garden scene in Karma.",
+            rows: [
+              { layout: "single", items: [{
+                iframeSrc:   "https://player.vimeo.com/video/1195047170?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
+                caption:     "Particle Render in Karma",
+                alt:         "Garden FLIP particle simulation final render in Karma",
+                aspectRatio: "16 / 9",
+              }]},
+            ],
+          },
+          {
+            eyebrow:     "02 · BREAKDOWN",
+            title:       "Volume Trail · Volume Velocity",
+            description: "A two-pass breakdown. Volume Trail (top) visualises the FLIP velocity field, and Volume velocity (bottom) shows the volume-velocity-from-curves field driving the sim.",
+            rows: [
+              { layout: "single", items: [{
+                iframeSrc:   "https://player.vimeo.com/video/1195047168?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
+                caption:     "Volume Trail · Volume velocity",
+                alt:         "FLIP breakdown · Volume Trail velocity field plus Volume velocity from curves",
+                // Source clip is a 2-up portrait composite at 960×1080
+                // (Volume Trail stacked above Volume velocity).
+                aspectRatio: "960 / 1080",
+              }]},
+            ],
+          },
+          {
+            eyebrow:     "03 · KEY PROCESS",
+            title:       "Houdini Simulation Setup",
+            description: "How the garden FLIP particle sim is built up step by step in Houdini.",
+            // Single group — matches the reference design where all
+            // three bullets live under one "Houdini Simulation"
+            // subheading. The Gazebo pattern with multiple groups
+            // (Simulation Mask + Velocity from Pyro) doesn't apply
+            // here because the FLIP pipeline reads as one coherent
+            // sequence rather than two parallel sub-systems.
+            groups: [
+              {
+                heading: "Houdini Simulation",
+                items: [
+                  "Designed a contained **FLIP** particle sim, tuning collision and dissipation for partial confinement within a sealed boundary.",
+                  "Drove the FLIP velocity field via **Volume Velocity from Curves**, using image-traced guide curves to art-direct the flow.",
+                  "Transferred color attributes onto simulated particles post-solve using **Attribute Copy.**",
+                ],
+              },
+            ],
+          },
         ],
       },
       {
@@ -264,7 +358,7 @@ export const TECH_SPECS = [
           "Lichtfeld Studio",
         ],
         output:    "3DGS centerpiece · particle + pyro driven splat dynamics",
-        note:      "The garden's central architecture. Authored in Houdini as a 3DGS simulation — particle + pyro sims drive splat dynamics via VEX expressions and the Axiom solver, then the resulting Gaussian Splat is dressed into the Unreal scene before the Lichtfeld Studio capture stage.",
+        note:      "The garden's central architecture. Authored in Houdini as a 3DGS simulation. Particle and pyro sims drive splat dynamics via VEX expressions and the Axiom solver, then the resulting Gaussian Splat is dressed into the Unreal scene before the Lichtfeld Studio capture stage.",
         // Step-style process cards — three numbered sections:
         //   01 Final Render — hero playback of the simulated gazebo
         //   02 Breakdown — multi-panel walkthrough of the Houdini graph
@@ -275,33 +369,33 @@ export const TECH_SPECS = [
         // hint, vimeo-fit.js refines once the Player API reports back.
         processCards: [
           {
-            eyebrow:     "01 — FINAL RENDER",
+            eyebrow:     "01 · FINAL RENDER",
             title:       "Gazebo · 3DGS Simulation",
             description: "Particle + pyro simulation drives splat dynamics in Houdini, baked and dressed into the Unreal scene for the Lichtfeld Studio capture.",
             rows: [
               { layout: "single", items: [{
-                iframeSrc:   "https://player.vimeo.com/video/1194895698?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
-                caption:     "Final render — particle FX on the gazebo",
+                iframeSrc:   "https://player.vimeo.com/video/1194895698?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
+                caption:     "Final render · particle FX on the gazebo",
                 alt:         "Gazebo final render with particle and pyro simulation",
                 aspectRatio: "16 / 9",
               }]},
             ],
           },
           {
-            eyebrow:     "02 — BREAKDOWN",
+            eyebrow:     "02 · BREAKDOWN",
             title:       "Simulation Pipeline",
-            description: "Three-panel breakdown — mask source on the gazebo geometry, color transfer onto the Gaussian Splat, emission group creation from those masks.",
+            description: "A three-panel breakdown covering the mask source on the gazebo geometry, the color transfer onto the Gaussian Splat, and the emission group creation from those masks.",
             rows: [
               { layout: "single", items: [{
-                iframeSrc:   "https://player.vimeo.com/video/1194895699?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
+                iframeSrc:   "https://player.vimeo.com/video/1194895699?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
                 caption:     "Mask source · color transfer · emission group",
-                alt:         "Gazebo simulation breakdown — Houdini graph walkthrough",
+                alt:         "Gazebo simulation breakdown · Houdini graph walkthrough",
                 aspectRatio: "16 / 9",
               }]},
             ],
           },
           {
-            eyebrow:     "03 — KEY PROCESS",
+            eyebrow:     "03 · KEY PROCESS",
             title:       "Houdini Simulation Setup",
             description: "How the gazebo's flower-growth FX is built up step by step in Houdini.",
             // Grouped bullets — each subheading carries its own
@@ -313,7 +407,7 @@ export const TECH_SPECS = [
               {
                 heading: "Simulation Mask",
                 items: [
-                  "Apply **Attribute Transfer node** — transfer color attribute (@Cd) from the source to the main object (the gazebo).",
+                  "Apply **Attribute Transfer node** to transfer color attribute (@Cd) from the source to the main object (the gazebo).",
                   "Group points based on masks to limit the area of particle emission.",
                 ],
               },
@@ -351,19 +445,19 @@ export const TECH_SPECS = [
         // MediaPipe interaction context (which the static images
         // can't show). Per the audit: trimmed from the longer
         // duplicate that restated the section descriptions.
-        note:      "Left-hand pinch in the live MediaPipe session scrubs the VAT playback during the shoot — the statue's animation responds to the operator's gesture in real time.",
+        note:      "Left-hand pinch in the live MediaPipe session scrubs the VAT playback during the shoot, so the statue's animation responds to the operator's gesture in real time.",
         // Step-style process cards — two sections matching the user
         // reference design. Both videos are user-provided Vimeo URLs.
         // aspectRatio is the first-paint hint; vimeo-fit.js refines to
         // the clip's actual ratio once the Vimeo Player API reports back.
         processCards: [
           {
-            eyebrow:     "01 — FINAL RESULT",
-            title:       "Unreal Engine 5 — VAT",
-            description: "A statue animation produced through a particle-sprite VAT pipeline — pre-baking simulation data into textures for lightweight, GPU-driven playback at runtime.",
+            eyebrow:     "01 · FINAL RESULT",
+            title:       "Unreal Engine 5 · VAT",
+            description: "A statue animation produced through a particle-sprite VAT pipeline that pre-bakes simulation data into textures for lightweight, GPU-driven playback at runtime.",
             rows: [
               { layout: "single", items: [{
-                iframeSrc:   "https://player.vimeo.com/video/1194884976?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
+                iframeSrc:   "https://player.vimeo.com/video/1194884976?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
                 caption:     "Statue · UE5 VAT playback",
                 alt:         "Statue VAT animation playing in Unreal Engine 5",
                 aspectRatio: "4 / 3",
@@ -371,12 +465,12 @@ export const TECH_SPECS = [
             ],
           },
           {
-            eyebrow:     "02 — HOUDINI SIMULATION",
-            title:       "Houdini — Gaussian Splat",
+            eyebrow:     "02 · HOUDINI SIMULATION",
+            title:       "Houdini · Gaussian Splat",
             description: "Animated Gaussian Splat with particle and pyro simulation, then rendered with V-RAY in Houdini.",
             rows: [
               { layout: "single", items: [{
-                iframeSrc:   "https://player.vimeo.com/video/1194884977?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
+                iframeSrc:   "https://player.vimeo.com/video/1194884977?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
                 caption:     "Houdini particle + pyro sim · 3DGS render",
                 alt:         "Statue Houdini Gaussian Splat simulation, V-RAY render",
                 aspectRatio: "16 / 9",
@@ -387,7 +481,7 @@ export const TECH_SPECS = [
         // Citation for the source statue model used as the base mesh
         // before the particle/pyro sim. Renders in the existing small
         // mono footer slot at the bottom of the asset card.
-        source: "Statue: Leartes Studios — Roman Statues Pack Vol 1 (cosmos.leartesstudios.com/environments/roman-statues-pack-vol1)",
+        source: "Statue: Leartes Studios, Roman Statues Pack Vol 1 (cosmos.leartesstudios.com/environments/roman-statues-pack-vol1)",
       },
       {
         name:      "Vine",
@@ -409,7 +503,7 @@ export const TECH_SPECS = [
         // intro. processCards render below it (the asset-hover.js order
         // was moved so embeds come BEFORE processCards).
         embed: {
-          src:   "https://player.vimeo.com/video/1194222092?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
+          src:   "https://player.vimeo.com/video/1194222092?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
           label: "Vine growth · Unreal MG + WPO shader",
           title: "Shot4B_VineAnimation",
           // The Vimeo embed markup ships at padding-top:75% (4:3) but
@@ -429,7 +523,7 @@ export const TECH_SPECS = [
         // keyPoints at the bottom of the card.
         processCards: [
           {
-            eyebrow:     "01 — FINAL RESULT IN THE SCENE",
+            eyebrow:     "01 · FINAL RESULT IN THE SCENE",
             title:       "Procedural Vine on the Gazebo",
             description: "By combining Unreal Engine's Motion Design plugin with the workflow from the Growing Roots with WPO tutorial, I developed a procedural vine system with controllable growth animation. The growth behavior is driven through Blueprint parameters, enabling interactive control and real-time triggering within the scene.",
             rows: [
@@ -439,12 +533,12 @@ export const TECH_SPECS = [
             ],
           },
           {
-            eyebrow:     "02 — WPO DYNAMIC MATERIAL BLUEPRINT",
-            title:       "Unreal Material — Growth Controls",
+            eyebrow:     "02 · WPO DYNAMIC MATERIAL BLUEPRINT",
+            title:       "Unreal Material · Growth Controls",
             description: "A single Unreal material drives the entire growth animation. The five inputs below combine into one interactive growth workflow that Blueprint can drive at runtime.",
             rows: [
               { layout: "single", items: [
-                { src: `${BASE}textures/vine/vine-material-blueprint.png`, caption: "M_VineGrowth — material blueprint" },
+                { src: `${BASE}textures/vine/vine-material-blueprint.webp`, caption: "M_VineGrowth · material blueprint" },
               ]},
             ],
             points: [
@@ -456,9 +550,9 @@ export const TECH_SPECS = [
             ],
           },
           {
-            eyebrow:     "03 — PLANT GROW ON THE VINE",
+            eyebrow:     "03 · PLANT GROW ON THE VINE",
             title:       "Motion Designer Cloner + Effectors",
-            description: "By using the Motion Designer plugin's Cloner component, assets (small plants, blooms) are distributed onto a specific Static Mesh surface and animated with controllable growth behavior. Adding more assets and Cloner components makes the vine visually richer and more organic. An Effector then controls both the transforms and the growth animation of the cloned assets — when driven through Sequencer or Blueprint, it creates a directional growth effect based on movement.",
+            description: "By using the Motion Designer plugin's Cloner component, assets (small plants, blooms) are distributed onto a specific Static Mesh surface and animated with controllable growth behavior. Adding more assets and Cloner components makes the vine visually richer and more organic. An Effector then controls both the transforms and the growth animation of the cloned assets, and when driven through Sequencer or Blueprint it creates a directional growth effect based on movement.",
             // Side-by-side equal-height pair (16:9 each) — the two
             // diagrams read as a related diptych: STEP 1 distribution
             // → STEP 2 control. Original images were stacked and ate
@@ -478,9 +572,9 @@ export const TECH_SPECS = [
             rows: [
               { layout: "pair", aspectRatio: "16 / 9", items: [
                 { src: `${BASE}textures/vine/vine-assets-static-mesh.jpg`,
-                  caption: "Step 1 — Cloner distributes bloom assets onto the static mesh" },
+                  caption: "Step 1 · Cloner distributes bloom assets onto the static mesh" },
                 { src: `${BASE}textures/vine/vine-cloner-effector.jpg`,
-                  caption: "Step 2 — plane + sphere effectors shape scale and density" },
+                  caption: "Step 2 · plane and sphere effectors shape scale and density" },
               ]},
             ],
           },
@@ -491,7 +585,7 @@ export const TECH_SPECS = [
         // from the verbatim APA-style reference — the previous full
         // citation wrapped to 2 lines in the mono footer and looked
         // overweight against the rest of the footer rows (Output / Pos).
-        source: "tharlevfx — Growing Roots with WPO (YouTube · KZX0kHSfD78)",
+        source: "tharlevfx · Growing Roots with WPO (YouTube · KZX0kHSfD78)",
       },
       {
         name:      "Daffodil",
@@ -506,7 +600,7 @@ export const TECH_SPECS = [
         // in asset-hover.js / tech-spec.js, so the new Houdini Simulation
         // + Texturing process cards slot in BELOW this video.
         embed: {
-          src:   "https://player.vimeo.com/video/1191203670?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
+          src:   "https://player.vimeo.com/video/1191203670?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
           label: "VAT + OSC interaction",
           title: "VAT",
         },
@@ -518,7 +612,7 @@ export const TECH_SPECS = [
         //   03 PBR Pipeline — full PBR map set
         processCards: [
           {
-            eyebrow:     "01 — HOUDINI SIMULATION",
+            eyebrow:     "01 · HOUDINI SIMULATION",
             title:       "Procedural Growth Animation",
             description: "In Houdini, KineFX and Vellum were used to create a natural, organic growth animation for the daffodil, preparing it for interaction.",
             rows: [
@@ -529,12 +623,12 @@ export const TECH_SPECS = [
               // at narrow widths instead of stacking).
               { layout: "pair", aspectRatio: "16 / 9", items: [
                 {
-                  iframeSrc: "https://player.vimeo.com/video/1194883065?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
+                  iframeSrc: "https://player.vimeo.com/video/1194883065?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
                   caption: "Close up Stamen",
                   alt: "Daffodil close-up stamen Houdini simulation",
                 },
                 {
-                  iframeSrc: "https://player.vimeo.com/video/1194883066?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
+                  iframeSrc: "https://player.vimeo.com/video/1194883066?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
                   caption: "Daffodil Animation",
                   alt: "Daffodil full growth Houdini simulation",
                 },
@@ -548,7 +642,7 @@ export const TECH_SPECS = [
             // read as a long scroll). This section tells the
             // STYLIZATION story: Original → AI Stylized → final SP
             // refined render. PBR maps live in their own section below.
-            eyebrow:     "02 — STYLIZATION",
+            eyebrow:     "02 · STYLIZATION",
             title:       "AI Stylized + Substance Painter",
             description: "Diffuse runs through a two-stage stylization pipeline. Substance Painter paints the base color; the in-house AI texture stylization tool converts that base into a painterly version; then back into Substance Painter for refinement.",
             rows: [
@@ -556,17 +650,17 @@ export const TECH_SPECS = [
               // aspects differ (0.84 vs 0.72 portrait) so we lock both
               // cells to 3:4 — each crops a small sliver to align.
               { layout: "pair", aspectRatio: "3 / 4", items: [
-                { src: `${BASE}textures/daffodil/daffodil-original-render.png`, caption: "Original" },
-                { src: `${BASE}textures/daffodil/daffodil-ai-render.png`,       caption: "AI Stylized" },
+                { src: `${BASE}textures/daffodil/daffodil-original-render.webp`, caption: "Original" },
+                { src: `${BASE}textures/daffodil/daffodil-ai-render.webp`,       caption: "AI Stylized" },
               ]},
               // Base-color swatches — both natively 1:1, no crop.
               { layout: "pair", aspectRatio: "1 / 1", items: [
-                { src: `${BASE}textures/daffodil/daffodil-original-swatch.png`, caption: "Original base color" },
-                { src: `${BASE}textures/daffodil/daffodil-ai-swatch.png`,       caption: "AI stylized base color" },
+                { src: `${BASE}textures/daffodil/daffodil-original-swatch.webp`, caption: "Original base color" },
+                { src: `${BASE}textures/daffodil/daffodil-ai-swatch.webp`,       caption: "AI stylized base color" },
               ]},
               // Final Substance Painter refined daffodil — full width.
               { layout: "single", items: [
-                { src: `${BASE}textures/daffodil/daffodil-sp-final.png`, caption: "Substance Painter — final refined daffodil" },
+                { src: `${BASE}textures/daffodil/daffodil-sp-final.webp`, caption: "Substance Painter · final refined daffodil" },
               ]},
             ],
           },
@@ -578,7 +672,7 @@ export const TECH_SPECS = [
             // four channels at-a-glance reads better as a dedicated
             // section than tacked onto the end of the stylization
             // story.
-            eyebrow:     "03 — PBR PIPELINE",
+            eyebrow:     "03 · PBR PIPELINE",
             title:       "Full Map Set",
             description: "The refined daffodil ships with a complete PBR map set, all authored from the AI-stylized base color through Substance Painter.",
             rows: [
@@ -587,10 +681,10 @@ export const TECH_SPECS = [
               // style.css). object-fit: cover handles any minor aspect
               // drift between maps.
               { layout: "quad", aspectRatio: "1 / 1", items: [
-                { src: `${BASE}textures/daffodil/daffodil-basecolor.png`,   caption: "BaseColor" },
-                { src: `${BASE}textures/daffodil/daffodil-normal.png`,      caption: "Normal" },
-                { src: `${BASE}textures/daffodil/daffodil-orm.png`,         caption: "ORM" },
-                { src: `${BASE}textures/daffodil/daffodil-scattermask.png`, caption: "ScatterMask" },
+                { src: `${BASE}textures/daffodil/daffodil-basecolor.webp`,   caption: "BaseColor" },
+                { src: `${BASE}textures/daffodil/daffodil-normal.webp`,      caption: "Normal" },
+                { src: `${BASE}textures/daffodil/daffodil-orm.webp`,         caption: "ORM" },
+                { src: `${BASE}textures/daffodil/daffodil-scattermask.webp`, caption: "ScatterMask" },
               ]},
             ],
           },
@@ -620,31 +714,31 @@ export const TECH_SPECS = [
         // public/textures/grapehyacinth/.
         processCards: [
           {
-            eyebrow:     "01 — PROCEDURAL TOOL",
-            title:       "Houdini Tool — Procedural Grape Hyacinth",
+            eyebrow:     "01 · PROCEDURAL TOOL",
+            title:       "Houdini Tool · Procedural Grape Hyacinth",
             description: "A fully procedural setup that grows the flower from parameters. The distribution of florets along the primary stem follows the golden angle of 137.5°, consistent with the phyllotaxis observed in natural inflorescence structures.",
             rows: [
               { layout: "single", items: [{
-                iframeSrc: "https://player.vimeo.com/video/1193813472?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
-                caption: "Network & viewport — showcase",
-                alt: "Houdini procedural grape-hyacinth tool — network + viewport",
+                iframeSrc: "https://player.vimeo.com/video/1193813472?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
+                caption: "Network and viewport showcase",
+                alt: "Houdini procedural grape-hyacinth tool · network plus viewport",
               }]},
             ],
           },
           {
-            eyebrow:     "02 — ANIMATION",
+            eyebrow:     "02 · ANIMATION",
             title:       "Vertex Animation Texture (VAT)",
-            description: "A grape hyacinth animation produced through a VAT pipeline — baking vertex motion into textures for smooth real-time playback.",
+            description: "A grape hyacinth animation produced through a VAT pipeline that bakes vertex motion into textures for smooth real-time playback.",
             rows: [
               { layout: "single", items: [{
-                iframeSrc: "https://player.vimeo.com/video/1187001709?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=1&loop=1",
+                iframeSrc: "https://player.vimeo.com/video/1187001709?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
                 caption: "Preliminary VAT Animation",
-                alt: "Grape hyacinth VAT animation — preliminary playback",
+                alt: "Grape hyacinth VAT animation · preliminary playback",
               }]},
             ],
           },
           {
-            eyebrow:     "03 — TEXTURING",
+            eyebrow:     "03 · TEXTURING",
             title:       "AI-Stylized Textures",
             description: "Texture variations explored with AI to push stylization looks while keeping the procedural base intact. Drag each slider to wipe between the procedural base and the AI-stylized output.",
             // Two A/B compare-slider widgets on ONE row, side-by-side
@@ -659,14 +753,14 @@ export const TECH_SPECS = [
                 layout: "compare",
                 items: [
                   {
-                    before: `${BASE}textures/grapehyacinth/gh-bud-before.png`,
-                    after:  `${BASE}textures/grapehyacinth/gh-bud-after.png`,
+                    before: `${BASE}textures/grapehyacinth/gh-bud-before.webp`,
+                    after:  `${BASE}textures/grapehyacinth/gh-bud-after.webp`,
                     labelA: "Before: Procedural base",
                     labelB: "After: AI-stylized oil paint",
                   },
                   {
-                    before: `${BASE}textures/grapehyacinth/gh-leaves-before.png`,
-                    after:  `${BASE}textures/grapehyacinth/gh-leaves-after.png`,
+                    before: `${BASE}textures/grapehyacinth/gh-leaves-before.webp`,
+                    after:  `${BASE}textures/grapehyacinth/gh-leaves-after.webp`,
                     labelA: "Before: Procedural base",
                     labelB: "After: AI-stylized oil paint",
                   },
@@ -707,19 +801,19 @@ export const TECH_SPECS = [
         // hero plate no longer letterboxes inside a forced 1:1 plinth.
         processCards: [
           {
-            eyebrow: "01 — REAL-TIME READY FOLIAGE",
+            eyebrow: "01 · REAL-TIME READY FOLIAGE",
             title:   "Final In-scene Result",
-            description: "640-triangle scatter cards dressed in the painterly Substance diffuse, lit by the same HDRI as the rest of the garden. The whole foreground daisy band ships at interactive frame rate on a desktop GPU without any per-frame foliage update. Below — how the asset got from a 28,557-triangle SpeedTree source to this real-time-ready plate.",
+            description: "640-triangle scatter cards dressed in the painterly Substance diffuse, lit by the same HDRI as the rest of the garden. The whole foreground daisy band ships at interactive frame rate on a desktop GPU without any per-frame foliage update. Below is how the asset got from a 28,557-triangle SpeedTree source to this real-time-ready plate.",
             rows: [
               { layout: "single", items: [
-                { src: `${BASE}textures/daisy/daisy-final-result.jpg`, caption: null, alt: "Stylised daisy field — final in-scene render" },
+                { src: `${BASE}textures/daisy/daisy-final-result.jpg`, caption: null, alt: "Stylised daisy field · final in-scene render" },
               ]},
             ],
           },
           {
-            eyebrow: "02 — MODELING & OPTIMIZATION",
+            eyebrow: "02 · MODELING & OPTIMIZATION",
             title:   "Procedural Plant + Aggressive Decimation",
-            description: "Authored procedurally in SpeedTree — a single node graph drives the whole daisy with parametric trunk, leaf, and cap rules, so scaling the scatter density never reauthors geometry. Decimation pass takes each plant from 28,557 to 640 triangles, the threshold where the Unreal Engine 5 foliage scatter stays at a stable interactive frame rate without visible silhouette loss.",
+            description: "Authored procedurally in SpeedTree, where a single node graph drives the whole daisy with parametric trunk, leaf, and cap rules, so scaling the scatter density never reauthors geometry. A decimation pass then takes each plant from 28,557 to 640 triangles, the threshold where the Unreal Engine 5 foliage scatter stays at a stable interactive frame rate without visible silhouette loss.",
             rows: [
               // aspectRatio locks both pair cells to 16:9 so the
               // modeling shot (942×776, ~1.21) and the node graph
@@ -729,8 +823,8 @@ export const TECH_SPECS = [
               // top/bottom, the node graph crops a sliver left/right.
               // Per user direction: "用justify的形式在同一行，相同height".
               { layout: "pair", aspectRatio: "16 / 9", items: [
-                { src: `${BASE}textures/daisy/daisy-modeling-speedtree.png`,  caption: "Modeling in SpeedTree" },
-                { src: `${BASE}textures/daisy/daisy-speedtree-nodegraph.png`, caption: "Procedural plant node graph" },
+                { src: `${BASE}textures/daisy/daisy-modeling-speedtree.webp`,  caption: "Modeling in SpeedTree" },
+                { src: `${BASE}textures/daisy/daisy-speedtree-nodegraph.webp`, caption: "Procedural plant node graph" },
               ]},
               { layout: "single", items: [
                 { src: `${BASE}textures/daisy/daisy-optimization.jpg`, caption: "Triangle decimation · 28,557 → 640" },
@@ -738,12 +832,12 @@ export const TECH_SPECS = [
             ],
           },
           {
-            eyebrow: "03 — STYLIZATION",
+            eyebrow: "03 · STYLIZATION",
             title:   "Substance Designer Painterly Procedural",
             description: "Diffuse and leaf atlas built procedurally in Substance Designer, inspired by 80 Level's \"Breakdown: Making 3D Landscape Look Like Painting\". The same brush-stroke language used on the Landscape master texture carries through to the foliage so the daisy band reads as part of the painting, not as a photo-real prop dropped into a painterly scene.",
             rows: [
               { layout: "single", items: [
-                { src: `${BASE}textures/daisy/daisy-substance-nodegraph.png`, caption: "Stylized procedural node graph" },
+                { src: `${BASE}textures/daisy/daisy-substance-nodegraph.webp`, caption: "Stylized procedural node graph" },
               ]},
               // Both before/after are near-square sources (837×786 ≈ 1.06,
               // 1087×1081 ≈ 1.005). Locking pair to 1:1 forces exactly
@@ -751,13 +845,13 @@ export const TECH_SPECS = [
               // imperceptible, and resolves the slight before/after
               // height drift visible in natural-aspect mode.
               { layout: "pair", aspectRatio: "1 / 1", items: [
-                { src: `${BASE}textures/daisy/daisy-substance-before.png`, caption: "Before stylization" },
-                { src: `${BASE}textures/daisy/daisy-substance-after.png`,  caption: "After stylization" },
+                { src: `${BASE}textures/daisy/daisy-substance-before.webp`, caption: "Before stylization" },
+                { src: `${BASE}textures/daisy/daisy-substance-after.webp`,  caption: "After stylization" },
               ]},
             ],
           },
         ],
-        note:      "Real-time-ready foliage authored procedurally in SpeedTree, then aggressively decimated (28,557 → 640 triangles) so the scattered plant cards survive an interactive FPS budget without visible quality loss. A Substance Designer stylization graph produces the painterly diffuse + leaf atlas — the same procedural-painterly look as the Landscape texture pipeline, inspired by 80 Level's \"Making 3D Landscape Look Like Painting\" breakdown.",
+        note:      "Real-time-ready foliage authored procedurally in SpeedTree, then aggressively decimated (28,557 → 640 triangles) so the scattered plant cards survive an interactive FPS budget without visible quality loss. A Substance Designer stylization graph produces the painterly diffuse and leaf atlas. The look mirrors the Landscape texture pipeline and is inspired by 80 Level's \"Making 3D Landscape Look Like Painting\" breakdown.",
       },
       {
         name:      "Tree",
@@ -772,7 +866,7 @@ export const TECH_SPECS = [
     section:   "R&D",
     group:     "layer",
     layerNum:  1,
-    desc:      "Research + interop layer — the custom AI texture tool plus the OpenUSD spec for our alternative render subforms.",
+    desc:      "Research and interop layer. The custom AI texture tool plus the OpenUSD spec for our alternative render subforms.",
     toolchain: ["IP-Adapter", "ControlNet", "AdaIN", "Diffusion", "OpenUSD", "UsdGeomPointInstancer"],
     items: [
       {
@@ -780,7 +874,7 @@ export const TECH_SPECS = [
         ref:       "Diffusion-based painterly tool with controllable color preservation",
         toolchain: ["IP-Adapter", "ControlNet (Tile / Canny)", "AdaIN", "Diffusion"],
         output:    "Painterly textures · pre-approved palette preserved",
-        note:      "Custom tool driving the painterly look on Daffodil + Landscape. Two artist-selectable modes — Full Style Transfer (color + texture + tone from a reference) and Texture-Only Transfer (auto-grayscale + AdaIN, preserves the original color palette). Per-channel histogram matching + patch-wise AdaIN run post-generation to deterministically correct residual color drift. Artist knobs: ControlNet mode, ControlNet strength, IP-Adapter strength, inference steps, guidance scale. PyTorch 2.11 / CUDA 13.0 on an NVIDIA RTX PRO 6000 Blackwell (96 GB VRAM) — 4K in ≈ 20 s at 20 inference steps, driven from a Gradio interface.",
+        note:      "Custom tool driving the painterly look on Daffodil and Landscape. It exposes two artist-selectable modes: Full Style Transfer (color, texture, and tone from a reference) and Texture-Only Transfer (auto-grayscale plus AdaIN, preserves the original color palette). Per-channel histogram matching and patch-wise AdaIN run post-generation to deterministically correct residual color drift. Artist knobs include ControlNet mode, ControlNet strength, IP-Adapter strength, inference steps, and guidance scale. PyTorch 2.11 / CUDA 13.0 on an NVIDIA RTX PRO 6000 Blackwell (96 GB VRAM) delivers 4K in around 20 s at 20 inference steps, driven from a Gradio interface.",
         compare: {
           before: null,
           after:  null,
