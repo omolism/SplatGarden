@@ -890,14 +890,14 @@ export const TECH_SPECS = [
             description: "640-triangle scatter cards dressed in the painterly Substance diffuse, lit by the same HDRI as the rest of the garden. The whole foreground daisy band ships at interactive frame rate on a desktop GPU without any per-frame foliage update. Below is how the asset got from a 28,557-triangle SpeedTree source to this real-time-ready plate.",
             rows: [
               { layout: "single", items: [
-                { src: `${BASE}textures/daisy/daisy-final-result.jpg`, caption: null, alt: "Stylised daisy field · final in-scene render" },
+                { src: `${BASE}textures/daisy/daisy-final-result.webp`, caption: null, alt: "Stylised daisy field · final in-scene render" },
               ]},
             ],
           },
           {
             eyebrow: "02 · MODELING & OPTIMIZATION",
             title:   "Procedural Plant + Aggressive Decimation",
-            description: "Authored procedurally in SpeedTree, where a single node graph drives the whole daisy with parametric trunk, leaf, and cap rules, so scaling the scatter density never reauthors geometry. A decimation pass then takes each plant from 28,557 to 640 triangles, the threshold where the Unreal Engine 5 foliage scatter stays at a stable interactive frame rate without visible silhouette loss.",
+            description: "To maintain stable and usable FPS performance, all foliage assets need to be carefully optimized.",
             rows: [
               // aspectRatio locks both pair cells to 16:9 so the
               // modeling shot (942×776, ~1.21) and the node graph
@@ -918,7 +918,7 @@ export const TECH_SPECS = [
           {
             eyebrow: "03 · STYLIZATION",
             title:   "Substance Designer Painterly Procedural",
-            description: "Diffuse and leaf atlas built procedurally in Substance Designer, inspired by 80 Level's \"Breakdown: Making 3D Landscape Look Like Painting\". The same brush-stroke language used on the Landscape master texture carries through to the foliage so the daisy band reads as part of the painting, not as a photo-real prop dropped into a painterly scene.",
+            description: "This was also another exploration of stylized workflows in Substance Designer, inspired by the article \"Breakdown: Making 3D Landscape Look Like Painting\" from 80 Level, which demonstrates a procedural approach to creating stylized textures.",
             rows: [
               { layout: "single", items: [
                 { src: `${BASE}textures/daisy/daisy-substance-nodegraph.webp`, caption: "Stylized procedural node graph" },
