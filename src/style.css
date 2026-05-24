@@ -600,6 +600,16 @@ body.phone-device #scene-panel .hint { display: none; }
   body.phone-device #key-hints {
     max-width: 280px !important;
     bottom: 12px !important;
+    /* Cap the panel height so it never grows past the top of a short
+     * landscape viewport. Without this, the 4-section content stacked
+     * vertically was taller than the ~400 px height of a phone in
+     * landscape and the top half of the Quick Guide ended up off-screen
+     * (or behind the top hamburger / about pill). The cap leaves
+     * 12 px of breathing room at the top + bottom, and overflow-y:
+     * auto turns the body into a scroll surface inside the chrome. */
+    max-height: calc(100dvh - 24px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
   }
   /* Quick Guide on phone landscape â€” single-column flow (the new desktop
      layout already does this <700 px), tighter vertical rhythm so the
@@ -4983,6 +4993,16 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   display: flex;
   flex-direction: column;
   gap: 22px;
+  /* flex: 1 + min-height: 0 lets the body actually consume the
+   * available height inside #credits (which is a flex column with a
+   * capped max-height) AND shrink below its intrinsic content size so
+   * overflow-y: auto kicks in. Without min-height: 0 the body defaults
+   * to min-height: auto which is its content height, so on a short
+   * landscape phone viewport the body grew past the parent and got
+   * clipped by the parent's overflow: hidden — the user saw the
+   * Credits header and footer but the middle was invisible. */
+  flex: 1 1 auto;
+  min-height: 0;
 }
 #credits .cr-sec-title {
   font-family: var(--font-mono);
