@@ -419,6 +419,12 @@ export function createScanModifier() {
                 rgba.a *= alphaCurve * wispMul;
                 scales *= mix(1.0, 1.45, onEdge);
                 scales *= mix(1.0, 0.55, gone * (1.0 - rev) * 0.85);
+                // Optional colour tint on the burning edge — onEdge is the
+                // edge-band intensity (peaks 1 right at the dissolve front,
+                // 0 elsewhere) so the tint shows up exactly where the eye
+                // is already drawn. uColor=(1,1,1) when colorOn is off, so
+                // this collapses to identity in the default case.
+                rgba.rgb *= mix(vec3(1.0), ${inputs.uColor}, onEdge * 0.85);
 
               } else if (${inputs.uEffect} == 3) {
                 // ==============================================================
@@ -537,9 +543,10 @@ export function createScanModifier() {
                 // Tip of long streaks fades a little so trails feather out.
                 rgba.a *= mix(1.0, 0.75, trailMix * 0.4);
 
-                // NOTE: per-splat colour is intentionally NOT modified — every
-                // splat carries its source RGB so the smear looks like the
-                // subject's own material flowing.
+                // Optional colour tint scaled by trailMix — the streak
+                // direction shows up tinted, splats still at rest stay at
+                // their source RGB. No-op when colorOn is off.
+                rgba.rgb *= mix(vec3(1.0), ${inputs.uColor}, trailMix * 0.7);
 
               } else if (${inputs.uEffect} == 4) {
                 // ==============================================================
@@ -619,6 +626,9 @@ export function createScanModifier() {
                 // Mild alpha attenuation on the flowing parts so the swirling
                 // mass doesn't oversaturate where streaks overlap.
                 rgba.a *= mix(1.0, 0.85, vMask * vdEnv * 0.4);
+                // Optional colour tint on the flowing splats (vMask*vdEnv
+                // peaks where the vortex is active). No-op when colorOn off.
+                rgba.rgb *= mix(vec3(1.0), ${inputs.uColor}, vMask * vdEnv * 0.7);
 
               } else if (${inputs.uEffect} == 5) {
                 // ==============================================================
@@ -710,6 +720,9 @@ export function createScanModifier() {
                 // mass blooms together based on mask×envelope only.
                 scales *= mix(1.0, 1.45, cpMask * cpEnv);
                 rgba.a *= mix(1.0, 0.85, cpMask * cpEnv * 0.5);
+                // Optional colour tint scaled by the same mask×envelope —
+                // tint pulses with the active particle motion. No-op off.
+                rgba.rgb *= mix(vec3(1.0), ${inputs.uColor}, cpMask * cpEnv * 0.7);
 
               } else if (${inputs.uEffect} == 6) {
                 // ==============================================================
@@ -781,6 +794,10 @@ export function createScanModifier() {
                 // (Removed the vein-bloom scale/alpha mods that previously
                 // tinted the background; per user request, Slime Molds is
                 // now strictly a displacement effect.)
+                // Optional opt-in colour tint on the moving veins. No-op
+                // when colorOn is off so the displacement-only intent is
+                // preserved by default.
+                rgba.rgb *= mix(vec3(1.0), ${inputs.uColor}, smMask * smEnv * 0.6);
 
               } else if (${inputs.uEffect} == 7) {
                 // ==============================================================
@@ -874,6 +891,9 @@ export function createScanModifier() {
                 scales *= mix(1.0, 1.18, frMask * frEnv);
                 float frTipFade = smoothstep(frReach * 0.55, frReach, frR);
                 rgba.a *= mix(1.0, 0.7, frTipFade * frMask * frEnv);
+                // Optional colour tint on the streaking splats — frMask*frEnv
+                // is the active-region factor. No-op when colorOn is off.
+                rgba.rgb *= mix(vec3(1.0), ${inputs.uColor}, frMask * frEnv * 0.7);
 
               } else {
                 // ==============================================================
