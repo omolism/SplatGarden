@@ -28,7 +28,7 @@ import {
 } from "./asset-hover.js";
 
 // Same BASE_URL trick the splat / FBX / HDRI / colmap loaders use —
-// resolves to "/" on local dev and "/SplatGarden-WebViewer/" on the
+// resolves to "/" on local dev and "/SplatGarden/" on the
 // GitHub Pages deploy. Without this prefix, the texture `<img src>`
 // values would point at the domain root on production and 404 — the
 // "images still aren't showing" symptom the user just flagged.

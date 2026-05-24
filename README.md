@@ -2,7 +2,7 @@
 
 A 3D Gaussian Splatting web viewer for an asset-pipeline showcase. A Houdini and Unreal Engine 5 garden, captured at a multi-camera rig, reconstructed with COLMAP, trained in parallel by Postshot and Lichtfeld Studio, optimised with Houdini GSOP, and rendered in the browser via Spark on Three.js + WebGL 2.
 
-**Live**: https://omolism.github.io/SplatGarden-WebViewer/
+**Live**: https://omolism.github.io/SplatGarden/
 
 ## Pipeline
 
@@ -52,7 +52,7 @@ The script uses Spark's own `transcodeSpz`, so the output version always matches
 
 ## Deploy
 
-GitHub Pages via `.github/workflows/deploy-pages.yml`. The workflow sets `VITE_BASE=/SplatGarden-WebViewer/` so subpath asset URLs resolve under the project page. No Git LFS (the previous LFS-cache step in the legacy repo is no longer needed).
+GitHub Pages via `.github/workflows/deploy-pages.yml`. The workflow sets `VITE_BASE=/SplatGarden/` so subpath asset URLs resolve under the project page. No Git LFS (the previous LFS-cache step in the legacy repo is no longer needed).
 
 ## Source layout
 

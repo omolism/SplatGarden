@@ -62,7 +62,7 @@ import { loadColmapImages, buildColmapFrustums, colmapCameraPosition, colmapCame
 
 // All public-folder assets resolve against BASE_URL so the same build
 // works at the root (`npm run dev`) and under a sub-path (GitHub Pages
-// — `/SplatGarden-WebViewer/`). BASE_URL always ends with "/" so plain
+// — `/SplatGarden/`). BASE_URL always ends with "/" so plain
 // concatenation is safe.
 const BASE = import.meta.env.BASE_URL;
 const SPLAT_URL = `${BASE}SplatGarden_PC.splat`;
@@ -3574,7 +3574,7 @@ async function loadAdditionalSplatLayers() {
 
   // Compare by BASENAME only — manifest entries are bare filenames
   // ("SplatGarden_PC.splat") but SPLAT_URL is the full path
-  // ("/SplatGarden-WebViewer/SplatGarden_PC.splat" on Pages). The old
+  // ("/SplatGarden/SplatGarden_PC.splat" on Pages). The old
   // `replace(/^\//, "")` left the BASE prefix intact, so the filter
   // never matched on production and the primary splat was loaded a
   // second time as a "secondary" — which is what produced the
