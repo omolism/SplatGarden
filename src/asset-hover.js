@@ -744,6 +744,23 @@ export class AssetHoverManager {
     document.body.classList.remove("asset-card-pinned");
   }
 
+  // Public dismissal API — used by external click-outside handlers
+  // (the canvas FX click in main.js) to close a pinned card before
+  // any click effect fires. Returns true if a card was actually
+  // pinned and got dismissed, so the caller can early-return and
+  // skip its own action (e.g. the click-FX trigger). Returns false
+  // when there's nothing to dismiss, letting the caller fall through
+  // to its normal behaviour.
+  isPinned() {
+    return !!this._pinned;
+  }
+  dismiss() {
+    if (!this._pinned) return false;
+    this._pinned = null;
+    this._hide();
+    return true;
+  }
+
   // Toggle the entire hotspot layer. Used both by the Tech Spec master
   // Enable and by user-uploaded splats (which hide the bundled markers).
   // When turning OFF we explicitly hide every dot; when turning ON we

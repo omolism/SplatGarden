@@ -2755,6 +2755,16 @@ async function loadSplat() {
     downPos = null;
     if (dx * dx + dy * dy > 9) return; // drag, not click
 
+    // Card-dismiss-first guard: when an asset hover card is pinned
+    // open, an empty-canvas click should close the card rather than
+    // ALSO detonating the click FX. Hotspot dots stopPropagation on
+    // pointer events, so reaching this handler with a pinned card
+    // means the user tapped outside both the card and any dot —
+    // a "close, please" signal, not a "fire the effect" signal.
+    // Subsequent clicks (with the card now closed) fall through to
+    // the FX trigger path below as normal.
+    if (assetHover.dismiss?.()) return;
+
     const r = rayHitLocal(e.clientX, e.clientY);
     if (!r) { statusEl.textContent = "No splat hit at click"; return; }
 
