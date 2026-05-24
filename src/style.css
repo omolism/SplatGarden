@@ -6155,6 +6155,64 @@ body.phone-device #ui-toast {
 }
 
 /* ============================================================
+ * First-paint reveal — full-viewport black veil between canvas
+ * (z-index 0) and loading splash (z-index 10+). Created in JS
+ * at boot so it's already painted before the splash hides;
+ * body.ui-ready transitions the opacity over 1.5 s, dissolving
+ * the held black frame into the live splat.
+ * ============================================================ */
+#first-paint-veil {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 1.5s ease-out;
+}
+body.ui-ready #first-paint-veil {
+  opacity: 0;
+}
+
+/* ============================================================
+ * Replay fade-to-black — half-second darken before the page
+ * reload that __replayIntro performs. Sits above EVERYTHING
+ * (z-index 99999) so it covers the cinematic UI while the
+ * reload spins up. pointer-events:none lets the click that
+ * triggered the fade still register on the underlying button.
+ * ============================================================ */
+body.replay-fading::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: #000;
+  pointer-events: none;
+  z-index: 99999;
+  animation: replay-fade 0.5s ease forwards;
+}
+@keyframes replay-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ============================================================
+ * Idle pulse — when body.idle is set after 5 s of no input,
+ * the hotspot dots amplify their ambient pulse and cycle the
+ * "loud moment" through dots one at a time via per-dot --i
+ * delay. First-time visitors who haven't noticed the small
+ * static pulses get a moment of "look, these are clickable"
+ * without the dots becoming distracting for engaged readers.
+ * ============================================================ */
+body.idle .asset-hotspot .ahot-ring {
+  animation: ahotIdlePulse 6s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 1.0s);
+}
+@keyframes ahotIdlePulse {
+  0%, 85%, 100% { opacity: 0.35; transform: scale(1.00); }
+  12%           { opacity: 1.00; transform: scale(2.50); }
+}
+
+/* ============================================================
  * MobileUI — bottom toolbar + slide-up sheet + asset toast.
  * Scoped to body.mobile (phone only). Tablets get the desktop UI
  * because iPad's screen is wide enough for the lil-gui + sidebar

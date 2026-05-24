@@ -869,6 +869,52 @@ Object.defineProperty(window, "__splatgardenState", {
   },
 });
 
+// First-paint reveal — a black veil layered between the canvas and the
+// splash that fades from opaque to transparent over 1.5 s once body.ui-
+// ready fires. Without it the splat snaps in the moment the splash
+// finishes its own fade; with it the splat materialises through a held
+// black frame, which reads more like a film cut and less like a screen
+// refresh. Inserted as a sibling of the splash so the splash's own
+// fade-out can play on top, and z-indexed at 2 (canvas is the implicit
+// base; loading splash sits much higher). Pointer-events disabled so
+// it never blocks input.
+(() => {
+  const veil = document.createElement("div");
+  veil.id = "first-paint-veil";
+  veil.setAttribute("aria-hidden", "true");
+  const splash = document.getElementById("loading");
+  if (splash && splash.parentNode) {
+    splash.parentNode.insertBefore(veil, splash);
+  } else {
+    document.body.appendChild(veil);
+  }
+})();
+
+// Idle pulse — after 5 s of no user input, set body.idle so the hotspot
+// pulse animation amplifies and cycles through the dots, telegraphing
+// "these are clickable" to first-time visitors who haven't yet noticed
+// the small ambient pulses. Cleared on any pointer / key / scroll
+// event so an actively engaged reader never sees the attention-grabbing
+// loop. Skipped while a focused-reading mode is on (drawer open, card
+// pinned, hand tracking active) so we don't pulse over content the
+// user is concentrating on.
+(() => {
+  let idleTimer = null;
+  const FOCUS_BLOCKERS = ["tech-spec-open", "asset-card-pinned", "hand-active", "intro-playing"];
+  const armIdle = () => {
+    document.body.classList.remove("idle");
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => {
+      if (FOCUS_BLOCKERS.some((c) => document.body.classList.contains(c))) return;
+      document.body.classList.add("idle");
+    }, 5000);
+  };
+  ["pointermove", "pointerdown", "keydown", "wheel", "touchstart"].forEach((ev) => {
+    window.addEventListener(ev, armIdle, { passive: true });
+  });
+  armIdle();
+})();
+
 // Status-text crossfade — when the human-readable part of #status
 // changes (e.g., "Playing camera move…" → "Camera move complete"),
 // flash the element with a quick fade + slide so the change reads as
@@ -1184,8 +1230,17 @@ async function loadSplat() {
     <span>Replay</span>
   `;
   replayBtn.addEventListener("click", () => {
-    if (typeof window.__replayIntro === "function") window.__replayIntro();
-    else statusEl.textContent = "Cinematic still loading, try again in a moment";
+    if (typeof window.__replayIntro !== "function") {
+      statusEl.textContent = "Cinematic still loading, try again in a moment";
+      return;
+    }
+    // Half-second fade-to-black before the page reload. __replayIntro
+    // clears the first-visit flag and reloads, which without a fade
+    // reads as a jarring yank — the half-second darken makes the cut
+    // feel deliberate, like a director's wipe. CSS rule on
+    // `body.replay-fading::after` owns the actual animation.
+    document.body.classList.add("replay-fading");
+    setTimeout(() => window.__replayIntro(), 480);
   });
 
   // "Snap" — PNG snapshot of the current canvas. Sits between Replay
