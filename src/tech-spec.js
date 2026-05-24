@@ -161,13 +161,12 @@ export const TECH_SPECS = [
           src:   "https://player.vimeo.com/video/1194203694?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
           label: "Final rendered landscape · in-scene",
           title: "Shot4B_MontyVersion_4.53_1",
-          // True ultrawide — Vimeo's own embed markup ships at
-          // `width="2048" height="452"`, which is ≈ 4.53 : 1 (about
-          // 36:8, beyond 21:9 cinemascope). Neither the 4:3 default
-          // nor 16:9 fits without bars. This explicit value is the
+          // Re-rendered at 16:9 — Vimeo's current embed markup ships
+          // at `width="1920" height="1080"`. (The earlier 2048×452
+          // ultrawide cut was retired.) This explicit value is the
           // first-paint hint; vimeo-fit.js then confirms / refines
           // it once the Player API reports actual dimensions.
-          aspectRatio: "2048 / 452",
+          aspectRatio: "16 / 9",
         },
         // Step-style processCards — matches Grape Hyacinth / Daffodil /
         // Foliage pattern. Three numbered sections:
