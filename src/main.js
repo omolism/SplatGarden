@@ -26,6 +26,7 @@ import { IntroOverlay } from "./intro-overlay.js";
 import { IntroRecorder } from "./intro-recorder.js";
 import { MobileNav } from "./mobile-nav.js";
 import { HandLandmarksOverlay } from "./hand-landmarks-overlay.js";
+import { FPSControls } from "./fps-controls.js";
 // CinematicFlourish import dropped — the end-card was retired per user
 // feedback. The module remains in src/ but no longer ships in the bundle.
 // import { CinematicFlourish }   from "./cinematic-flourish.js";
@@ -499,6 +500,27 @@ controls.zoomSpeed = 0.9;
 controls.panSpeed = 0.7;
 controls.minDistance = 0.05;
 controls.maxDistance = 200;
+
+// First-person walking controls — disabled by default; toggle in the
+// Camera Movement folder of the right-rail studio enters / exits.
+// The instance is created eagerly because the constructor doesn't add
+// any DOM listeners (those happen in enter()). Toggle wiring + render-
+// loop integration are stitched in further below.
+const fpsControls = new FPSControls({
+  camera,
+  domElement: canvas,
+  onEnter: () => {
+    controls.enabled = false;
+    document.body.classList.add("fps-active");
+    window.__toast?.("First-person on — WASD to move, Shift to sprint, Esc to release");
+  },
+  onExit: () => {
+    controls.enabled = true;
+    document.body.classList.remove("fps-active");
+    window.__toast?.("First-person off");
+  },
+});
+window.__fpsControls = fpsControls;
 
 // ---------------------------------------------------------------------------
 // Resize
@@ -2638,6 +2660,21 @@ async function loadSplat() {
   // including the title-sequence overlay + onboarding pointers.
   const replayCtrl = fOverlay.add({ replay: window.__replayIntro }, "replay").name("↻ Replay Intro");
   replayCtrl.domElement.title = "Reset the first-visit flag and reload so the opening cinematic plays again.";
+
+  // First-person walking — Unreal-style WASD + mouse-look free-fly. The
+  // toggle lives here because Camera Movement is the conceptual home
+  // for "how the camera moves" controls (Play / Stop / Replay are all
+  // canned-motion variants; FPS is the user-driven alternative). The
+  // backing FPSControls instance was created up near OrbitControls; the
+  // checkbox just toggles enter / exit, and the onEnter / onExit
+  // callbacks flip OrbitControls' enabled flag so the two never fight.
+  const fpsParams = { fpsActive: false };
+  const fpsCtrl = fOverlay.add(fpsParams, "fpsActive").name("First-person walk").onChange((on) => {
+    if (on) fpsControls.enter();
+    else fpsControls.exit();
+  });
+  fpsCtrl.domElement.title = "First-person free-fly. WASD or arrow keys to walk, Shift to sprint, Space / Ctrl for vertical, mouse to look. Esc releases pointer lock.";
+
   // Live tuning so you can frame the gazebo while the move plays.
   const fCamTune = fOverlay.addFolder("Camera Move Tuning").close();
   fCamTune.add(camMoveXf, "ox",    -30, 30, 0.1).name("Offset X").onChange(applyCamFbxXf);
@@ -3852,6 +3889,12 @@ renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.05);
   profiler.beginFrame();
   profiler.begin("logic");
+
+  // First-person walk update — moves the camera based on held keys and
+  // applies the accumulated yaw / pitch from pointer-lock mouse motion.
+  // No-op when FPS mode is off. Runs BEFORE annotation / marker updates
+  // so screen-space projections use the latest camera pose.
+  fpsControls?.update(dt);
 
   // Annotation tween + screen-space marker update
   if (annotations) {
