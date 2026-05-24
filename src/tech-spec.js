@@ -128,14 +128,14 @@ export const TECH_SPECS = [
         processCards: [
           {
             eyebrow:     "01 · TRAINING",
-            description: "Postshot's optimizer starts from a chaotic radiance-field initialization and progressively shapes the Gaussian field against the 990 COLMAP-recovered camera poses. The cleanup pass prunes outlier splats; the residual sparse point cloud is what anchors the dense field.",
+            description: "Postshot's optimizer starts from a chaotic radiance-field initialization and progressively shapes the Gaussian field against the 990 COLMAP-recovered camera poses. The cleanup pass prunes outlier splats so the dense Gaussian field reads cleanly; the third frame overlays the camera trajectory recovered by COLMAP, the spatial scaffold Postshot uses to anchor every optimization step.",
             rows: [
               { layout: "pair", aspectRatio: "16 / 9", items: [
                 { src: `${BASE}textures/3dgs/3dgs-before-cleanup.webp`, caption: "Before Cleanup" },
                 { src: `${BASE}textures/3dgs/3dgs-after-cleanup.webp`,  caption: "After Cleanup" },
               ]},
               { layout: "single", items: [
-                { src: `${BASE}textures/3dgs/3dgs-pointcloud.webp`, caption: "Pointcloud" },
+                { src: `${BASE}textures/3dgs/3dgs-pointcloud.webp`, caption: "Camera trajectory" },
               ]},
             ],
           },
