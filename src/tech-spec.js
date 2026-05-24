@@ -642,10 +642,15 @@ export const TECH_SPECS = [
             // vimeo-fit.js refines once the Player API confirms.
             rows: [
               { layout: "single", items: [{
-                iframeSrc:   "https://player.vimeo.com/video/1195194768?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
+                // Updated to the "Procedural Vine Growth System (1)" cut
+                // (1195195534, true 1920×1080) — sharper framing than
+                // the prior 1920×1048 take, and the aspect matches the
+                // project's 16:9 default so vimeo-fit.js has less work
+                // to do on first paint.
+                iframeSrc:   "https://player.vimeo.com/video/1195195534?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
                 caption:     "Procedural vine growth · gazebo dressed in real time",
                 alt:         "Procedural Vine Growth System — live capture of the WPO-driven vine growing across the gazebo",
-                aspectRatio: "1920 / 1048",
+                aspectRatio: "16 / 9",
               }]},
             ],
             points: [
