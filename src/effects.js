@@ -1372,6 +1372,42 @@ export function buildGUI(controller) {
   // below — the closure only fires later when the user clicks, by
   // which time the picker has been initialised.
   let colorPicker;
+  // Slider-range expander. lil-gui's number controller clamps typed
+  // values to its [min, max] window; this helper lets the user TYPE
+  // a value beyond the cap and have the window expand to fit instead.
+  // Reads the input element from the controller, listens on the
+  // capture phase so we run BEFORE lil-gui's own change handler, and
+  // calls controller.max() / .min() to expand the range before the
+  // subsequent clamping setValue runs. Use it on any FX slider where
+  // a power-user might legitimately want a value outside the default
+  // range — e.g., radius up to 50 for huge ripples, duration up to 30
+  // for slow-burn effects.
+  //
+  // Side benefit: the slider track redraws with the new max so a
+  // value of 50 doesn't sit invisibly off the right edge.
+  function allowExpand(controller) {
+    if (!controller) return controller;
+    const input = controller.$input
+               ?? controller.domElement?.querySelector?.("input[type='number']")
+               ?? controller.domElement?.querySelector?.("input");
+    if (!input) return controller;
+    // Title hint surfaces the affordance without adding a UI element.
+    const orig = input.title || "";
+    input.title = orig ? `${orig} · Type a value beyond the max to extend the range.`
+                       : "Type a value beyond the max to extend the range.";
+    input.addEventListener("change", () => {
+      const v = parseFloat(input.value);
+      if (!Number.isFinite(v)) return;
+      if (typeof controller._max === "number" && v > controller._max) {
+        controller.max(v);
+      }
+      if (typeof controller._min === "number" && v < controller._min) {
+        controller.min(v);
+      }
+    }, true);
+    return controller;
+  }
+
   fCore.add(params, "colorOn").name("Color tint").onChange((on) => {
     if (on) colorPicker.show(); else colorPicker.hide();
     controller.applyParams();
@@ -1382,27 +1418,27 @@ export function buildGUI(controller) {
   });
   colorPicker = fCore.addColor(params, "color").name("Color").onChange(() => controller.applyParams());
   if (!params.colorOn) colorPicker.hide();
-  fCore.add(params, "radius",    0.1, 10.0, 0.05).name("Radius").onChange(() => controller.applyParams());
-  fCore.add(params, "duration",  0.3,  8.0, 0.1 ).name("Duration (s)").onChange(() => controller.applyParams());
-  fCore.add(params, "intensity", 0.0,  3.0, 0.01).name("Intensity").onChange(() => controller.applyParams());
+  allowExpand(fCore.add(params, "radius",    0.1, 10.0, 0.05).name("Radius").onChange(() => controller.applyParams()));
+  allowExpand(fCore.add(params, "duration",  0.3,  8.0, 0.1 ).name("Duration (s)").onChange(() => controller.applyParams()));
+  allowExpand(fCore.add(params, "intensity", 0.0,  3.0, 0.01).name("Intensity").onChange(() => controller.applyParams()));
 
   const fStyle = fFX.addFolder("Style").close();
-  fStyle.add(params, "speed",      0.1, 20.0, 0.1 ).name("Speed / Freq").onChange(() => controller.applyParams());
-  fStyle.add(params, "noiseScale", 0.1,  5.0, 0.05).name("Noise Scale").onChange(() => controller.applyParams());
-  fStyle.add(params, "edgeWidth",  0.02, 0.6, 0.01).name("Edge Width").onChange(() => controller.applyParams());
-  fStyle.add(params, "emissive",   0.0,  8.0, 0.05).name("Emissive Boost").onChange(() => controller.applyParams());
-  fStyle.add(params, "fadeTail",   0.0,  3.0, 0.05).name("Fade Tail (s)").onChange(() => {
+  allowExpand(fStyle.add(params, "speed",      0.1, 20.0, 0.1 ).name("Speed / Freq").onChange(() => controller.applyParams()));
+  allowExpand(fStyle.add(params, "noiseScale", 0.1,  5.0, 0.05).name("Noise Scale").onChange(() => controller.applyParams()));
+  allowExpand(fStyle.add(params, "edgeWidth",  0.02, 0.6, 0.01).name("Edge Width").onChange(() => controller.applyParams()));
+  allowExpand(fStyle.add(params, "emissive",   0.0,  8.0, 0.05).name("Emissive Boost").onChange(() => controller.applyParams()));
+  allowExpand(fStyle.add(params, "fadeTail",   0.0,  3.0, 0.05).name("Fade Tail (s)").onChange(() => {
     controller.fadeTailS = params.fadeTail;
-  });
+  }));
 
   // ---- Dissolve-specific FX knobs (also bias Wave a bit) ----
   const fDis = fFX.addFolder("Dissolve FX").close();
-  fDis.add(params, "edgeRagged", 0.0, 1.5, 0.01).name("Edge Ragged").onChange(() => controller.applyParams());
-  fDis.add(params, "wispAmt",    0.0, 1.5, 0.01).name("Wisp Alpha").onChange(() => controller.applyParams());
-  fDis.add(params, "flyMax",     0.5, 8.0, 0.05).name("Hero Fly Max").onChange(() => controller.applyParams());
-  fDis.add(params, "windX",     -2.0, 2.0, 0.02).name("Wind X").onChange(() => controller.applyParams());
-  fDis.add(params, "windY",     -2.0, 2.0, 0.02).name("Wind Y").onChange(() => controller.applyParams());
-  fDis.add(params, "windZ",     -2.0, 2.0, 0.02).name("Wind Z").onChange(() => controller.applyParams());
+  allowExpand(fDis.add(params, "edgeRagged", 0.0, 1.5, 0.01).name("Edge Ragged").onChange(() => controller.applyParams()));
+  allowExpand(fDis.add(params, "wispAmt",    0.0, 1.5, 0.01).name("Wisp Alpha").onChange(() => controller.applyParams()));
+  allowExpand(fDis.add(params, "flyMax",     0.5, 8.0, 0.05).name("Hero Fly Max").onChange(() => controller.applyParams()));
+  allowExpand(fDis.add(params, "windX",     -2.0, 2.0, 0.02).name("Wind X").onChange(() => controller.applyParams()));
+  allowExpand(fDis.add(params, "windY",     -2.0, 2.0, 0.02).name("Wind Y").onChange(() => controller.applyParams()));
+  allowExpand(fDis.add(params, "windZ",     -2.0, 2.0, 0.02).name("Wind Z").onChange(() => controller.applyParams()));
 
   fFX.add({
     test: () => { controller.triggerAt(uniforms.hit.value); },
