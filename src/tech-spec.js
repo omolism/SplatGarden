@@ -332,18 +332,25 @@ export const TECH_SPECS = [
         note:      "Garden-wide particle pass. A contained Houdini FLIP simulation whose velocity field is art-directed by image-traced guide curves, then colour-transferred onto the particles post-solve. The final pass is rendered in Karma alongside the dressed garden.",
         // Step-style processCards — show → show → show → tell:
         //   01 — FINAL RENDER  hero playback (Karma offline render).
-        //   02 — BREAKDOWN     one composite Vimeo clip stacking
-        //                      Volume Trail (top) + Volume velocity
-        //                      (bottom) — the source video is already
-        //                      a 2-up portrait composite at 960×1080,
-        //                      so it goes in as a single layout with
-        //                      the literal 960/1080 aspect (vimeo-fit
-        //                      refines once the Player API confirms).
-        //   03 — XR-STAGE VIEW load-test playback of the FLIP particle
-        //                      sim on the on-set XR LED stage that the
+        //   02 — BREAKDOWN     one composite Vimeo clip covering all
+        //                      four breakdown panels per the Figma
+        //                      reference: Source Layers (input geometry,
+        //                      ≈17.7M particle peak), Volume Trail
+        //                      (velocity field), FLIP Simulation & Color
+        //                      Transfer (in-progress sim with colour
+        //                      already transferred), and Volume velocity
+        //                      (volume-velocity-from-curves field). The
+        //                      source video is a 2-up portrait composite
+        //                      at 960×1080, so it goes in as a single
+        //                      layout with the literal 960/1080 aspect.
+        //   03 — LARGE DISPLAY VIEW  load-test playback of the FLIP
+        //                      particle sim on the LED stage that the
         //                      final piece targets — "where the work
         //                      lives" context after the hero + sim
         //                      breakdown, before the closing bullets.
+        //                      Was originally labelled XR-STAGE VIEW;
+        //                      renamed to match the Figma's "Large
+        //                      Display View" wording.
         //   04 — KEY PROCESS   three bullets describing the contained
         //                      FLIP setup. Inline **bold** surfaces the
         //                      named Houdini nodes / concepts (FLIP,
@@ -369,23 +376,24 @@ export const TECH_SPECS = [
           },
           {
             eyebrow:     "02 · BREAKDOWN",
-            description: "A two-pass breakdown. Volume Trail (top) visualises the FLIP velocity field, and Volume velocity (bottom) shows the volume-velocity-from-curves field driving the sim.",
+            description: "A four-panel breakdown of the contained FLIP setup. Source Layers shows the input geometry the sim reads from (≈ 17.7 M particle count at peak). Volume Trail visualises the FLIP velocity field. FLIP Simulation & Color Transfer is the in-progress sim with color attributes already transferred onto the particles. Volume velocity is the volume-velocity-from-curves field driving the flow.",
             rows: [
               { layout: "single", items: [{
                 iframeSrc:   "https://player.vimeo.com/video/1195047168?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
-                caption:     "Volume Trail · Volume velocity",
-                alt:         "FLIP breakdown · Volume Trail velocity field plus Volume velocity from curves",
-                // Source clip is a 2-up portrait composite at 960×1080
-                // (Volume Trail stacked above Volume velocity).
+                caption:     "Source Layers · Volume trail · FLIP Simulation & Color Transfer · Volume velocity",
+                alt:         "FLIP breakdown four-panel composite — source layers, volume trail, FLIP sim with color transfer, volume velocity from curves",
                 aspectRatio: "960 / 1080",
               }]},
             ],
           },
           {
-            // XR-Stage View sits after the breakdown because it's the
-            // "where it lives" beat: same sim, but seen playing back
-            // on the on-set LED volume that the final piece targets.
-            // The hero Karma render up top answers "what does it look
+            // Large Display View — the "where it lives" beat: same sim,
+            // playing back on the LED volume that the final piece targets.
+            // Originally labelled XR-Stage View in the data; renamed to
+            // match the Figma reference's "Large Display View" wording
+            // (the user's intent is closer to "this is how it looks on
+            // a huge display" than to the XR / VR connotation). The
+            // hero Karma render up top answers "what does it look
             // like?"; this answers "where does it deploy?". Closes the
             // visual sequence before Key Process drops the text bullets.
             //
@@ -393,14 +401,13 @@ export const TECH_SPECS = [
             // the caption "Particle Load Test" under the video already
             // names the beat completely, and the reference Figma
             // intentionally leaves the prose slot empty so the video
-            // owns the breath of the section. Matches sections 03/04
-            // text "一模一样" per the user reference.
-            eyebrow:     "03 · XR-STAGE VIEW",
+            // owns the breath of the section.
+            eyebrow:     "03 · LARGE DISPLAY VIEW",
             rows: [
               { layout: "single", items: [{
                 iframeSrc:   "https://player.vimeo.com/video/1195059511?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
                 caption:     "Particle Load Test",
-                alt:         "FLIP particle sim load test on the on-set XR LED stage",
+                alt:         "FLIP particle sim load test playback on the on-set LED stage",
                 aspectRatio: "16 / 9",
               }]},
             ],
@@ -501,15 +508,20 @@ export const TECH_SPECS = [
             groups: [
               {
                 heading: "Simulation Mask",
+                // Bullet wording matches the Figma reference exactly —
+                // "Apply Attribute Transfer node transfer color attribute"
+                // reads as "[Apply node] → [transfer attribute]" which is
+                // the Figma's intent. Trailing periods dropped because
+                // the Figma's bullets are period-less.
                 items: [
-                  "Apply **Attribute Transfer node** to transfer color attribute (@Cd) from the source to the main object (the gazebo).",
-                  "Group points based on masks to limit the area of particle emission.",
+                  "Apply **Attribute Transfer node** transfer color attribute (@Cd) from the source to the main object (the gazebo)",
+                  "Group points based on masks to limit the area of particle emission",
                 ],
               },
               {
                 heading: "Velocity from Pyro",
                 items: [
-                  "Use pyro simulations from **Axiom** plugin on multiple pyro sources to drive particles velocity.",
+                  "Use pyro simulations from **Axiom** plugin on multiple pyro sources to drive particles velocity",
                 ],
               },
             ],
@@ -608,43 +620,47 @@ export const TECH_SPECS = [
           // inside the card with no top/bottom black letterbox bars.
           aspectRatio: "16 / 9",
         },
-        // Step-style processCards mirror the reference design:
-        //   01 — FINAL RESULT IN THE SCENE       hero gazebo plate + summary
-        //   02 — WPO DYNAMIC MATERIAL BLUEPRINT  node graph + 5 in-section bullets
-        //   03 — PLANT GROW ON THE VINE          assets + cloner/effector scene
-        // Section 02 uses the new per-card `points` field for the
-        // blueprint-specific bullet list (UV Directional Masking /
-        // Vertex Color Control / etc.) — distinct from the global
-        // keyPoints at the bottom of the card.
+        // Step-style processCards mirror the Figma reference design.
+        // Unlike Particles / Daffodil / Gazebo / Foliage (which all use
+        // numbered "01 · ..." chip eyebrows), the Vine Figma uses
+        // descriptive section titles without numbering — so we follow
+        // its lead here. Section 01 surfaces the four "system + workflow"
+        // bullets directly under the hero plate; sections 02 and 03 carry
+        // their own bullet lists too. Bullets are period-less to match
+        // the Figma's typography.
         processCards: [
           {
-            eyebrow:     "01 · FINAL RESULT IN THE SCENE",
-            description: "Combined Unreal Engine's Motion Design plugin with the workflow demonstrated in the Growing Roots with World Position Offset (WPO) tutorial to develop a procedural vine system with controllable growth animation. Blueprint-controlled parameters drive vine growth behavior, enabling interactive real-time triggering and directional vine expansion within the environment.",
+            eyebrow:     "Procedural Vine Growth System",
             rows: [
               { layout: "single", items: [
                 { src: `${BASE}textures/vine/vine-final-scene.jpg`, caption: "Gazebo dressed with the procedural vine" },
               ]},
             ],
+            points: [
+              { key: "Motion Design Workflow Integration", value: "Combined Unreal Engine's Motion Design plugin with the workflow demonstrated in the Growing Roots with World Position Offset (WPO) tutorial" },
+              { key: "Procedural Vine System Development", value: "Developed a procedural vine system with controllable growth animation" },
+              { key: "Blueprint Parameter Control",        value: "Used Blueprint-controlled parameters to drive vine growth behavior" },
+              { key: "Interactive Real-Time Growth",       value: "Enabled interactive real-time triggering and directional vine expansion within the environment" },
+            ],
           },
           {
-            eyebrow:     "02 · WPO DYNAMIC MATERIAL BLUEPRINT",
-            description: "A single Unreal material drives the entire growth animation. The five inputs below combine into one interactive growth workflow that Blueprint can drive at runtime.",
+            eyebrow:     "Procedural Vine Growth System Using World Position Offset (WPO)",
             rows: [
               { layout: "single", items: [
                 { src: `${BASE}textures/vine/vine-material-blueprint.webp`, caption: "M_VineGrowth · material blueprint" },
               ]},
             ],
             points: [
-              { key: "UV Directional Masking",            value: "Controls the directional flow and expansion of the vine growth." },
-              { key: "Vertex Color Control",              value: "Defines growth areas and controls the blending behavior of the shader." },
-              { key: "World Position Offset (WPO)",       value: "Animates the mesh deformation to simulate organic vine growth in real time." },
-              { key: "Unreal Engine Material Blueprint System",  value: "Combines all procedural controls into an interactive and controllable growth workflow." },
-              { key: "Procedural Vine Growth Workflow",   value: "Simulates dynamic and organic vine expansion interactively within the environment." },
+              { key: "UV Directional Masking",                  value: "Controls the directional flow and expansion of the vine growth" },
+              { key: "Vertex Color Control",                    value: "Defines growth areas and controls the blending behavior of the shader" },
+              { key: "World Position Offset (WPO)",             value: "Animates the mesh deformation to simulate organic vine growth in real time" },
+              { key: "Unreal Engine Material Blueprint System", value: "Combines all procedural controls into an interactive and controllable growth workflow" },
+              { key: "Procedural Vine Growth Workflow",         value: "Simulates dynamic and organic vine expansion interactively within the environment" },
             ],
           },
           {
-            eyebrow:     "03 · PLANT GROW ON THE VINE",
-            description: "By using the Motion Designer plugin's Cloner component, assets can be distributed onto a specific Static Mesh surface and animated with controllable growth behavior. Adding more Cloner components and assets creates a denser and more organic vine structure. An Effector controls both the transform behavior and growth animation of cloned assets, affecting each individual asset within the Cloner system. When driven through Sequencer or Blueprint, it creates directional growth effects based on movement.",
+            eyebrow:     "Plant Grow on the vine",
+            description: "By using the Motion Designer plugin's Cloner component, assets can be distributed onto a specific Static Mesh surface and animated with controllable growth behavior.",
             // Side-by-side equal-height pair (16:9 each) — the two
             // diagrams read as a related diptych: STEP 1 distribution
             // → STEP 2 control. Original images were stacked and ate
@@ -669,15 +685,23 @@ export const TECH_SPECS = [
                   caption: "Step 2 · plane and sphere effectors shape scale and density" },
               ]},
             ],
+            // Four cloner / effector bullets per the Figma reference,
+            // sitting after the diagrams and before the source-citation
+            // footer. Bullets are period-less to match the Figma.
+            points: [
+              { key: "Cloner Asset Expansion",         value: "Added additional assets and Cloner components to create a denser and more organic vine structure" },
+              { key: "Effector-Based Animation Control", value: "Applied an Effector to control both the transform behavior and growth animation of cloned assets" },
+              { key: "Individual Asset Influence",     value: "Enabled the Effector to affect each individual asset within the Cloner system" },
+              { key: "Sequencer and Blueprint Integration", value: "Drove the Effector through Sequencer or Blueprint to create directional growth effects based on movement" },
+            ],
           },
         ],
-        // Citation for the source tutorial referenced in section 01.
-        // Renders in the existing small mono footer slot at the bottom
-        // of the asset card (see ah-foot in renderCard). Shortened
-        // from the verbatim APA-style reference — the previous full
-        // citation wrapped to 2 lines in the mono footer and looked
-        // overweight against the rest of the footer rows (Output / Pos).
-        source: "tharlevfx · Growing Roots with WPO (YouTube · KZX0kHSfD78)",
+        // Citation for the source tutorial referenced in section 01,
+        // matching the Figma footnote verbatim (APA-style). Renders in
+        // the small mono footer slot at the bottom of the asset card
+        // (see ah-foot in renderCard). The link is clickable through
+        // the same anchor-rendering path that the Tree citation uses.
+        source: `[1] tharlevfx. (2024, January 19). Growing roots with WPO [Video]. <a href="https://www.youtube.com/watch?v=KZX0kHSfD7B" target="_blank" rel="noopener noreferrer">youtube.com/watch?v=KZX0kHSfD7B ↗</a>`,
       },
       {
         name:      "Daffodil",
@@ -811,10 +835,15 @@ export const TECH_SPECS = [
             groups: [
               {
                 heading: "Daffodil texture pipeline",
+                // Bullets match the Figma reference verbatim — no inline
+                // bold, and the "Substance Painter → exported as base
+                // color map" arrow keeps the two-step beat that the
+                // earlier comma flattened. Tool names stay plain text
+                // because the Figma renders them without emphasis.
                 items: [
-                  "Base color painted in **Substance Painter**, exported as base color map.",
-                  "**AI stylization tool** generates a stylized version from the export.",
-                  "Back into **Substance Painter** for refinement and detail painting.",
+                  "Base color painted in Substance Painter → exported as base color map",
+                  "AI stylization tool generates a stylized version from the export",
+                  "Back into Substance Painter for refinement and detail painting",
                 ],
               },
             ],
@@ -930,10 +959,17 @@ export const TECH_SPECS = [
         // Frames inherit natural image height (see .ah-pc-fig .ah-frame
         // { aspect-ratio: auto } in style.css), so the wide landscape
         // hero plate no longer letterboxes inside a forced 1:1 plinth.
+        // Eyebrow chips match the Figma reference's section titles
+        // verbatim (chip-style, no 01/02/03 numbering — Foliage and Vine
+        // diverge from the Particles / Daffodil / Gazebo pattern in the
+        // source design). Where the Figma puts descriptive prose AFTER
+        // the imagery (acting as a caption / footnote), we use the
+        // `note` field instead of `description` so the text renders
+        // below the rows rather than above them. Section 1 has no
+        // accompanying prose in the Figma — only the hero plate.
         processCards: [
           {
-            eyebrow: "01 · REAL-TIME READY FOLIAGE",
-            description: "640-triangle scatter cards dressed in the painterly Substance diffuse, lit by the same HDRI as the rest of the garden. The whole foreground daisy band ships at interactive frame rate on a desktop GPU without any per-frame foliage update. Below is how the asset got from a 28,557-triangle SpeedTree source to this real-time-ready plate.",
+            eyebrow: "Procedural Stylized Foliage",
             rows: [
               { layout: "single", items: [
                 { src: `${BASE}textures/daisy/daisy-final-result.webp`, caption: null, alt: "Stylised daisy field · final in-scene render" },
@@ -941,8 +977,7 @@ export const TECH_SPECS = [
             ],
           },
           {
-            eyebrow: "02 · MODELING & OPTIMIZATION",
-            description: "To maintain stable and usable FPS performance, all foliage assets need to be carefully optimized.",
+            eyebrow: "Modeling and optimization",
             rows: [
               // aspectRatio locks both pair cells to 16:9 so the
               // modeling shot (942×776, ~1.21) and the node graph
@@ -959,10 +994,14 @@ export const TECH_SPECS = [
                 { src: `${BASE}textures/daisy/daisy-optimization.jpg`, caption: "Optimization" },
               ]},
             ],
+            // The Figma puts the "FPS performance" sentence AFTER the
+            // Optimization image (as a footer), so we use the `note`
+            // field rather than the top `description` slot. Renders
+            // through renderProcessCard's .ah-pc-note path.
+            note: "To maintain stable and usable FPS performance, all foliage assets need to be carefully optimized.",
           },
           {
-            eyebrow: "03 · STYLIZATION",
-            description: "This was also another exploration of stylized workflows in Substance Designer, inspired by the article \"Breakdown: Making 3D Landscape Look Like Painting\" from 80 Level, which demonstrates a procedural approach to creating stylized textures.",
+            eyebrow: "Substance Designer Stylization Workflow",
             rows: [
               { layout: "single", items: [
                 { src: `${BASE}textures/daisy/daisy-substance-nodegraph.webp`, caption: "Substance Designer Stylized Procedural Node Graph" },
@@ -977,6 +1016,10 @@ export const TECH_SPECS = [
                 { src: `${BASE}textures/daisy/daisy-substance-after.webp`,  caption: "After Procedural Stylization" },
               ]},
             ],
+            // Figma puts the 80 Level reference sentence AFTER the
+            // before/after pair (as a footnote-style note), so this
+            // goes in `note` not `description`.
+            note: "This was also another exploration of stylized workflows in Substance Designer, inspired by the article \"Breakdown: Making 3D Landscape Look Like Painting\" from 80 Level, which demonstrates a procedural approach to creating stylized textures.",
           },
         ],
         note:      "Real-time-ready foliage authored procedurally in SpeedTree, then aggressively decimated (28,557 → 640 triangles) so the scattered plant cards survive an interactive FPS budget without visible quality loss. A Substance Designer stylization graph produces the painterly diffuse and leaf atlas. The look mirrors the Landscape texture pipeline and is inspired by 80 Level's \"Making 3D Landscape Look Like Painting\" breakdown.",
