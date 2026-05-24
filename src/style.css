@@ -1859,6 +1859,22 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   letter-spacing: 0.04em;
   color: var(--text-dim);
 }
+/* External citation link inside an item's source footer (e.g., Tree
+ * → Fab.com marketplace credit). Inherits the small mono dim styling
+ * so the citation reads as metadata, with an underline + brightening
+ * on hover so it's clearly clickable without breaking the monochrome
+ * palette. */
+#tech-spec .ts-item-src a {
+  color: var(--text-mid);
+  text-decoration: underline;
+  text-decoration-color: var(--hair-strong);
+  text-underline-offset: 2px;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+#tech-spec .ts-item-src a:hover {
+  color: var(--text);
+  text-decoration-color: var(--text);
+}
 
 /* 5b. Inline before/after compare widget â€” drag the handle to wipe.
  * Placeholder mode (no images yet) shows two subtly tinted panes so the

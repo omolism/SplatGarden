@@ -43,20 +43,18 @@ export const TECH_SPECS = [
   // actually looking at right now (the splat) and unwinds to the
   // upstream stages.
   //
-  // Overview     — one-screen anchor: what is this, in one sentence.
-  // L3 3DGS      — what the viewer is actually LOOKING AT (rendering
-  //                primitive + capture + training). Leads because
-  //                observers ask "what is this?" before "how did the
-  //                team build it?".
-  // L2 Production — the per-asset authoring that produced the captured
-  //                scene. The L1 R&D layer that used to follow has
-  //                been retired in favour of the official 3-stage
-  //                narrative; tooling notes (AI Texture Stylization,
-  //                OpenUSD subforms) now live inside the per-asset
-  //                cards that actually consume them, and the live USD
-  //                showcase lives in the 3DGS/USD panel on screen.
-  // (The numeric `layerNum` fields keep their original L2 / L3 values
-  //  for semantic stability — the reorder is presentational only.)
+  // Overview — one-screen anchor: what is this, in one sentence.
+  // 01 3DGS  — what the viewer is actually LOOKING AT (rendering
+  //            primitive + capture + training). Leads because observers
+  //            ask "what is this?" before "how did the team build it?".
+  // 02 Production — the per-asset authoring that produced the captured
+  //            scene. The original 3-layer scheme (L1 R&D + L2
+  //            Production + L3 3DGS) was retired when L1 dropped out;
+  //            tooling notes (AI Texture Stylization, OpenUSD subforms)
+  //            now live inside the per-asset cards that consume them,
+  //            and the live USD showcase lives in the 3DGS/USD panel on
+  //            screen. Each section's `pillarIdx` is its reading-order
+  //            number after Overview — strictly presentational.
   {
     section:   "Overview",
     group:     "summary",
@@ -79,7 +77,13 @@ export const TECH_SPECS = [
   {
     section:   "3DGS",
     group:     "layer",
-    layerNum:  3,
+    // Sequential reading-order chip. Was `layerNum: 3` back when the
+    // drawer carried three pipeline layers (L1 R&D + L2 Production +
+    // L3 3DGS); with L1 retired the "L3" label implied a missing
+    // anchor. The chip now reads "01" because 3DGS is the first
+    // detail section after Overview — what the viewer is actually
+    // looking at.
+    pillarIdx: 1,
     desc:      "Capturing the dressed Unreal scene and training it as a 3D Gaussian Splat. Postshot and Lichtfeld Studio run in parallel as two independent trainers, and we cross-compare their results to pick the cleaner one.",
     toolchain: ["Multi-camera rig", "COLMAP", "Postshot", "Lichtfeld Studio", "Spark"],
     items: [
@@ -156,7 +160,11 @@ export const TECH_SPECS = [
   {
     section:   "Production",
     group:     "layer",
-    layerNum:  2,
+    // Sequential reading-order chip — see the matching comment on the
+    // 3DGS section above. "02" places Production as the second detail
+    // section after Overview; the per-asset authoring sits behind the
+    // 3DGS layer the viewer sees first.
+    pillarIdx: 2,
     desc:      "Per-object authoring plus Unreal scene assembly. Everything that goes into the dressed scene before the camera turns on.",
     toolchain: ["Houdini", "SpeedTree", "VAT bake", "Python · OSC", "Unreal Engine 5", "Perforce"],
     items: [
@@ -333,13 +341,16 @@ export const TECH_SPECS = [
         //                      final piece targets — "where the work
         //                      lives" context after the hero + sim
         //                      breakdown, before the closing bullets.
-        //   04 — KEY PROCESS   grouped bullets (only one group:
-        //                      "Houdini Simulation") describing the
-        //                      contained FLIP setup. Inline **bold**
-        //                      surfaces the named Houdini nodes /
-        //                      concepts (FLIP, Volume Velocity from
-        //                      Curves, Attribute Copy) within the
-        //                      bullet prose.
+        //   04 — KEY PROCESS   three bullets describing the contained
+        //                      FLIP setup. Inline **bold** surfaces the
+        //                      named Houdini nodes / concepts (FLIP,
+        //                      Volume Velocity from Curves, Attribute
+        //                      Copy) within the bullet prose. No group
+        //                      heading: the bullets live directly under
+        //                      the "04 · KEY PROCESS" eyebrow to match
+        //                      the Figma reference, which shows
+        //                      Key Process → bullets without any subhead
+        //                      between.
         processCards: [
           {
             eyebrow:     "01 · FINAL RENDER",
@@ -400,15 +411,15 @@ export const TECH_SPECS = [
             // shows this same minimal stack: header → subhead →
             // bullets, with no descriptive prose between them.
             //
-            // Single group — three bullets all live under "Houdini
-            // Simulation". The Gazebo pattern with multiple groups
-            // (Simulation Mask + Velocity from Pyro) doesn't apply
-            // here because the FLIP pipeline reads as one coherent
-            // sequence rather than two parallel sub-systems.
+            // Single ungrouped block — the FLIP pipeline reads as one
+            // coherent sequence (collision tuning → velocity field
+            // shaping → color transfer) rather than parallel sub-systems
+            // like Gazebo's Simulation Mask + Velocity from Pyro pair,
+            // so a single bullet list under the eyebrow tells the story
+            // cleanly. The Figma reference shows the same flat shape.
             eyebrow:     "04 · KEY PROCESS",
             groups: [
               {
-                heading: "Houdini Simulation",
                 items: [
                   "Designed a contained **FLIP** particle sim, tuning collision and dissipation for partial confinement within a sealed boundary.",
                   "Drove the FLIP velocity field via **Volume Velocity from Curves**, using image-traced guide curves to art-direct the flow.",
@@ -972,6 +983,13 @@ export const TECH_SPECS = [
         location:  "Near gazebo",
         toolchain: ["SpeedTree", "Unreal Engine 5 (set dress)"],
         note:      "Procedural tree authored in SpeedTree, dressed into the Unreal scene before the env capture.",
+        // Third-party marketplace asset rather than in-house authoring,
+        // so this is the only Production item that surfaces an external
+        // citation. The `source` field renders as the small mono footer
+        // under the note; we wrap the URL in an <a> so the credit is
+        // clickable, and target="_blank" + rel="noopener" keep the
+        // viewer's session intact when the reader opens the listing.
+        source:    `Asset: <a href="https://www.fab.com/listings/21c3786d-bc4a-472f-bace-70e40b2f01dc" target="_blank" rel="noopener noreferrer">SpeedTree pack on Fab.com ↗</a>`,
       },
     ],
   },
