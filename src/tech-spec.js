@@ -631,10 +631,22 @@ export const TECH_SPECS = [
         processCards: [
           {
             eyebrow:     "Procedural Vine Growth System",
+            // Hero plate swapped from the static vine-final-scene.jpg
+            // to the live "Procedural Vine Growth System2" Vimeo clip
+            // so the section leads with the motion of the vine actually
+            // growing rather than a single frame. autoplay=1 + loop=1
+            // keep it ambient; muted=0 follows the project convention
+            // (the user has been explicit that "autoplay but not muted"
+            // is the SplatGarden Vimeo pattern). The first-paint
+            // aspectRatio comes from the iframe's 1920×1048 markup;
+            // vimeo-fit.js refines once the Player API confirms.
             rows: [
-              { layout: "single", items: [
-                { src: `${BASE}textures/vine/vine-final-scene.jpg`, caption: "Gazebo dressed with the procedural vine" },
-              ]},
+              { layout: "single", items: [{
+                iframeSrc:   "https://player.vimeo.com/video/1195194768?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
+                caption:     "Procedural vine growth · gazebo dressed in real time",
+                alt:         "Procedural Vine Growth System — live capture of the WPO-driven vine growing across the gazebo",
+                aspectRatio: "1920 / 1048",
+              }]},
             ],
             points: [
               { key: "Motion Design Workflow Integration", value: "Combined Unreal Engine's Motion Design plugin with the workflow demonstrated in the Growing Roots with World Position Offset (WPO) tutorial" },
