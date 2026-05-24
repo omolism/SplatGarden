@@ -907,11 +907,11 @@ export const TECH_SPECS = [
               // top/bottom, the node graph crops a sliver left/right.
               // Per user direction: "用justify的形式在同一行，相同height".
               { layout: "pair", aspectRatio: "16 / 9", items: [
-                { src: `${BASE}textures/daisy/daisy-modeling-speedtree.webp`,  caption: "Modeling in SpeedTree" },
-                { src: `${BASE}textures/daisy/daisy-speedtree-nodegraph.webp`, caption: "Procedural plant node graph" },
+                { src: `${BASE}textures/daisy/daisy-modeling-speedtree.webp`,  caption: "Modeling in Speedtree" },
+                { src: `${BASE}textures/daisy/daisy-speedtree-nodegraph.webp`, caption: "Procedural Plant Generation in SpeedTree" },
               ]},
               { layout: "single", items: [
-                { src: `${BASE}textures/daisy/daisy-optimization.jpg`, caption: "Triangle decimation · 28,557 → 640" },
+                { src: `${BASE}textures/daisy/daisy-optimization.jpg`, caption: "Optimization" },
               ]},
             ],
           },
@@ -921,7 +921,7 @@ export const TECH_SPECS = [
             description: "This was also another exploration of stylized workflows in Substance Designer, inspired by the article \"Breakdown: Making 3D Landscape Look Like Painting\" from 80 Level, which demonstrates a procedural approach to creating stylized textures.",
             rows: [
               { layout: "single", items: [
-                { src: `${BASE}textures/daisy/daisy-substance-nodegraph.webp`, caption: "Stylized procedural node graph" },
+                { src: `${BASE}textures/daisy/daisy-substance-nodegraph.webp`, caption: "Substance Designer Stylized Procedural Node Graph" },
               ]},
               // Both before/after are near-square sources (837×786 ≈ 1.06,
               // 1087×1081 ≈ 1.005). Locking pair to 1:1 forces exactly
@@ -929,8 +929,8 @@ export const TECH_SPECS = [
               // imperceptible, and resolves the slight before/after
               // height drift visible in natural-aspect mode.
               { layout: "pair", aspectRatio: "1 / 1", items: [
-                { src: `${BASE}textures/daisy/daisy-substance-before.webp`, caption: "Before stylization" },
-                { src: `${BASE}textures/daisy/daisy-substance-after.webp`,  caption: "After stylization" },
+                { src: `${BASE}textures/daisy/daisy-substance-before.webp`, caption: "Before Procedural Stylization" },
+                { src: `${BASE}textures/daisy/daisy-substance-after.webp`,  caption: "After Procedural Stylization" },
               ]},
             ],
           },
