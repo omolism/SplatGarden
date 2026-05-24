@@ -25,6 +25,7 @@ import {
   renderKeyPoints,
   renderEmbed,
   renderSimVideo,
+  escapeHtml,
 } from "./asset-hover.js";
 
 // Same BASE_URL trick the splat / FBX / HDRI / colmap loaders use —
@@ -1175,6 +1176,14 @@ export class TechSpec {
           <button class="ts-close" title="Close (T or Esc)">×</button>
         </header>
         <div class="ts-sub">How everything in this scene was made · click a section to fold</div>
+        <nav class="ts-toc" aria-label="Tech Breakdown sections">
+          ${TECH_SPECS.map((s, i) => `
+            <button class="ts-toc-pill${i === 0 ? " active" : ""}"
+                    type="button"
+                    data-toc-target="${i}"
+                    title="Jump to ${escapeHtml(s.section)}">${escapeHtml(s.section)}</button>
+          `).join("")}
+        </nav>
         <div class="ts-body">
           ${TECH_SPECS.map((s, i) => {
             const groupCls = s.group ? ` ts-sec-${s.group}` : "";
@@ -1223,6 +1232,69 @@ export class TechSpec {
         sec.classList.toggle("collapsed");
       });
     });
+
+    // Sticky TOC at the top of the drawer — table of contents pill row
+    // listing every TECH_SPECS section. Two interactions:
+    //   1) Click pill → smooth-scroll the body to that section's top
+    //      AND auto-expand the section if it was collapsed (otherwise
+    //      the click would land on a collapsed header showing nothing).
+    //   2) Scroll-spy → as the user scrolls the body, the pill matching
+    //      the topmost-visible section gets .active so the reader
+    //      always knows where they are in the long content.
+    //
+    // The body is a nested scroll container (overflow-y: auto), so we
+    // compute scroll target via getBoundingClientRect against the body
+    // rather than scrollIntoView which would also scroll the page. rAF
+    // throttles the scroll-spy so a fast flick doesn't burn the main
+    // thread.
+    const bodyEl = this.el.querySelector(".ts-body");
+    const tocPills = Array.from(this.el.querySelectorAll(".ts-toc-pill"));
+    const sectionEls = Array.from(this.el.querySelectorAll(".ts-sec"));
+
+    tocPills.forEach(pill => {
+      pill.addEventListener("click", () => {
+        const idx = Number(pill.dataset.tocTarget);
+        const sec = sectionEls[idx];
+        if (!sec) return;
+        sec.classList.remove("collapsed");
+        const bodyRect = bodyEl.getBoundingClientRect();
+        const secRect  = sec.getBoundingClientRect();
+        const offset   = (secRect.top - bodyRect.top) + bodyEl.scrollTop;
+        bodyEl.scrollTo({ top: offset, behavior: "smooth" });
+      });
+    });
+
+    let _tocSpyScheduled = false;
+    const updateActivePill = () => {
+      _tocSpyScheduled = false;
+      const bodyTop = bodyEl.getBoundingClientRect().top;
+      // Pick the section whose top is at or just above the viewport's
+      // top edge (offset by a small fudge so a section that just barely
+      // peeked out of view still counts as "current").
+      const fudge = 80;
+      let activeIdx = 0;
+      let bestTop  = -Infinity;
+      sectionEls.forEach((sec, i) => {
+        const rel = sec.getBoundingClientRect().top - bodyTop;
+        if (rel <= fudge && rel > bestTop) {
+          bestTop = rel;
+          activeIdx = i;
+        }
+      });
+      tocPills.forEach((p, i) => p.classList.toggle("active", i === activeIdx));
+      // Keep the active pill visible inside the horizontally-scrollable
+      // TOC strip — on phone where the strip overflows, the active pill
+      // may otherwise be off-screen after a long scroll.
+      const activePill = tocPills[activeIdx];
+      if (activePill) {
+        activePill.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+      }
+    };
+    bodyEl.addEventListener("scroll", () => {
+      if (_tocSpyScheduled) return;
+      _tocSpyScheduled = true;
+      requestAnimationFrame(updateActivePill);
+    }, { passive: true });
 
     // Hotspot ON/OFF toggle on each asset item. Delegated so the listener
     // survives any future re-render. stopPropagation keeps the section

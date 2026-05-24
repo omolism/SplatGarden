@@ -1487,6 +1487,63 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   letter-spacing: 0.02em;
 }
 
+/* Table-of-contents pill row — sits between the sub-line and the
+   scrolling body. Stays fixed at the top of the panel (it's OUTSIDE
+   .ts-body, so doesn't move with the content scroll). Horizontally
+   scrollable on phone so a long section list never wraps to a second
+   row and never eats vertical space. Each pill is a button so it
+   handles keyboard focus + activation natively. The scrollbar is
+   hidden (the active-pill auto-centre handles "I can't see all the
+   pills" on phone, and a visible scrollbar would compete with the
+   pill chips for attention). */
+#tech-spec .ts-toc {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--hair);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  /* Touch — let horizontal swipe scroll the pills without the parent
+     scroll context (drawer body) stealing the gesture. */
+  overscroll-behavior-inline: contain;
+  touch-action: pan-x;
+}
+#tech-spec .ts-toc::-webkit-scrollbar { display: none; }
+#tech-spec .ts-toc-pill {
+  appearance: none;
+  flex: 0 0 auto;
+  background: transparent;
+  border: 1px solid var(--hair);
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-family: var(--font-ui);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-mid);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+#tech-spec .ts-toc-pill:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--hair-strong);
+  color: var(--text);
+}
+#tech-spec .ts-toc-pill.active {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.32);
+  color: var(--text);
+}
+#tech-spec .ts-toc-pill:focus-visible {
+  outline: 1px solid rgba(255, 255, 255, 0.55);
+  outline-offset: 1px;
+}
+
 #tech-spec .ts-body {
   flex: 1;
   overflow-y: auto;
