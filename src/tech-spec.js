@@ -886,7 +886,6 @@ export const TECH_SPECS = [
         processCards: [
           {
             eyebrow: "01 · REAL-TIME READY FOLIAGE",
-            title:   "Final In-scene Result",
             description: "640-triangle scatter cards dressed in the painterly Substance diffuse, lit by the same HDRI as the rest of the garden. The whole foreground daisy band ships at interactive frame rate on a desktop GPU without any per-frame foliage update. Below is how the asset got from a 28,557-triangle SpeedTree source to this real-time-ready plate.",
             rows: [
               { layout: "single", items: [
@@ -896,7 +895,6 @@ export const TECH_SPECS = [
           },
           {
             eyebrow: "02 · MODELING & OPTIMIZATION",
-            title:   "Procedural Plant + Aggressive Decimation",
             description: "To maintain stable and usable FPS performance, all foliage assets need to be carefully optimized.",
             rows: [
               // aspectRatio locks both pair cells to 16:9 so the
@@ -917,7 +915,6 @@ export const TECH_SPECS = [
           },
           {
             eyebrow: "03 · STYLIZATION",
-            title:   "Substance Designer Painterly Procedural",
             description: "This was also another exploration of stylized workflows in Substance Designer, inspired by the article \"Breakdown: Making 3D Landscape Look Like Painting\" from 80 Level, which demonstrates a procedural approach to creating stylized textures.",
             rows: [
               { layout: "single", items: [
