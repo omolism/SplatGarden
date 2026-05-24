@@ -175,6 +175,17 @@ function renderProcessCard(card) {
     : (card.label ? `<div class="ah-sec-title">${escapeHtml(card.label)}</div>` : "");
 
   const rows = card.rows.map(r => {
+    // Optional per-row sub-heading. Applied to every layout below so a
+    // card can mix compare / single / pair / quad rows under a unified
+    // sub-section header treatment. Computed once up here so the
+    // compare branch (which early-returns) and the standard branch
+    // both consume the same string. See the CSS rule for the
+    // doubled-separator suppression when a heading immediately follows
+    // the card title block.
+    const heading = r.heading
+      ? `<h4 class="ah-pc-row-heading">${escapeHtml(r.heading)}</h4>`
+      : "";
+
     // Compare-slider row: one or more A/B wipe widgets driven by the
     // existing tech-spec.js helpers. Two schemas accepted:
     //   • Single compare — row itself carries { before, after, labelA,
@@ -195,7 +206,7 @@ function renderProcessCard(card) {
         const a = c.aspectRatio || aspect;
         return `<div class="ah-pc-cmp-cell" style="--cmp-aspect: ${a};">${renderCompare(c)}</div>`;
       }).join("");
-      return `<div class="ah-pc-row ah-pc-compare${pairClass}" style="--cmp-aspect: ${aspect};">${inner}</div>`;
+      return `${heading}<div class="ah-pc-row ah-pc-compare${pairClass}" style="--cmp-aspect: ${aspect};">${inner}</div>`;
     }
     // Layout primitives:
     //   single — one media item, full row width, natural aspect
@@ -224,7 +235,10 @@ function renderProcessCard(card) {
       const qa = r.aspectRatio || "1 / 1";
       aspectStyle = ` style="--quad-aspect: ${escapeHtml(qa)};"`;
     }
-    return `<div class="ah-pc-row ${layout}"${aspectStyle}>${items}</div>`;
+    // `heading` was already computed at the top of this iteration so
+    // both the compare branch (early return above) and this default
+    // branch consume the same string. No re-declaration here.
+    return `${heading}<div class="ah-pc-row ${layout}"${aspectStyle}>${items}</div>`;
   }).join("");
 
   // In-section bullet list — used by Vine's "WPO Dynamic Material

@@ -636,56 +636,96 @@ export const TECH_SPECS = [
             ],
           },
           {
-            // Split out of the old combined "TEXTURING" section so each
-            // beat stays digestible (the original had 4 rows of mixed
-            // content — renders + swatches + sp final + maps — which
-            // read as a long scroll). This section tells the
-            // STYLIZATION story: Original → AI Stylized → final SP
-            // refined render. PBR maps live in their own section below.
+            // Combined STYLIZATION + PBR PIPELINE — the previous split
+            // (sections 02 + 03) put the SP refined render and its PBR
+            // maps in different cards even though they describe the
+            // same end-state output, which made the reader scroll back
+            // and forth to connect "the textured daffodil" with "the
+            // 4 maps that produced it". New shape keeps the whole
+            // stylization story in one card and uses A/B compare
+            // sliders for the actual transformation beats: drag once
+            // to see the AI stylization, drag again at the texture
+            // level. The SP refined daffodil then anchors the bottom
+            // with its PBR map set inline, so the reader sees the
+            // final shaded result and the maps that built it in the
+            // same eye-pass.
             eyebrow:     "02 · STYLIZATION",
             title:       "AI Stylized + Substance Painter",
-            description: "Diffuse runs through a two-stage stylization pipeline. Substance Painter paints the base color; the in-house AI texture stylization tool converts that base into a painterly version; then back into Substance Painter for refinement.",
+            description: "Diffuse runs through a two-stage stylization pipeline. Substance Painter paints the base color, the in-house AI texture stylization tool converts that base into a painterly version, and then back into Substance Painter for refinement and the full PBR map set.",
             rows: [
-              // Original vs AI Stylized — daffodil renders. Native
-              // aspects differ (0.84 vs 0.72 portrait) so we lock both
-              // cells to 3:4 — each crops a small sliver to align.
-              { layout: "pair", aspectRatio: "3 / 4", items: [
-                { src: `${BASE}textures/daffodil/daffodil-original-render.webp`, caption: "Original" },
-                { src: `${BASE}textures/daffodil/daffodil-ai-render.webp`,       caption: "AI Stylized" },
+              // Headline compare — same daffodil pose, drag reveals
+              // the AI-stylized painterly look replacing the original
+              // shading. Aspect locked to 3:4 so the two cells align
+              // exactly under the wipe handle (the source renders
+              // have slightly different native aspect ratios; the
+              // compare slider requires identical framing to read).
+              { layout: "compare", aspectRatio: "3 / 4", items: [
+                {
+                  before: `${BASE}textures/daffodil/daffodil-original-render.webp`,
+                  after:  `${BASE}textures/daffodil/daffodil-ai-render.webp`,
+                  labelA: "Original",
+                  labelB: "AI Stylized",
+                },
               ]},
-              // Base-color swatches — both natively 1:1, no crop.
-              { layout: "pair", aspectRatio: "1 / 1", items: [
-                { src: `${BASE}textures/daffodil/daffodil-original-swatch.webp`, caption: "Original base color" },
-                { src: `${BASE}textures/daffodil/daffodil-ai-swatch.webp`,       caption: "AI stylized base color" },
+              // Texture-level compare — the same transformation viewed
+              // at the diffuse-map data level. Square aspect since the
+              // swatches are 1:1 native. Sub-heading separates this
+              // beat from the render compare above so the reader sees
+              // "shaded result" and "underlying texture" as parallel
+              // proofs of the same stylization pass.
+              { heading: "Base color texture", layout: "compare", aspectRatio: "1 / 1", items: [
+                {
+                  before: `${BASE}textures/daffodil/daffodil-original-swatch.webp`,
+                  after:  `${BASE}textures/daffodil/daffodil-ai-swatch.webp`,
+                  labelA: "Original",
+                  labelB: "AI Stylized",
+                },
               ]},
-              // Final Substance Painter refined daffodil — full width.
-              { layout: "single", items: [
-                { src: `${BASE}textures/daffodil/daffodil-sp-final.webp`, caption: "Substance Painter · final refined daffodil" },
+              // Second transformation compare — AI Stylized ↔ SP+AI
+              // refined final. Completes the two-step pipeline story
+              // (Original → AI Stylized → SP+AI refined): the first
+              // compare above shows the AI stylization landing on the
+              // base; this one shows the Substance Painter refinement
+              // pass adding brush detail and edge break-up on top.
+              // Same 3:4 aspect as compare 1 so the two transformation
+              // beats line up visually as a parallel pair of "before/
+              // after" reveals.
+              { heading: "Substance Painter + AI Stylized Tool", layout: "compare", aspectRatio: "3 / 4", items: [
+                {
+                  before: `${BASE}textures/daffodil/daffodil-ai-render.webp`,
+                  after:  `${BASE}textures/daffodil/daffodil-sp-final.webp`,
+                  labelA: "AI Stylized",
+                  labelB: "SP Refined",
+                },
               ]},
-            ],
-          },
-          {
-            // The PBR map set gets its own beat so the reader has a
-            // clean break between "what was authored" (section 02) and
-            // "what shipped to the GPU" (this section). Map-set
-            // showcases benefit from focused presentation anyway —
-            // four channels at-a-glance reads better as a dedicated
-            // section than tacked onto the end of the stylization
-            // story.
-            eyebrow:     "03 · PBR PIPELINE",
-            title:       "Full Map Set",
-            description: "The refined daffodil ships with a complete PBR map set, all authored from the AI-stylized base color through Substance Painter.",
-            rows: [
-              // Full PBR map set — 4 maps in one row at desktop,
-              // collapses to 2x2 at ≤900px (see .ah-pc-quad in
-              // style.css). object-fit: cover handles any minor aspect
-              // drift between maps.
+              // PBR map set sits inline below the refined render so
+              // the reader can scan render-then-maps in one motion.
+              // 4 maps at desktop, collapses to 2x2 at narrow widths.
+              // No row heading here — visually flows with the SP row
+              // above as the same "refined output" group.
               { layout: "quad", aspectRatio: "1 / 1", items: [
                 { src: `${BASE}textures/daffodil/daffodil-basecolor.webp`,   caption: "BaseColor" },
                 { src: `${BASE}textures/daffodil/daffodil-normal.webp`,      caption: "Normal" },
                 { src: `${BASE}textures/daffodil/daffodil-orm.webp`,         caption: "ORM" },
                 { src: `${BASE}textures/daffodil/daffodil-scattermask.webp`, caption: "ScatterMask" },
               ]},
+            ],
+            // Three-step pipeline summary anchored at the end of the
+            // card. Mirrors the user's reference design where the
+            // "Daffodil texture pipeline" bullets sit directly under
+            // the image rows. Distinct from the global per-asset
+            // keyPoints below (which describe the broader Houdini +
+            // SP + AI stack); these three lines focus on the SP/AI
+            // loop specifically.
+            groups: [
+              {
+                heading: "Daffodil texture pipeline",
+                items: [
+                  "Base color painted in **Substance Painter**, exported as base color map.",
+                  "**AI stylization tool** generates a stylized version from the export.",
+                  "Back into **Substance Painter** for refinement and detail painting.",
+                ],
+              },
             ],
           },
         ],

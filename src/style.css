@@ -3879,6 +3879,36 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   color: var(--text-mid);
   margin: 0 0 18px;
 }
+/* Per-row sub-heading inside a processCard. Sits between rows when a
+   single card needs to group multiple subform rows under their own
+   smaller header (the Daffodil STYLIZATION card uses three sub-groups:
+   Original / AI Stylized / Substance Painter + AI Stylized Tool). Sits
+   visually between the eyebrow-title-desc block at the top and the
+   image rows themselves, so the typography scale is intentionally
+   between the two — slightly smaller than the card title, heavier than
+   the body figcaptions. Hairline rule above each heading separates
+   adjacent groups without adding box clutter. */
+:is(.ah-card, .ts-rich) .ah-pc-row-heading {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.005em;
+  color: var(--text);
+  margin: 18px 0 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--hair);
+}
+/* First row heading in a card sits flush after the card title / desc,
+   so suppress the rule + top padding for that specific case to avoid a
+   doubled separator. */
+:is(.ah-card, .ts-rich) .ah-pc-desc + .ah-pc-row-heading,
+:is(.ah-card, .ts-rich) .ah-pc-title + .ah-pc-row-heading,
+:is(.ah-card, .ts-rich) .ah-pc-eyebrow + .ah-pc-row-heading {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
 /* Caption ABOVE the image in step-style cards. Default figcaption uses
    normal-flow order (caption AFTER frame); the .ah-pc-fig-cap-above
    variant inverts via flex-direction so the caption appears above. */

@@ -67,7 +67,7 @@ import { loadColmapImages, buildColmapFrustums, colmapCameraPosition, colmapCame
 const BASE = import.meta.env.BASE_URL;
 const SPLAT_URL = `${BASE}SplatGarden_PC.splat`;
 // Mobile variant — same 3 M splats, just re-encoded as SPZ (Niantic's
-// open-sourced compressed format). SPZ typically lands at 30-40% of the
+// open-sourced compressed format). SPZ typically lands at 30-50% of the
 // uncompressed .splat size with no visible quality loss, so phones over
 // a metered link feel the difference but the showcase still ships every
 // splat the desktop sees. NOT a downsampled "mobile-quality" variant —
@@ -78,10 +78,13 @@ const SPLAT_URL = `${BASE}SplatGarden_PC.splat`;
 // HEAD probe in pickSplatUrl() below 404s and the loader gracefully
 // falls back to SPLAT_URL — every device still works, only the mobile
 // bandwidth win goes unrealised. Generate the .spz from the same
-// SplatGarden_PC.splat using either:
-//   • Niantic's open-source SPZ CLI (https://github.com/nianticlabs/spz)
-//   • PlayCanvas SuperSplat → File → Export → SPZ
-const SPLAT_MOBILE_URL = `${BASE}SplatGarden_PC.spz`;
+// SplatGarden_PC.splat by running `node scripts/generate-spz-v3.mjs`;
+// the script uses Spark's own transcodeSpz so the output version
+// matches whatever the shipped runtime can decode (0.1.10 → v3, v2.x →
+// v4). External tools (PlayCanvas SuperSplat, Niantic CLI) also work
+// as long as the SPZ version matches the Spark runtime — see
+// _archive/README.md for the version-mismatch troubleshooting story.
+const SPLAT_MOBILE_URL = `${BASE}SplatGarden_Mobile.spz`;
 
 // Resolve the splat URL to load. Phones get a HEAD probe on the SPZ
 // variant first; if it 404s we fall back to the full .splat. The probe
