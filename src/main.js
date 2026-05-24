@@ -938,6 +938,27 @@ Object.defineProperty(window, "__splatgardenState", {
   },
 });
 
+// Service worker — runtime-caching PWA. Registered fire-and-forget so
+// a failure (e.g., dev server quirks, locked-down enterprise browser)
+// never blocks the boot. Lives in /public/sw.js (Vite copies it as-is
+// to the build root) and uses stale-while-revalidate for heavy assets
+// (splat, SPZ, WebP textures, JS chunks) so the second visit feels
+// instant. The base path comes from import.meta.env.BASE_URL so the
+// register call works in dev (`/`) and on Pages (`/SplatGarden/`).
+//
+// Skipped on `localhost` over `file://` because some browsers refuse
+// SW registration there, and the dev experience is rebuild-heavy
+// anyway — caching would just get in the way.
+if ("serviceWorker" in navigator && location.protocol !== "file:") {
+  window.addEventListener("load", () => {
+    const base = import.meta.env.BASE_URL || "/";
+    const swUrl = base + "sw.js";
+    navigator.serviceWorker.register(swUrl, { scope: base })
+      .then((reg) => console.info("[sw] registered, scope:", reg.scope))
+      .catch((err) => console.info("[sw] registration skipped:", err?.message ?? err));
+  });
+}
+
 // First-paint reveal — a black veil layered between the canvas and the
 // splash that fades from opaque to transparent over 1.5 s once body.ui-
 // ready fires. Without it the splat snaps in the moment the splash
@@ -1020,6 +1041,17 @@ function setLoadProgress(loaded, total) {
   }
   const pct = Math.max(0, Math.min(100, (100 * loaded) / total));
   _ldFill.style.width = `${pct}%`;
+  // Pillar progress lighting — light up 01 3DGS / 02 USD / 03 AI in
+  // sequence as the download crosses 33 % / 66 % / 99 %. Telegraphs
+  // "we're making real progress" beyond the bare fill bar, and lets
+  // the editorial pillar row earn its keep during the wait. Class is
+  // sticky once set (no toggle-off) so a brief network stall doesn't
+  // de-light a pillar — progress is monotonic by nature anyway.
+  if (loadingEl) {
+    if (pct >= 30) loadingEl.classList.add("p1");
+    if (pct >= 60) loadingEl.classList.add("p2");
+    if (pct >= 95) loadingEl.classList.add("p3");
+  }
 }
 
 // Stream a binary asset with byte-level progress. Used instead of letting

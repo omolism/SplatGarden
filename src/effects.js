@@ -1291,10 +1291,71 @@ export function buildGUI(controller) {
   // Customize-level so the headline UI stays on assets / pipeline / interaction.
   // (FX moved OUT of here and up to top-level — see above.)
   const fPlay = fCustomize.addFolder("Play").close();
-  fFX.add(presetObj, "preset", presetKeys).name("Preset").onChange((name) => {
-    Object.assign(params, PRESETS[name]);
+  // Preset switching with a smooth 500 ms blend on numeric params.
+  // Non-numeric / non-lerpable fields (effect, colorOn, color) snap at
+  // the start so the right shader branch + tint colour are active for
+  // the whole transition; numeric params (radius, speed, intensity,
+  // duration, noiseScale, edgeWidth, emissive, edgeRagged, wispAmt,
+  // flyMax, windX/Y/Z) ease-in-out from current → target. A pending
+  // lerp is cancelled if the user picks another preset mid-flight so
+  // a rapid sequence of clicks settles on the final selection rather
+  // than blending through every intermediate. GUI controllers update
+  // once at the start (snap) and once at the end (final values) to
+  // avoid jittery per-frame display thrashing.
+  let _presetLerpRAF = null;
+  function lerpToPreset(targetName) {
+    const target = PRESETS[targetName];
+    if (!target) return;
+    if (_presetLerpRAF) {
+      cancelAnimationFrame(_presetLerpRAF);
+      _presetLerpRAF = null;
+    }
+    const duration = 500;
+    const startTime = performance.now();
+    const startVals  = {};
+    const targetVals = {};
+    for (const key in target) {
+      if (typeof target[key] === "number") {
+        startVals[key]  = params[key];
+        targetVals[key] = target[key];
+      } else {
+        // Snap non-numeric values (effect, color, colorOn) immediately
+        // so the shader branch + tint colour are correct during the lerp.
+        params[key] = target[key];
+      }
+    }
+    // First applyParams flushes the snapped non-numeric values into the
+    // shader; the per-frame applyParams calls below then drive the
+    // numeric lerp.
     controller.applyParams();
+    // Refresh GUI once now so the preset's non-numeric controllers
+    // (Effect dropdown, Color picker, Color tint checkbox) reflect the
+    // new state immediately.
     gui.controllersRecursive().forEach((c) => c.updateDisplay());
+
+    const step = (now) => {
+      const t = Math.min(1, (now - startTime) / duration);
+      // Smooth ease-in-out (cubic).
+      const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      for (const key in targetVals) {
+        params[key] = startVals[key] + (targetVals[key] - startVals[key]) * eased;
+      }
+      controller.applyParams();
+      if (t < 1) {
+        _presetLerpRAF = requestAnimationFrame(step);
+      } else {
+        _presetLerpRAF = null;
+        // Final controller refresh — settles the numeric sliders on
+        // their target values after the per-frame lerp has been
+        // sweeping them silently.
+        gui.controllersRecursive().forEach((c) => c.updateDisplay());
+      }
+    };
+    _presetLerpRAF = requestAnimationFrame(step);
+  }
+
+  fFX.add(presetObj, "preset", presetKeys).name("Preset").onChange((name) => {
+    lerpToPreset(name);
     // Surface the preset name as a micro-toast so a change from a deep
     // panel still reads as a deliberate state shift.
     window.__toast?.(`Preset: ${name}`);

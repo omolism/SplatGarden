@@ -2475,12 +2475,26 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
   display: inline-flex;
   align-items: baseline;
   gap: 8px;
+  /* Default state: dim. As the download progresses past 30/60/95%, the
+   * setLoadProgress helper in main.js stamps p1/p2/p3 on #loading,
+   * which lights each pillar in turn. The transition is gentle so the
+   * progression reads as a slow editorial fade-up, not a strobe. */
+  opacity: 0.32;
+  transition: opacity 0.55s cubic-bezier(0.2, 0.7, 0.2, 1.0);
 }
 #loading .ld-pillar-n {
   font-size: 9px;
   color: var(--text-dim);
   letter-spacing: 0.10em;
+  transition: color 0.55s ease;
 }
+/* Sequential reveal — each progress class lights the next pillar. The
+ * `:nth-child(N)` selectors target the pillar elements directly so
+ * they survive a future reorder of the .ld-pillars wrapper. */
+#loading.p1 .ld-pillar:nth-child(1),
+#loading.p2 .ld-pillar:nth-child(-n+2),
+#loading.p3 .ld-pillar { opacity: 1; }
+#loading.p3 .ld-pillar-n { color: var(--text-mid); }
 
 /* Bottom progress bar + status text */
 #loading .ld-foot {
