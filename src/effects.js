@@ -77,6 +77,15 @@ export const uniforms = {
 
 export const params = {
   effect: "Wave & Tint",
+  // Color tinting is OPT-IN. The default `colorOn = false` forces
+  // uniforms.color to neutral white inside applyParams, which makes
+  // Scan Line (the only effect that still consumes uColor in the
+  // shader; the other seven explicitly removed it) render fully
+  // monochrome — matching the project's monochrome rule out of the
+  // box. Toggling Color tint ON in lil-gui reveals the picker below
+  // and pipes its value through to the shader uniform, so a user
+  // who wants colored Scan Line FX gets one tap to opt in.
+  colorOn: false,
   color: "#cccccc",
   radius: 2.0,
   speed: 4.0,
@@ -1046,8 +1055,17 @@ export class EffectController {
     uniforms.edgeRagged.value = params.edgeRagged;
     uniforms.wispAmt.value    = params.wispAmt;
     uniforms.flyMax.value     = params.flyMax;
-    const c = new THREE.Color(params.color);
-    uniforms.color.value.set(c.r, c.g, c.b);
+    // Honour the Color tint toggle — off (default) forces neutral
+    // white so Scan Line and any future color-aware effect render
+    // monochrome regardless of what's parked in the colour picker.
+    // The picker value only takes effect when the user explicitly
+    // opts in via the Color tint checkbox in the FX → Core folder.
+    if (params.colorOn) {
+      const c = new THREE.Color(params.color);
+      uniforms.color.value.set(c.r, c.g, c.b);
+    } else {
+      uniforms.color.value.set(1, 1, 1);
+    }
     this.mesh?.updateVersion();
   }
 
@@ -1249,7 +1267,21 @@ export function buildGUI(controller) {
 
   const fCore = fFX.addFolder("Core");
   fCore.add(params, "effect", Object.keys(EFFECT_INDEX)).name("Effect").onChange(() => controller.applyParams());
-  fCore.addColor(params, "color").name("Color").onChange(() => controller.applyParams());
+  // Color tint — opt-in checkbox guarding the picker below. Off by
+  // default so the FX section reads monochrome on first open, matching
+  // the project's monochrome aesthetic; toggling on reveals the picker
+  // and pipes its value through to the shader uniform.
+  // `let colorPicker` (not const) so the checkbox's onChange closure
+  // can reference it before the picker is registered on the line
+  // below — the closure only fires later when the user clicks, by
+  // which time the picker has been initialised.
+  let colorPicker;
+  fCore.add(params, "colorOn").name("Color tint").onChange((on) => {
+    if (on) colorPicker.show(); else colorPicker.hide();
+    controller.applyParams();
+  });
+  colorPicker = fCore.addColor(params, "color").name("Color").onChange(() => controller.applyParams());
+  if (!params.colorOn) colorPicker.hide();
   fCore.add(params, "radius",    0.1, 10.0, 0.05).name("Radius").onChange(() => controller.applyParams());
   fCore.add(params, "duration",  0.3,  8.0, 0.1 ).name("Duration (s)").onChange(() => controller.applyParams());
   fCore.add(params, "intensity", 0.0,  3.0, 0.01).name("Intensity").onChange(() => controller.applyParams());
