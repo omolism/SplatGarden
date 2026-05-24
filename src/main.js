@@ -790,8 +790,84 @@ function onResize() {
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   postfx.setSize(w, h);
+
+  // Re-evaluate body orientation classes here too — the standalone
+  // _applyOrientationClasses listener fires on the same `resize`, but
+  // bundling the call into the resize tail makes the order
+  // deterministic: phone/tablet flips before any DOM measurement that
+  // CSS rules under those classes would change.
+  if (typeof _applyOrientationClasses === "function") _applyOrientationClasses();
+
+  // Clamp any inline-positioned floating panel back into the viewport.
+  // When the user drags the Credits or asset-hover card to a corner
+  // that exists in landscape and then rotates to portrait, the inline
+  // left/top can land the panel off-screen (e.g., left=700px is fine
+  // in a 932-wide landscape, dies in a 414-wide portrait). The CSS
+  // viewport-relative rules can't reach inline styles, so we do it
+  // here. Margin keeps a visible edge handle so the user can still
+  // drag the panel back if they want.
+  _clampInlinePanelsToViewport();
 }
 window.addEventListener("resize", onResize);
+
+// iOS Safari + Chrome Android both fire `orientationchange` but the
+// `window.innerWidth/Height` values lag by a frame or two — reading
+// them inside the event handler often returns the pre-rotation size.
+// Schedule a debounced re-resize so the final post-rotation dimensions
+// drive the actual layout. visualViewport.resize is the most reliable
+// signal for "the visible viewport just changed for real" (URL bar
+// collapse, keyboard reveal, software rotation all included); we hook
+// it as a belt-and-braces alongside the legacy events.
+let _resizeRAF = null;
+function _scheduleResize(delayMs = 0) {
+  if (_resizeRAF) cancelAnimationFrame(_resizeRAF);
+  if (delayMs > 0) {
+    setTimeout(() => requestAnimationFrame(onResize), delayMs);
+  } else {
+    _resizeRAF = requestAnimationFrame(() => { _resizeRAF = null; onResize(); });
+  }
+}
+window.addEventListener("orientationchange", () => {
+  // Two follow-up ticks so we catch BOTH the immediate-but-stale
+  // dimensions and the settled post-rotation values. 50 ms covers
+  // most devices; 350 ms catches the slow iOS URL-bar reflow.
+  _scheduleResize(0);
+  _scheduleResize(50);
+  _scheduleResize(350);
+});
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", () => _scheduleResize(0));
+}
+
+// Clamp inline-positioned floating panels back into the visible
+// viewport on resize / rotation. Defensive about the elements existing
+// — most are mounted lazily, so a too-early call shouldn't throw.
+function _clampInlinePanelsToViewport() {
+  const w = window.innerWidth;
+  const h = window.innerHeight;
+  // Minimum visible edge so a clamped panel still has a header-grab
+  // surface inside the viewport.
+  const EDGE = 32;
+  const targets = [
+    document.getElementById("credits"),
+    document.getElementById("asset-hover-card"),
+  ];
+  for (const el of targets) {
+    if (!el || el.hasAttribute("hidden")) continue;
+    const left = parseFloat(el.style.left);
+    const top  = parseFloat(el.style.top);
+    if (!Number.isFinite(left) && !Number.isFinite(top)) continue;
+    const rect = el.getBoundingClientRect();
+    const maxLeft = Math.max(EDGE - rect.width, w - EDGE);
+    const maxTop  = Math.max(EDGE - rect.height, h - EDGE);
+    if (Number.isFinite(left)) {
+      el.style.left = Math.min(Math.max(left, EDGE - rect.width), maxLeft) + "px";
+    }
+    if (Number.isFinite(top)) {
+      el.style.top  = Math.min(Math.max(top, 0), maxTop) + "px";
+    }
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Load splat

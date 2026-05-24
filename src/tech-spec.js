@@ -984,15 +984,16 @@ export const TECH_SPECS = [
       {
         name:      "Tree",
         location:  "Near gazebo",
-        toolchain: ["SpeedTree", "Unreal Engine 5 (set dress)"],
-        note:      "Procedural tree authored in SpeedTree, dressed into the Unreal scene before the env capture.",
-        // Third-party marketplace asset rather than in-house authoring,
-        // so this is the only Production item that surfaces an external
-        // citation. The `source` field renders as the small mono footer
-        // under the note; we wrap the URL in an <a> so the credit is
-        // clickable, and target="_blank" + rel="noopener" keep the
-        // viewer's session intact when the reader opens the listing.
-        source:    `Asset: <a href="https://www.fab.com/listings/21c3786d-bc4a-472f-bace-70e40b2f01dc" target="_blank" rel="noopener noreferrer">SpeedTree pack on Fab.com ↗</a>`,
+        toolchain: ["SpeedTree", "Fab marketplace", "Unreal Engine 5 (set dress)"],
+        note:      "Hybrid asset sourcing. The hero trees near the gazebo were team-authored in SpeedTree to match the SplatGarden look, while the surrounding fill foliage was sourced from the Fab marketplace and dropped into the same SpeedTree pipeline for consistency. Both paths land in Unreal Engine 5 as set-dressed meshes before the env capture.",
+        // Hybrid sourcing — the team-authored hero trees are in-house
+        // SpeedTree work, but some of the surrounding fill foliage
+        // comes from a Fab marketplace pack. The `source` field links
+        // the marketplace credit explicitly so the third-party portion
+        // of the bundle is acknowledged; the team-authored hero work
+        // stands without citation, which matches the rest of the
+        // Production items.
+        source:    `Fill foliage: <a href="https://www.fab.com/listings/21c3786d-bc4a-472f-bace-70e40b2f01dc" target="_blank" rel="noopener noreferrer">SpeedTree pack on Fab.com ↗</a>`,
       },
     ],
   },
