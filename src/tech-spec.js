@@ -343,7 +343,6 @@ export const TECH_SPECS = [
         processCards: [
           {
             eyebrow:     "01 · FINAL RENDER",
-            title:       "Particle Render in Karma",
             description: "Final pass of the FLIP particle simulation rendered against the dressed garden scene in Karma.",
             rows: [
               { layout: "single", items: [{
@@ -356,7 +355,6 @@ export const TECH_SPECS = [
           },
           {
             eyebrow:     "02 · BREAKDOWN",
-            title:       "Volume Trail · Volume Velocity",
             description: "A two-pass breakdown. Volume Trail (top) visualises the FLIP velocity field, and Volume velocity (bottom) shows the volume-velocity-from-curves field driving the sim.",
             rows: [
               { layout: "single", items: [{
@@ -468,7 +466,6 @@ export const TECH_SPECS = [
           },
           {
             eyebrow:     "02 · BREAKDOWN",
-            title:       "Simulation Pipeline",
             description: "A three-panel breakdown covering the mask source on the gazebo geometry, the color transfer onto the Gaussian Splat, and the emission group creation from those masks.",
             rows: [
               { layout: "single", items: [{
@@ -481,7 +478,6 @@ export const TECH_SPECS = [
           },
           {
             eyebrow:     "03 · KEY PROCESS",
-            title:       "Houdini Simulation Setup",
             description: "How the gazebo's flower-growth FX is built up step by step in Houdini.",
             // Grouped bullets — each subheading carries its own
             // bullet list. Schema lives on processCards as `groups`;
@@ -609,7 +605,6 @@ export const TECH_SPECS = [
         processCards: [
           {
             eyebrow:     "01 · FINAL RESULT IN THE SCENE",
-            title:       "Procedural Vine on the Gazebo",
             description: "Combined Unreal Engine's Motion Design plugin with the workflow demonstrated in the Growing Roots with World Position Offset (WPO) tutorial to develop a procedural vine system with controllable growth animation. Blueprint-controlled parameters drive vine growth behavior, enabling interactive real-time triggering and directional vine expansion within the environment.",
             rows: [
               { layout: "single", items: [
@@ -619,7 +614,6 @@ export const TECH_SPECS = [
           },
           {
             eyebrow:     "02 · WPO DYNAMIC MATERIAL BLUEPRINT",
-            title:       "Unreal Material · Growth Controls",
             description: "A single Unreal material drives the entire growth animation. The five inputs below combine into one interactive growth workflow that Blueprint can drive at runtime.",
             rows: [
               { layout: "single", items: [
@@ -636,7 +630,6 @@ export const TECH_SPECS = [
           },
           {
             eyebrow:     "03 · PLANT GROW ON THE VINE",
-            title:       "Motion Designer Cloner + Effectors",
             description: "By using the Motion Designer plugin's Cloner component, assets can be distributed onto a specific Static Mesh surface and animated with controllable growth behavior. Adding more Cloner components and assets creates a denser and more organic vine structure. An Effector controls both the transform behavior and growth animation of cloned assets, affecting each individual asset within the Cloner system. When driven through Sequencer or Blueprint, it creates directional growth effects based on movement.",
             // Side-by-side equal-height pair (16:9 each) — the two
             // diagrams read as a related diptych: STEP 1 distribution
@@ -698,7 +691,6 @@ export const TECH_SPECS = [
         processCards: [
           {
             eyebrow:     "01 · HOUDINI SIMULATION",
-            title:       "Procedural Growth Animation",
             description: "In Houdini, KineFX and Vellum were used to create a natural, organic growth animation for the daffodil, preparing it for interaction.",
             rows: [
               // Two videos side-by-side at matched 16:9 — user-provided
