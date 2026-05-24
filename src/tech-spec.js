@@ -569,7 +569,7 @@ export const TECH_SPECS = [
           {
             eyebrow:     "01 · FINAL RESULT IN THE SCENE",
             title:       "Procedural Vine on the Gazebo",
-            description: "By combining Unreal Engine's Motion Design plugin with the workflow from the Growing Roots with WPO tutorial, I developed a procedural vine system with controllable growth animation. The growth behavior is driven through Blueprint parameters, enabling interactive control and real-time triggering within the scene.",
+            description: "Combined Unreal Engine's Motion Design plugin with the workflow demonstrated in the Growing Roots with World Position Offset (WPO) tutorial to develop a procedural vine system with controllable growth animation. Blueprint-controlled parameters drive vine growth behavior, enabling interactive real-time triggering and directional vine expansion within the environment.",
             rows: [
               { layout: "single", items: [
                 { src: `${BASE}textures/vine/vine-final-scene.jpg`, caption: "Gazebo dressed with the procedural vine" },
@@ -589,14 +589,14 @@ export const TECH_SPECS = [
               { key: "UV Directional Masking",            value: "Controls the directional flow and expansion of the vine growth." },
               { key: "Vertex Color Control",              value: "Defines growth areas and controls the blending behavior of the shader." },
               { key: "World Position Offset (WPO)",       value: "Animates the mesh deformation to simulate organic vine growth in real time." },
-              { key: "Unreal Engine Material Blueprint",  value: "Combines all procedural controls into an interactive and controllable growth workflow." },
+              { key: "Unreal Engine Material Blueprint System",  value: "Combines all procedural controls into an interactive and controllable growth workflow." },
               { key: "Procedural Vine Growth Workflow",   value: "Simulates dynamic and organic vine expansion interactively within the environment." },
             ],
           },
           {
             eyebrow:     "03 · PLANT GROW ON THE VINE",
             title:       "Motion Designer Cloner + Effectors",
-            description: "By using the Motion Designer plugin's Cloner component, assets (small plants, blooms) are distributed onto a specific Static Mesh surface and animated with controllable growth behavior. Adding more assets and Cloner components makes the vine visually richer and more organic. An Effector then controls both the transforms and the growth animation of the cloned assets, and when driven through Sequencer or Blueprint it creates a directional growth effect based on movement.",
+            description: "By using the Motion Designer plugin's Cloner component, assets can be distributed onto a specific Static Mesh surface and animated with controllable growth behavior. Adding more Cloner components and assets creates a denser and more organic vine structure. An Effector controls both the transform behavior and growth animation of cloned assets, affecting each individual asset within the Cloner system. When driven through Sequencer or Blueprint, it creates directional growth effects based on movement.",
             // Side-by-side equal-height pair (16:9 each) — the two
             // diagrams read as a related diptych: STEP 1 distribution
             // → STEP 2 control. Original images were stacked and ate
