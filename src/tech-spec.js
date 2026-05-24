@@ -335,9 +335,14 @@ export const TECH_SPECS = [
             // The hero Karma render up top answers "what does it look
             // like?"; this answers "where does it deploy?". Closes the
             // visual sequence before Key Process drops the text bullets.
+            //
+            // No title / description on this card — the eyebrow plus
+            // the caption "Particle Load Test" under the video already
+            // names the beat completely, and the reference Figma
+            // intentionally leaves the prose slot empty so the video
+            // owns the breath of the section. Matches sections 03/04
+            // text "一模一样" per the user reference.
             eyebrow:     "03 · XR-STAGE VIEW",
-            title:       "Particle Load Test",
-            description: "Real-time load test of the FLIP particle sim playing back on the on-set XR LED stage that the final piece targets.",
             rows: [
               { layout: "single", items: [{
                 iframeSrc:   "https://player.vimeo.com/video/1195059511?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
@@ -348,15 +353,20 @@ export const TECH_SPECS = [
             ],
           },
           {
-            eyebrow:     "04 · KEY PROCESS",
-            title:       "Houdini Simulation Setup",
-            description: "How the garden FLIP particle sim is built up step by step in Houdini.",
-            // Single group — matches the reference design where all
-            // three bullets live under one "Houdini Simulation"
-            // subheading. The Gazebo pattern with multiple groups
+            // Key Process closes the card with the four-line Houdini
+            // glossary. No title / description on top of the eyebrow —
+            // the eyebrow ("04 · KEY PROCESS") IS the section name, and
+            // the group's own "Houdini Simulation" subhead introduces
+            // the bullets directly underneath. The reference Figma
+            // shows this same minimal stack: header → subhead →
+            // bullets, with no descriptive prose between them.
+            //
+            // Single group — three bullets all live under "Houdini
+            // Simulation". The Gazebo pattern with multiple groups
             // (Simulation Mask + Velocity from Pyro) doesn't apply
             // here because the FLIP pipeline reads as one coherent
             // sequence rather than two parallel sub-systems.
+            eyebrow:     "04 · KEY PROCESS",
             groups: [
               {
                 heading: "Houdini Simulation",
