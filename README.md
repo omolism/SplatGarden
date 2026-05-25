@@ -2,7 +2,7 @@
 
 A 3D Gaussian Splatting web viewer for an asset-pipeline showcase. A Houdini and Unreal Engine 5 garden, captured at a multi-camera rig, reconstructed with COLMAP, trained in parallel by Postshot and Lichtfeld Studio, optimised with Houdini GSOP, and rendered in the browser via Spark on Three.js + WebGL 2.
 
-**Live**: https://omolism.github.io/SplatGarden/
+**Live**: https://splatgarden.com (apex domain; the previous `omolism.github.io/SplatGarden/` URL now redirects)
 
 ## Pipeline
 
@@ -88,7 +88,7 @@ The companion `Max range (m)` input caps the auto-reframe radius — useful when
 
 ## Deploy
 
-GitHub Pages via `.github/workflows/deploy-pages.yml`. The workflow sets `VITE_BASE=/SplatGarden/` so subpath asset URLs resolve under the project page. No Git LFS (the previous LFS-cache step in the legacy repo is no longer needed).
+GitHub Pages via `.github/workflows/deploy-pages.yml`. The workflow sets `VITE_BASE=/` because the site is served from the apex custom domain `splatgarden.com` (rather than the `omolism.github.io/SplatGarden/` project-page subpath). `public/CNAME` carries the domain into the build so GitHub Pages maps the deploy to it; the DNS records on Spaceship point the apex at GitHub's anycast IPs (`185.199.108.153`, `109.153`, `110.153`, `111.153`) plus a `www` CNAME to `omolism.github.io`. To fall back to the project page, flip `VITE_BASE` back to `/SplatGarden/` and remove `public/CNAME`. No Git LFS.
 
 ## Source layout
 
