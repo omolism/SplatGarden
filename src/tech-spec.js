@@ -625,26 +625,17 @@ export const TECH_SPECS = [
         processCards: [
           {
             eyebrow:     "Procedural Vine Growth System",
-            // Hero plate swapped from the static vine-final-scene.jpg
-            // to the live "Procedural Vine Growth System2" Vimeo clip
-            // so the section leads with the motion of the vine actually
-            // growing rather than a single frame. autoplay=1 + loop=1
-            // keep it ambient; muted=0 follows the project convention
-            // (the user has been explicit that "autoplay but not muted"
-            // is the SplatGarden Vimeo pattern). The first-paint
-            // aspectRatio comes from the iframe's 1920×1048 markup;
-            // vimeo-fit.js refines once the Player API confirms.
+            // "Procedural Vine Growth System2" Vimeo cut (1195194768,
+            // 1920×1048) per the user's reference iframe. This is the
+            // wide hero capture of the gazebo dressed with the live
+            // procedural vine. The WPO shader section below stays on
+            // its static blueprint screenshot.
             rows: [
               { layout: "single", items: [{
-                // "Procedural Vine Growth System (1)" cut (Vimeo
-                // 1195195534, true 1920×1080). This is the WPO-driven
-                // hero capture and the only video the Vine card uses —
-                // the WPO shader section below intentionally stays on
-                // its static blueprint screenshot.
-                iframeSrc:   "https://player.vimeo.com/video/1195195534?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
-                caption:     "Procedural vine growth · gazebo dressed in real time",
+                iframeSrc:   "https://player.vimeo.com/video/1195194768?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
+                caption:     null,
                 alt:         "Procedural Vine Growth System — live capture of the WPO-driven vine growing across the gazebo",
-                aspectRatio: "16 / 9",
+                aspectRatio: "1920 / 1048",
               }]},
             ],
             points: [
@@ -689,11 +680,16 @@ export const TECH_SPECS = [
             // each diagram represents, so caption + image are
             // complementary, not redundant.
             rows: [
+              // Captions intentionally null — the Figma reference shows
+              // both images with their labels embedded INSIDE the image
+              // ("Assets Applied to Static Mesh" badge on the left, the
+              // Plane / Sphere Effector callouts on the right). Adding
+              // separate "Step 1 · …" / "Step 2 · …" captions below
+              // duplicates that information and doesn't appear in the
+              // reference design.
               { layout: "pair", aspectRatio: "16 / 9", items: [
-                { src: `${BASE}textures/vine/vine-assets-static-mesh.jpg`,
-                  caption: "Step 1 · Cloner distributes bloom assets onto the static mesh" },
-                { src: `${BASE}textures/vine/vine-cloner-effector.jpg`,
-                  caption: "Step 2 · plane and sphere effectors shape scale and density" },
+                { src: `${BASE}textures/vine/vine-assets-static-mesh.jpg`, caption: null },
+                { src: `${BASE}textures/vine/vine-cloner-effector.jpg`,    caption: null },
               ]},
             ],
             // Four cloner / effector bullets per the Figma reference,
@@ -712,7 +708,7 @@ export const TECH_SPECS = [
         // the small mono footer slot at the bottom of the asset card
         // (see ah-foot in renderCard). The link is clickable through
         // the same anchor-rendering path that the Tree citation uses.
-        source: `[1] tharlevfx. (2024, January 19). Growing roots with WPO [Video]. <a href="https://www.youtube.com/watch?v=KZX0kHSfD7B" target="_blank" rel="noopener noreferrer">youtube.com/watch?v=KZX0kHSfD7B ↗</a>`,
+        source: `[1] tharlevfx. (2024, January 19). Growing roots with WPO [Video]. <a href="https://www.youtube.com/watch?v=KZX0kHSfD7B" target="_blank" rel="noopener noreferrer">https://www.youtube.com/watch?v=KZX0kHSfD7B</a>`,
       },
       {
         name:      "Daffodil",
