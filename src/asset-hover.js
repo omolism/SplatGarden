@@ -139,7 +139,6 @@ function renderProcessCardItem(item /* captionAbove unused — always below */) 
     ? `<figcaption>${escapeHtml(item.caption)}</figcaption>`
     : "";
   // All captions render BELOW their content (image or video) per user
-  // direction "图片的标注也需要在图片的下方". One uniform rule — keeps
   // visual rhythm consistent across cards and matches the standard
   // figure → figcaption flow. The .ah-pc-fig-cap-above CSS variant
   // is left in style.css dormant in case a future card wants captions
@@ -151,17 +150,23 @@ function renderProcessCardItem(item /* captionAbove unused — always below */) 
 }
 
 function renderProcessCard(card) {
-  if (!card || !Array.isArray(card.rows) || card.rows.length === 0) return "";
+  if (!card) return "";
+  // A card needs SOMETHING to render — either media rows, or bullet
+  // content (points / groups), or at least a header (eyebrow / title /
+  // label). Bullets-only cards (like Particles' "Key Process") were
+  // silently dropping out under the old "rows required" check, which
+  // is why the Key Process bullets were invisible while the asset's
+  // top-level `note` ended up filling the void at the bottom of the
+  // card. The four sentinels below let any one of header / rows /
+  // points / groups carry the card on its own.
+  const hasRows   = Array.isArray(card.rows)   && card.rows.length   > 0;
+  const hasPoints = Array.isArray(card.points) && card.points.length > 0;
+  const hasGroups = Array.isArray(card.groups) && card.groups.length > 0;
+  const hasHeader = !!(card.eyebrow || card.title || card.label || card.description);
+  if (!hasRows && !hasPoints && !hasGroups && !hasHeader) return "";
   // Detect style by presence of eyebrow/title (Style B) vs label (Style A).
   const isStep = !!(card.eyebrow || card.title);
-  // Both styles render as FLAT sections (no rounded-box wrapper) — user
-  // direction: "我不要这样的卡片嵌套排版，类似Gazebo这样平铺的就可以".
-  // Each card becomes its own <section class="ah-section">, consistent
-  // with how Gazebo's "HOUDINI 3DGS SIMULATION" section is rendered.
-  // Captions also always render BELOW their content (image or video)
-  // per the follow-up "图片的标注也需要在图片的下方" — captionAbove
-  // plumbing is removed entirely; renderProcessCardItem handles the
-  // uniform below-caption layout itself.
+
   const sectionClass = isStep ? "ah-section ah-pc-step" : "ah-section ah-pc-flat";
 
   // Chip-style header → use the standard .ah-sec-title (uppercase
@@ -174,7 +179,10 @@ function renderProcessCard(card) {
        ${card.description ? `<p class="ah-pc-desc">${escapeHtml(card.description)}</p>` : ""}`
     : (card.label ? `<div class="ah-sec-title">${escapeHtml(card.label)}</div>` : "");
 
-  const rows = card.rows.map(r => {
+  // Guarded against undefined `rows` because cards can now be
+  // bullets-only (see the sentinels above the renderProcessCard
+  // early-return). `(card.rows || [])` makes the map a safe no-op.
+  const rows = (card.rows || []).map(r => {
     // Optional per-row sub-heading. Applied to every layout below so a
     // card can mix compare / single / pair / quad rows under a unified
     // sub-section header treatment. Computed once up here so the
@@ -348,7 +356,6 @@ export function renderCard(it) {
     ${/* processCards render AFTER embeds — Daffodil keeps its existing
         VAT+OSC video at the top, then the rich Houdini Simulation /
         Texturing process cards appear below it. Per user direction
-        "加在现在daffodil VAT OSC 内容的下面". Grape Hyacinth + Additional
         Foliage have no separate `embed` field so this ordering doesn't
         affect them — their processCards still render right after the
         Keywords zone. */

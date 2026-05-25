@@ -329,7 +329,14 @@ export const TECH_SPECS = [
           "VEX",
         ],
         output:    "Houdini FLIP particle simulation · final pass rendered in Karma",
-        note:      "Garden-wide particle pass. A contained Houdini FLIP simulation whose velocity field is art-directed by image-traced guide curves, then colour-transferred onto the particles post-solve. The final pass is rendered in Karma alongside the dressed garden.",
+        // Asset-level `note` deliberately dropped — the Figma shows
+        // Large Display View → Key Process bullets at the bottom of
+        // the card with no fallback paragraph. Previously the bullets
+        // were silently invisible (Key Process processCard has no
+        // `rows`, and the old renderProcessCard required rows), so
+        // this note ended up filling the void at the bottom. With the
+        // renderer fix in asset-hover.js the bullets render properly
+        // and this prose isn't needed.
         // Step-style processCards — show → show → show → tell:
         //   01 — FINAL RENDER  hero playback (Karma offline render).
         //   02 — BREAKDOWN     one composite Vimeo clip covering all
