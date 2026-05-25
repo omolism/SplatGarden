@@ -526,6 +526,11 @@ export const TECH_SPECS = [
         // Inherits the OLD Gazebo coordinates per user direction — the
         // statue physically sits where the Gazebo hotspot used to be.
         worldPos:  [-0.58, -0.561, 3.774],
+        // Keyword chips match the Figma chip row verbatim — "VAT"
+        // (rather than "VAT (Vertex Animation Texture)") and "UE5"
+        // (rather than "Unreal Engine 5"). Both short forms keep the
+        // chip row from wrapping awkwardly and match the reference
+        // design's typography.
         toolchain: [
           "Houdini",
           "Particle Simulation",
@@ -534,53 +539,50 @@ export const TECH_SPECS = [
           "Axiom",
           "Gaussian Splat",
           "GSOPs",
-          "VAT (Vertex Animation Texture)",
-          "Unreal Engine 5",
+          "VAT",
+          "UE5",
         ],
-        output:    "Animated statue · 3DGS dynamics + VAT-baked playback in UE5",
-        // `note` is the only Statue-card prose that the processCards
-        // don't already cover — they describe the VAT + Houdini-GS
-        // stages each in isolation; this one-liner adds the live
-        // MediaPipe interaction context (which the static images
-        // can't show). Per the audit: trimmed from the longer
-        // duplicate that restated the section descriptions.
-        note:      "Left-hand pinch in the live MediaPipe session scrubs the VAT playback during the shoot, so the statue's animation responds to the operator's gesture in real time.",
-        // Step-style process cards — two sections matching the user
-        // reference design. Both videos are user-provided Vimeo URLs.
-        // aspectRatio is the first-paint hint; vimeo-fit.js refines to
-        // the clip's actual ratio once the Vimeo Player API reports back.
+        // Top-level `output` line and the MediaPipe `note` are both
+        // dropped because neither appears in the Figma reference; the
+        // user's instruction is to keep only the text the Figma shows.
+        // Videos / images stay untouched.
         processCards: [
           {
-            eyebrow:     "01 · FINAL RESULT",
-            title:       "Unreal Engine 5 · VAT",
-            description: "A statue animation produced through a particle-sprite VAT pipeline that pre-bakes simulation data into textures for lightweight, GPU-driven playback at runtime.",
+            // Eyebrow text + caption + description all align to the
+            // Figma "VAT in Unreal Engine 5" section verbatim. The
+            // bold-title field (`title`) is dropped because the Figma
+            // surfaces the section name only through the chip-style
+            // eyebrow.
+            eyebrow:     "VAT in Unreal Engine 5",
+            description: "A statue animation produced through a particle sprite VAT pipeline — pre-baking simulation data into textures for lightweight, GPU-driven playback at runtime.",
             rows: [
               { layout: "single", items: [{
                 iframeSrc:   "https://player.vimeo.com/video/1194884976?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
-                caption:     "Statue · UE5 VAT playback",
+                caption:     "Unreal Engine 5 - VAT",
                 alt:         "Statue VAT animation playing in Unreal Engine 5",
                 aspectRatio: "4 / 3",
               }]},
             ],
           },
           {
-            eyebrow:     "02 · HOUDINI SIMULATION",
-            title:       "Houdini · Gaussian Splat",
-            description: "Animated Gaussian Splat with particle and pyro simulation, then rendered with V-RAY in Houdini.",
+            eyebrow:     "Houdini Simulation",
+            description: "Animated Gaussian Splat with particle and pyro simulation, then rendered with V-RAY in Houdini",
             rows: [
               { layout: "single", items: [{
                 iframeSrc:   "https://player.vimeo.com/video/1194884977?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
-                caption:     "Houdini particle + pyro sim · 3DGS render",
+                caption:     "Houdini - Gaussian Splat",
                 alt:         "Statue Houdini Gaussian Splat simulation, V-RAY render",
                 aspectRatio: "16 / 9",
               }]},
             ],
           },
         ],
-        // Citation for the source statue model used as the base mesh
-        // before the particle/pyro sim. Renders in the existing small
-        // mono footer slot at the bottom of the asset card.
-        source: "Statue: Leartes Studios, Roman Statues Pack Vol 1 (cosmos.leartesstudios.com/environments/roman-statues-pack-vol1)",
+        // Citation styled to match the Figma's "Statue Citation:" label
+        // + full URL display, in the small mono footer slot at the
+        // bottom of the asset card. The URL is wrapped in an <a> so
+        // the credit is clickable; target="_blank" + rel="noopener"
+        // keep the viewer's session intact when the reader opens it.
+        source: `<strong>Statue Citation:</strong> <a href="https://cosmos.leartesstudios.com/environments/roman-statues-pack-vol1" target="_blank" rel="noopener noreferrer">cosmos.leartesstudios.com/environments/roman-statues-pack-vol1 ↗</a>`,
       },
       {
         name:      "Vine",
