@@ -4568,6 +4568,29 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   flex: 1;
   word-break: break-word;
 }
+/* Citation links inside OUTPUT / SOURCE / POS footer rows + inside
+ * processCard notes (Foliage's "Inspired by:" 80.lv block, etc.) —
+ * inherit the body text colour rather than the browser default
+ * blue/purple link palette. The monochrome project look would
+ * otherwise break wherever a citation lives. Underline + a slightly
+ * brighter colour on hover signal interactivity without breaking the
+ * editorial palette. Visited state stays in the same dim-white range
+ * so reading a citation once doesn't paint it purple forever. */
+.ah-card .ah-foot a,
+.ah-card .ah-foot a:visited,
+:is(.ah-card, .ts-rich) .ah-pc-note a,
+:is(.ah-card, .ts-rich) .ah-pc-note a:visited {
+  color: var(--text-mid);
+  text-decoration: underline;
+  text-decoration-color: var(--hair-strong);
+  text-underline-offset: 2px;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+.ah-card .ah-foot a:hover,
+:is(.ah-card, .ts-rich) .ah-pc-note a:hover {
+  color: var(--text);
+  text-decoration-color: var(--text);
+}
 
 /* ============================================================
    Tech-spec drawer â€” rich content block (.ts-rich)
