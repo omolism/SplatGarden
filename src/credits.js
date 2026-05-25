@@ -16,10 +16,17 @@ const TEAM = [
   { name: "Xinyi Liang",              role: "Team Member", url: "https://www.artstation.com/xiaoduye817" },
 ];
 
+// Supervising Professor — split out of Special Thanks so the advisory
+// role reads as its own distinct credit weight rather than being
+// flattened in with the rest of the thanks. Same row markup as
+// SPECIAL_THANKS so the visual styling stays consistent.
+const SUPERVISING_PROFESSOR = [
+  { name: "Dr. Deborah R. Fowler", url: "https://www.deborahrfowler.com/" },
+];
+
 // Special Thanks — advisors, mentors, external teams. Distinct from the
 // team list so credit weight reads correctly.
 const SPECIAL_THANKS = [
-  { name: "Dr. Deborah R. Fowler",             url: "https://www.deborahrfowler.com/" },
   { name: "Munkhtsetseg Nandigjav",            url: "https://www.linkedin.com/in/munkhtsetseg-nandigjav" },
   { name: "NVIDIA Omniverse and OpenUSD team", url: "https://www.linkedin.com/showcase/nvidia-omniverse/" },
 ];
@@ -97,6 +104,23 @@ export class Credits {
                 <li class="cr-row">
                   <span class="cr-name">${p.name}</span>
                   <span class="cr-role">${p.role}</span>
+                  ${aOpen}${LINK_ICON_SVG}${aClose}
+                </li>`;
+            }).join("")}
+          </ul>
+        </section>
+        <section class="cr-sec">
+          <div class="cr-sec-title">Supervising Professor</div>
+          <ul class="cr-list cr-list-thanks">
+            ${SUPERVISING_PROFESSOR.map(p => {
+              const linked = p.url && p.url !== "#";
+              const aOpen  = linked
+                ? `<a class="cr-link" href="${p.url}" target="_blank" rel="noopener noreferrer" title="Open ${p.name}'s site">`
+                : `<span class="cr-link cr-link-empty" title="No link yet">`;
+              const aClose = linked ? `</a>` : `</span>`;
+              return `
+                <li class="cr-row cr-row-thanks">
+                  <span class="cr-name">${p.name}</span>
                   ${aOpen}${LINK_ICON_SVG}${aClose}
                 </li>`;
             }).join("")}
