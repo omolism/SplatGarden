@@ -600,20 +600,12 @@ export const TECH_SPECS = [
         ],
         output:    "Procedural vine growth · WPO-driven mesh deformation + Cloner-scattered blooms",
         note:      "Procedural vine system built in Unreal Engine 5's Motion Design plugin, following the Growing Roots with WPO tutorial. A custom material drives mesh deformation through World Position Offset; Motion Designer's Cloner + Effectors scatter and animate the bloom assets along the vine. Growth is exposed as Blueprint parameters so the whole system can be triggered interactively in-scene.",
-        // Existing vine growth video stays at top as the "Final Render"
-        // intro. processCards render below it (the asset-hover.js order
-        // was moved so embeds come BEFORE processCards).
-        embed: {
-          src:   "https://player.vimeo.com/video/1194222092?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
-          label: "Vine growth · Unreal MG + WPO shader",
-          title: "Shot4B_VineAnimation",
-          // The Vimeo embed markup ships at padding-top:75% (4:3) but
-          // the underlying clip is rendered at 16:9 — same Vimeo
-          // template-default trap the Landscape clip hit. Forcing the
-          // iframe to 16:9 makes the gazebo content tile edge-to-edge
-          // inside the card with no top/bottom black letterbox bars.
-          aspectRatio: "16 / 9",
-        },
+        // Top-level `embed` video deliberately dropped — the Figma
+        // reference opens directly on the "Procedural Vine Growth
+        // System" processCard, so the prior "Vine growth · Unreal MG
+        // + WPO shader" clip that sat above it is no longer surfaced.
+        // The Vimeo asset itself is still on the account if it ever
+        // needs to come back; just no card slot points at it today.
         // Step-style processCards mirror the Figma reference design.
         // Unlike Particles / Daffodil / Gazebo / Foliage (which all use
         // numbered "01 · ..." chip eyebrows), the Vine Figma uses
