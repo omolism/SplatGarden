@@ -80,11 +80,14 @@ export class About {
             The project spans four pillars: <strong>AI Tools</strong>,
             <strong>3DGS</strong>, <strong>Simulation</strong>, and live
             <strong>Interaction</strong>, all under the theme
-            <em>Real-Time Visual and Simulation</em>. The team's presentation
-            covers custom AI stylization tools, a newly designed browser
-            viewer for experiencing 3DGS with hand-tracking interaction, the
-            Unreal Engine interactive counterpart, and current test results
-            from the LED volume as the intended large-screen display context.
+            <em>Real-Time Visual and Simulation</em>. This browser viewer
+            is the web-deployable face of that work. It captures an
+            Unreal Engine garden as a 3D Gaussian Splat, authored with
+            custom AI-stylized textures and dressed with Houdini-driven
+            simulations, then re-renders the scene live with hand-tracking
+            interaction. The same garden is staged on an LED volume for
+            large-screen display; this viewer is the portable counterpart
+            that ships in a browser tab.
           </p>
         </section>
 
