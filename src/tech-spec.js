@@ -588,15 +588,15 @@ export const TECH_SPECS = [
         name:      "Vine",
         location:  "Near gazebo",
         worldPos:  [-0.89, -0.926, 3.258],
-        // Keywords surface the Unreal stack that drives the vine —
-        // Motion Design plugin + the WPO material + the Cloner /
-        // Effector combo that scatters the bloom assets.
+        // Keywords trimmed to the three the Figma reference shows on
+        // the Vine chip row. The wider Unreal-stack list (Cloner +
+        // Effectors, Blueprint, etc.) is still narrated inside the
+        // processCards' bullets; the chip row stays focused on the
+        // headline beats.
         toolchain: [
-          "Unreal Engine 5",
-          "Motion Design plugin",
-          "WPO material",
-          "Cloner + Effectors",
-          "Blueprint",
+          "Motion Design",
+          "World Position Offset",
+          "Material Blueprint",
         ],
         output:    "Procedural vine growth · WPO-driven mesh deformation + Cloner-scattered blooms",
         note:      "Procedural vine system built in Unreal Engine 5's Motion Design plugin, following the Growing Roots with WPO tutorial. A custom material drives mesh deformation through World Position Offset; Motion Designer's Cloner + Effectors scatter and animate the bloom assets along the vine. Growth is exposed as Blueprint parameters so the whole system can be triggered interactively in-scene.",
@@ -884,11 +884,16 @@ export const TECH_SPECS = [
         // slides the hotspot from the right-edge daisy cluster across
         // to the left-edge daisy band that the camera also passes over.
         worldPos:  [-1.829, -0.774, 1.574],
+        // Keywords trimmed to the three chips the Figma reference
+        // shows on the Foliage chip row. The decimation note (28,557 →
+        // 640 triangles) still lives in the "Modeling and optimization"
+        // processCard, so dropping the "Triangle decimation" chip
+        // doesn't lose information — it just stops the row from
+        // wrapping in a small drawer column.
         toolchain: [
-          "SpeedTree (procedural plant)",
-          "Triangle decimation",
-          "Substance Designer (stylized texture)",
-          "Unreal Engine 5 (set dress)",
+          "Substance Designer",
+          "SpeedTree",
+          "Unreal Engine 5",
         ],
         // `output` line dropped to match the Figma reference, which
         // doesn't surface any output metadata for the Foliage card.
