@@ -380,7 +380,23 @@ window.__rendererPref = RENDERER_PREF;
 if (RENDERER_PREF === "webgpu") {
   console.info("[renderer] WebGPU requested via ?renderer=webgpu URL param. Spark 0.1.10 doesn't expose WebGPU yet, falling back to WebGL 2. The flag is recorded on window.__rendererPref for future activation.");
 }
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, preserveDrawingBuffer: true });
+// powerPreference: "high-performance" tells the browser we want the
+// discrete GPU on dual-GPU laptops (NVIDIA / AMD instead of the Intel
+// iGPU). Without this hint Chrome / Edge default to the iGPU for power
+// savings, so even a workstation laptop with an RTX 5070 Ti ends up
+// running the 3M-splat scene on Intel Graphics — visible in Task
+// Manager as 0% NVIDIA + 90%+ Intel. The hint propagates into the
+// WebGL context attributes that Spark inherits, so Spark's splat
+// rasteriser lands on the discrete GPU too. Note: this is a HINT,
+// not a guarantee — Windows / browser per-app graphics prefs can
+// still override (see the OS-side toggle in the README's deploy
+// notes).
+const renderer = new THREE.WebGLRenderer({
+  canvas,
+  antialias: false,
+  preserveDrawingBuffer: true,
+  powerPreference: "high-performance",
+});
 // Pixel-ratio policy. The old cap of `min(dpr, 2)` matched native iPad/Retina
 // pixel density, but the user reported the iPad Air emulator in Chrome
 // DevTools rendered softer than expected — "looks like the mobile asset
