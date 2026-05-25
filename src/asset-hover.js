@@ -294,8 +294,16 @@ function renderProcessCard(card) {
       }).join("")
     : "";
 
+  // Note is interpolated raw (no escapeHtml) for the same reason the
+  // source field is — the value is author-controlled (defined in
+  // tech-spec.js, never user input), so it can carry inline HTML like
+  // <strong>, <br>, and <a> links. The Foliage card's section-3 note,
+  // for example, ends with a clickable "Inspired by:" 80.lv citation
+  // that lives inside this note rather than in the asset-level source
+  // footer because the Figma reference shows it right after the
+  // paragraph in the same section block.
   const note = card.note
-    ? `<div class="ah-pc-note">${escapeHtml(card.note)}</div>`
+    ? `<div class="ah-pc-note">${card.note}</div>`
     : "";
 
   return `<section class="${sectionClass}">${header}${rows}${points}${groups}${note}</section>`;

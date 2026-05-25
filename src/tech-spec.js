@@ -890,7 +890,8 @@ export const TECH_SPECS = [
           "Substance Designer (stylized texture)",
           "Unreal Engine 5 (set dress)",
         ],
-        output:    "Real-time-ready foliage · 640 triangles · stylized procedural diffuse",
+        // `output` line dropped to match the Figma reference, which
+        // doesn't surface any output metadata for the Foliage card.
         // Step-style processCards — editorial pattern (eyebrow + bold
         // title + prose description + media rows), matches Grape Hyacinth.
         // Narrative arc per user direction "先放最好看的照片 再放breakdown":
@@ -957,13 +958,20 @@ export const TECH_SPECS = [
                 { src: `${BASE}textures/daisy/daisy-substance-after.webp`,  caption: "After Procedural Stylization" },
               ]},
             ],
-            // Figma puts the 80 Level reference sentence AFTER the
-            // before/after pair (as a footnote-style note), so this
-            // goes in `note` not `description`.
-            note: "This was also another exploration of stylized workflows in Substance Designer, inspired by the article \"Breakdown: Making 3D Landscape Look Like Painting\" from 80 Level, which demonstrates a procedural approach to creating stylized textures.",
+            // Figma puts a short paragraph and a separate clickable
+            // "Inspired by:" 80.lv citation AFTER the before/after
+            // pair. Both land inside this `note` field, which the
+            // renderer now interpolates raw so the <strong> label and
+            // <a> link render properly. Paragraph wording matches the
+            // Figma verbatim (including the period-then-lowercase-
+            // "which" pattern in the source design).
+            note: `This was also another exploration of stylized workflows in Substance Designer. which demonstrates a procedural approach to creating stylized textures.<br><br><strong>Inspired by:</strong><br><a href="https://80.lv/articles/breakdown-making-3d-landscape-look-like-painting" target="_blank" rel="noopener noreferrer">https://80.lv/articles/breakdown-making-3d-landscape-look-like-painting</a>`,
           },
         ],
-        note:      "Real-time-ready foliage authored procedurally in SpeedTree, then aggressively decimated (28,557 → 640 triangles) so the scattered plant cards survive an interactive FPS budget without visible quality loss. A Substance Designer stylization graph produces the painterly diffuse and leaf atlas. The look mirrors the Landscape texture pipeline and is inspired by 80 Level's \"Making 3D Landscape Look Like Painting\" breakdown.",
+        // Asset-level `note` and `output` lines dropped — neither
+        // appears in the Figma reference; the citation now lives
+        // inside the Substance Designer Stylization Workflow section
+        // (as the Figma shows), not in the asset's bottom metadata.
       },
       {
         name:      "Tree",
