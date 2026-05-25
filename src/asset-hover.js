@@ -409,7 +409,7 @@ export function renderCard(it) {
 
     <footer class="ah-foot">
       ${it.output ? `<div class="ah-foot-row"><span class="ah-k">Output</span><span class="ah-v">${escapeHtml(it.output)}</span></div>` : ""}
-      ${it.source ? `<div class="ah-foot-row"><span class="ah-k">Source</span><span class="ah-v">${escapeHtml(it.source)}</span></div>` : ""}
+      ${it.source ? `<div class="ah-foot-row"><span class="ah-k">Source</span><span class="ah-v">${it.source}</span></div>` : ""}
       ${it.worldPos ? `<div class="ah-foot-row"><span class="ah-k">Pos</span><span class="ah-v">${it.worldPos.map(n => Number(n).toFixed(3)).join(", ")}</span></div>` : ""}
     </footer>
   `;
