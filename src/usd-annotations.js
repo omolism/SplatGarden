@@ -9,7 +9,12 @@
 // (which restarts the timer) or clicks the close button.
 // ---------------------------------------------------------------------------
 
-const AUTO_HIDE_MS = 7500;
+// Bumped 7500 → 14000 per user feedback: the Voxel / Billboard popups
+// went away before they could finish reading the body copy. 14 s gives a
+// comfortable read window without overstaying — re-toggling the layer
+// restarts the timer, so users who linger get plenty of time, and the
+// close button is always available for the impatient.
+const AUTO_HIDE_MS = 14000;
 
 // Inline icon glyphs — small, monochrome line-art matching the iOS
 // reference (wind / UV / humidity / rain pictograms). Each tile in the

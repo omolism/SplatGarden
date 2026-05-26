@@ -62,14 +62,14 @@ export const TECH_SPECS = [
     items: [
       {
         name:      "SplatGarden",
-        ref:       "Houdini × SpeedTree × Unreal · captured at a multi-cam rig · 3DGS-trained · rendered live in your browser",
+        ref:       "Houdini × Unreal × SpeedTree · captured by a multi-cam rig · 3DGS-trained · rendered live in your browser",
         // Embedded `.ticker` spans roll their values from 0 → target the
         // first time the drawer opens (IntersectionObserver in
         // ticker.js fires the animation when each span scrolls into
         // view). Static text + commas remain literal so only the
         // numbers animate.
         output:    "≈ <span class=\"ticker\" data-target=\"3000000\" data-format=\"compact\">0</span> splats · <span class=\"ticker\" data-target=\"990\">0</span> capture frames · <span class=\"ticker\" data-target=\"16.67\" data-decimals=\"2\">0</span>s authored flythrough",
-        note:      "A Unreal-authored garden, captured at a multi-camera rig, reconstructed with COLMAP, trained in parallel by Postshot and Lichtfeld Studio, optimised with Houdini GSOP, and rendered in real time via Spark on Three.js + WebGL 2. The breakdown below walks the pipeline backwards. It starts with the rendering primitive you're looking at right now, then unwinds to the per-asset authoring that produced the captured scene.",
+        note:      "An Unreal-authored garden, captured by a multi-camera rig, reconstructed with COLMAP, trained in parallel by Postshot and Lichtfeld Studio, optimized with Houdini GSOP, and rendered in real time via Spark on Three.js + WebGL — the breakdown below walks the pipeline backwards. It starts with the rendering primitive you're looking at right now, then unwinds to the per-asset authoring that produced the captured scene.",
       },
     ],
   },
@@ -90,7 +90,7 @@ export const TECH_SPECS = [
       {
         name: "3D Gaussian Splatting",
         ref:  "Kerbl et al., SIGGRAPH 2023 · rendered in-browser via @sparkjsdev/spark",
-        note: "The render primitive: per-splat ellipsoidal Gaussians + spherical-harmonic view-dependent colour. The composed garden ends up as a single .splat asset, rasterised in real time by Spark on Three.js + WebGL 2.",
+        note: "The render primitive: per-splat ellipsoidal Gaussians + spherical-harmonic view-dependent color. The composed garden ends up as a single .splat asset, rasterized in real time by Spark on Three.js + WebGL 2.",
       },
       // Upstream stages that turn the dressed Unreal scene into a
       // trainable input plus the post-training cleanup. The training
@@ -148,7 +148,7 @@ export const TECH_SPECS = [
           },
           {
             eyebrow:     "02 · DEPLOYMENT",
-            description: "USD voxelization composites the trained splat with a complementary point-cloud overlay. The voxel layer (USD PointInstancer) carries solid structure for collision and geometry; the point-cloud layer adds atmospheric scatter and a stylised skybox feel. Both surfaces are toggleable in the 3DGS / USD panel of this viewer.",
+            description: "USD voxelization composites the trained splat with a complementary point-cloud overlay. The voxel layer (USD PointInstancer) carries solid structure for collision and geometry; the point-cloud layer adds atmospheric scatter and a stylized skybox feel. Both surfaces are toggleable in the 3DGS / USD panel of this viewer.",
             rows: [
               { layout: "single", items: [
                 { src: `${BASE}textures/3dgs/3dgs-pointcloud-overlay.webp`, caption: "PointCloud Overlay on 3DGS" },
@@ -169,7 +169,7 @@ export const TECH_SPECS = [
     // 3DGS layer the viewer sees first.
     pillarIdx: 2,
     desc:      "Per-object authoring plus Unreal scene assembly. Everything that goes into the dressed scene before the camera turns on.",
-    toolchain: ["Houdini", "SpeedTree", "VAT bake", "Python · OSC", "Unreal Engine 5", "Perforce"],
+    toolchain: ["Houdini", "Unreal Engine 5", "SpeedTree", "VAT bake", "Python · OSC", "Perforce"],
     items: [
       {
         name: "Scene assembly",
@@ -184,7 +184,6 @@ export const TECH_SPECS = [
       // concrete "tool-chain in action" example.
       {
         name:      "Landscape",
-        location:  "Whole scene base",
         // World position resolved with the same +Z-forward → -Z-forward
         // flip used for all other hotspots (see AssetHoverManager).
         // X nudged left in stages — 1.051 → 0.651 → 0.251 → -0.749 —
@@ -207,7 +206,7 @@ export const TECH_SPECS = [
           "Houdini",
           "Unreal Engine 5",
         ],
-        output:    "Stylized terrain · painterly base colour + Houdini COP-adjusted height + normal map",
+        output:    "Stylized terrain · painterly base color + Houdini COP-adjusted height + normal map",
         note:      "Whole-scene base ground. Two materials (dirt and grass) each pass through the same AI stylization pipeline. The inputs are an original photographic texture plus a chosen painterly style reference, and the output is a painterly base color produced by ControlNet, IP-Adapter, AdaIN, and SDXL. Dirt is further refined in a Houdini COPNET to balance color and paint in scattered surface detail. Final terrain is authored in Unreal Engine 5 and dressed into the scene before the 3DGS capture stage.",
         embed: {
           src:   "https://player.vimeo.com/video/1194203694?badge=0&autopause=0&player_id=0&app_id=58479&autoplay=1&muted=0&loop=1",
@@ -316,7 +315,6 @@ export const TECH_SPECS = [
       // internally to match Three.js's -Z-forward camera.
       {
         name:      "Particles",
-        location:  "Garden-wide FX",
         worldPos:  [-1.871, -0.653, 0.483],
         // Keywords surface the Houdini FLIP stack — fluid sim with a
         // custom velocity field driven from image-traced curves, plus
@@ -434,7 +432,6 @@ export const TECH_SPECS = [
       },
       {
         name:      "Gazebo",
-        location:  "Centerpiece",
         // X shifted -0.58 → -0.18 (net +0.4: +1 from the first nudge,
         // then −0.6 from the follow-up correction) — final pose sits
         // just to the right of the statue silhouette, on the open
@@ -522,7 +519,6 @@ export const TECH_SPECS = [
       },
       {
         name:      "Statue",
-        location:  "Inside the gazebo",
         // Inherits the OLD Gazebo coordinates per user direction — the
         // statue physically sits where the Gazebo hotspot used to be.
         worldPos:  [-0.58, -0.561, 3.774],
@@ -586,7 +582,6 @@ export const TECH_SPECS = [
       },
       {
         name:      "Vine",
-        location:  "Near gazebo",
         worldPos:  [-0.89, -0.926, 3.258],
         // Keywords trimmed to the three the Figma reference shows on
         // the Vine chip row. The wider Unreal-stack list (Cloner +
@@ -704,7 +699,6 @@ export const TECH_SPECS = [
       },
       {
         name:      "Daffodil",
-        location:  "Near gazebo",
         worldPos:  [0.08, -0.773, 2.226],
         toolchain: ["Houdini", "VAT bake", "Unreal Engine 5 (set dress)", "Python · OSC · MediaPipe", "AI texture stylization"],
         // Top-level prose is the Figma's lead bullet about the Houdini
@@ -753,18 +747,24 @@ export const TECH_SPECS = [
             // doesn't surface that label.
             eyebrow:     "AI Stylized + Substance Painter",
             rows: [
-              { layout: "compare", aspectRatio: "3 / 4", items: [
-                {
-                  before: `${BASE}textures/daffodil/daffodil-original-render.webp`,
-                  after:  `${BASE}textures/daffodil/daffodil-ai-render.webp`,
-                  labelA: "Original",
-                  labelB: "AI Stylized",
-                },
-              ]},
+              // Texture-first ordering: the swatch (1:1) is the closer-to-
+              // ground-truth artifact — the user actually painted these
+              // and the AI stylized them. The render comp below (3:4) is
+              // a downstream demonstration of how that texture behaves on
+              // the SP-shaded daffodil. Showing texture → render reads as
+              // "input → output" instead of "output → input".
               { layout: "compare", aspectRatio: "1 / 1", items: [
                 {
                   before: `${BASE}textures/daffodil/daffodil-original-swatch.webp`,
                   after:  `${BASE}textures/daffodil/daffodil-ai-swatch.webp`,
+                  labelA: "Original",
+                  labelB: "AI Stylized",
+                },
+              ]},
+              { layout: "compare", aspectRatio: "3 / 4", items: [
+                {
+                  before: `${BASE}textures/daffodil/daffodil-original-render.webp`,
+                  after:  `${BASE}textures/daffodil/daffodil-ai-render.webp`,
                   labelA: "Original",
                   labelB: "AI Stylized",
                 },
@@ -799,7 +799,6 @@ export const TECH_SPECS = [
       },
       {
         name:      "Grape Hyacinth",
-        location:  "Near gazebo",
         worldPos:  [-0.195, -0.730, 2.379],
         toolchain: [
           "Houdini (procedural tool + GUI)",
@@ -879,7 +878,6 @@ export const TECH_SPECS = [
       },
       {
         name:      "Foliage",
-        location:  "Foreground daisy band",
         // X shifted from 1.171 → -1.829 (−3) per user direction —
         // slides the hotspot from the right-edge daisy cluster across
         // to the left-edge daisy band that the camera also passes over.
@@ -980,7 +978,6 @@ export const TECH_SPECS = [
       },
       {
         name:      "Tree",
-        location:  "Near gazebo",
         toolchain: ["SpeedTree", "Fab marketplace", "Unreal Engine 5 (set dress)"],
         note:      "Hybrid asset sourcing. The hero trees near the gazebo were team-authored in SpeedTree to match the SplatGarden look, while the surrounding fill foliage was sourced from the Fab marketplace and dropped into the same SpeedTree pipeline for consistency. Both paths land in Unreal Engine 5 as set-dressed meshes before the env capture.",
         // Hybrid sourcing — the team-authored hero trees are in-house

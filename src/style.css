@@ -3776,12 +3776,28 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
 }
 
 .ah-card .ah-close {
-  position: absolute;
+  /* Sticky-pinned to the top-right of the card's visible viewport, NOT
+     to the top of the card's content. The card is the scroll container
+     (overflow-y: auto on #asset-hover-card); a previous position:absolute
+     anchored the X to the content's origin, so scrolling the card body
+     moved the X up out of view — the user had to scroll back up just
+     to close. position:sticky keeps the X in the visible upper-right
+     corner regardless of scroll position. The float:right is what gives
+     us the right-edge anchor (sticky only handles vertical adhesion);
+     the negative margin-bottom keeps the X from claiming a row of
+     vertical space that would push the actual content down. */
+  position: sticky;
   top: 10px;
-  right: 10px;
+  float: right;
+  margin-right: 10px;
+  margin-bottom: -38px;       /* button height + small gap, so content
+                                 isn't pushed down by the floated button */
   width: 28px;
   height: 28px;
-  background: transparent;
+  background: rgba(10, 12, 16, 0.72);  /* semi-opaque so it stays legible
+                                          when scrolled content is behind it */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border: 1px solid var(--hair-strong);
   border-radius: 4px;
   box-sizing: border-box;
@@ -3789,17 +3805,15 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   font-size: 18px;
   font-family: var(--font-ui);
   line-height: 1;
-  /* Explicit padding:0 to override the UA <button> default that would
-     otherwise squash the box width under border-box sizing. */
   padding: 0;
   cursor: pointer;
-  /* Hidden by default â€” the `.pinned .ah-close` rule below flips
+  /* Hidden by default — the `.pinned .ah-close` rule below flips
      display:inline-flex when the card is pinned. flex centring keeps
-     the Ã— glyph geometrically centred in the box. */
+     the × glyph geometrically centred in the box. */
   display: none;
   align-items: center;
   justify-content: center;
-  z-index: 1;
+  z-index: 2;                 /* above the scrolled content beneath */
   transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 #asset-hover-card.pinned .ah-close { display: inline-flex; }
@@ -3807,6 +3821,25 @@ body.mobile .subform-tip { transition: opacity 0.06s, visibility 0.06s; }
   background: var(--hover-strong);
   border-color: rgba(255, 255, 255, 0.22);
   color: var(--text);
+}
+
+/* When an asset card is PINNED (clicked open, not hover-only), dim the
+   right-rail lil-gui so the card reads as the primary surface. z-index
+   already puts the card at 1200 above lil-gui's 1001, but on viewports
+   where the card doesn't horizontally overlap lil-gui the user still
+   perceives the lil-gui as a competing UI surface. Dimming + slight
+   desaturation pushes it visually back without removing the
+   "navigate elsewhere" affordance entirely. Same pattern used for the
+   About panel + mobile bottombar earlier. */
+body:has(#asset-hover-card.pinned) .lil-gui.root {
+  opacity: 0.45;
+  filter: saturate(0.6);
+  transition: opacity 0.22s ease, filter 0.22s ease;
+}
+body:has(#asset-hover-card.pinned) .lil-gui.root:hover {
+  /* Restore fully on hover so the user can intentionally navigate. */
+  opacity: 1;
+  filter: none;
 }
 
 .ah-card .ah-head {
