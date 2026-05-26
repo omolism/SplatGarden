@@ -1394,8 +1394,10 @@ body.phone:not(.tablet) #hand-panel { display: none !important; }
 }
 #tech-spec.show { display: block; }
 /* Backdrop is fully transparent AND click-through so the 3DGS scene reads
- * sharply AND stays draggable behind the panel. The drawer is a live doc,
- * not a modal â€” close via T / Esc / the Ã— button. */
+ * sharply behind the panel. Dismissal is handled in JS: a pointerdown
+ * anywhere outside .ts-panel minimizes the drawer (see TechSpec
+ * _onOutsidePointerDown), alongside the close button, the T toggle, and
+ * Esc. */
 #tech-spec .ts-backdrop {
   position: absolute;
   inset: 0;

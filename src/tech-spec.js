@@ -1297,8 +1297,29 @@ export class TechSpec {
     mountEl.appendChild(this.el);
 
     this.el.querySelector(".ts-close").addEventListener("click", () => this.close());
-    // Backdrop is click-through (pointer-events:none) so drags reach the
-    // canvas — no listener wired. Close via × button, Esc, or T toggle.
+
+    // Click-outside-to-minimize. The drawer is a reading surface layered
+    // over the live scene, so a press anywhere outside .ts-panel reads as
+    // "done — take me back to the garden" and folds the drawer away. This
+    // mirrors the Credits panel's _onOutsidePointerDown dismiss, captured
+    // on pointerdown so it fires ahead of any downstream handler. The
+    // backdrop is pointer-events:none, so a press in the empty region to
+    // the left of the panel actually lands on the canvas underneath — that
+    // target is outside .ts-panel, so it correctly closes the drawer.
+    // Close still works via the × button, the T toggle, and Esc too.
+    //
+    // Skips .lil-gui targets for parity with Credits. While the drawer is
+    // open the Studio panel is slid off-screen + pointer-events:none
+    // (body.tech-spec-open), so this guard is belt-and-braces rather than
+    // load-bearing, but it avoids folding on a stray control poke during
+    // the slide transition.
+    this._onOutsidePointerDown = (e) => {
+      if (!this.open) return;
+      const panel = this.el.querySelector(".ts-panel");
+      if (panel && panel.contains(e.target)) return;
+      if (e.target?.closest?.(".lil-gui")) return;
+      this.close();
+    };
 
     this.el.querySelectorAll(".ts-sec-head").forEach(h => {
       h.addEventListener("click", () => {
@@ -1463,10 +1484,17 @@ export class TechSpec {
     // don't re-measure.
     fitVimeoFrames(this.el);
     this.onOpenChange?.(true);
+    // Defer attaching the outside-click dismiss one macrotask so the very
+    // press that opened the drawer (About CTA / mobile-sheet button) can't
+    // bubble straight into this listener and re-close it on the same gesture.
+    setTimeout(() => {
+      if (this.open) document.addEventListener("pointerdown", this._onOutsidePointerDown, true);
+    }, 0);
   }
   close() {
     this.open = false;
     this.el.classList.remove("show");
+    document.removeEventListener("pointerdown", this._onOutsidePointerDown, true);
     this.onOpenChange?.(false);
   }
 
