@@ -1287,10 +1287,6 @@ export function buildGUI(controller) {
   // ----- Top-level: Customize → everything visual --------------------------
   const fCustomize = gui.addFolder("Customize");
 
-  // Play — toy section housing the post-process tweaks etc. Demoted from
-  // Customize-level so the headline UI stays on assets / pipeline / interaction.
-  // (FX moved OUT of here and up to top-level — see above.)
-  const fPlay = fCustomize.addFolder("Play").close();
   // Preset switching with a smooth 500 ms blend on numeric params.
   // Non-numeric / non-lerpable fields (effect, colorOn, color) snap at
   // the start so the right shader branch + tint colour are active for
@@ -1696,9 +1692,8 @@ export function buildGUI(controller) {
   uniforms.maskActive.value = 0.0;
 
   // Expose folder refs so postfx.attachGUI / main.js can place their
-  // controls inside the right parents (Customize / Play / FX / 3DGS-USD).
+  // controls inside the right parents (Customize / FX / 3DGS-USD).
   gui.fCustomize = fCustomize;
-  gui.fPlay      = fPlay;
   gui.fFX        = fFX;
   gui.fLayers    = fLayers;
 
