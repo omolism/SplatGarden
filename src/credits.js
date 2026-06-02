@@ -159,15 +159,16 @@ export class Credits {
             ${TECH_OTHER   .map(s => `<span class="cr-chip">${s}</span>`).join("")}
           </div>
         </section>
-        <!-- Hardware acknowledgement — kept as a small mono footer line
-             so it reads as a quiet thank-you rather than a featured chip
-             (the NVIDIA workstations enabled the AI-stylization rendering
-             but it's hardware credit, distinct from the software stack
-             above). "An" dropped per user note: more than one unit was
-             sponsored, so the line refers to the model class, not a
-             single machine. -->
+        <!-- Sponsor thanks — two stacked lines, each calling out a
+             SPECIFIC kind of support (compute hardware via NVIDIA;
+             Houdini access via SideFX). Kept as small mono footer
+             type so they read as quiet acknowledgements parallel
+             to each other, NOT as featured chips up in the SOFTWARE
+             stack above. The wrapper carries the top border + shared
+             typography; the inner divs stack with a tight gap. -->
         <div class="cr-hw-thanks">
-          Rendered on <strong>NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation Edition</strong>. Sincere thanks to NVIDIA.
+          <div>Workstation provided by <strong>NVIDIA</strong> — RTX PRO 6000 Blackwell Max-Q. Sincere thanks.</div>
+          <div>Houdini access supported by <strong>SideFX</strong>. Sincere thanks.</div>
         </div>
       </div>
     `;

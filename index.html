@@ -10,6 +10,17 @@
          splash so the OS chrome blends in. -->
     <link rel="manifest" href="./manifest.webmanifest" />
     <meta name="theme-color" content="#000000" />
+
+    <!-- Google Analytics (gtag.js) — anonymous page-view + engagement
+         telemetry only; no PII collected. Loaded async so it doesn't
+         block the splat-loading critical path. -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-7YB79WFBLQ"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){ dataLayer.push(arguments); }
+      gtag('js', new Date());
+      gtag('config', 'G-7YB79WFBLQ');
+    </script>
   </head>
   <body>
     <div id="app">
