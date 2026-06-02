@@ -167,8 +167,8 @@ export class Credits {
              stack above. The wrapper carries the top border + shared
              typography; the inner divs stack with a tight gap. -->
         <div class="cr-hw-thanks">
-          <div>Workstation provided by <strong>NVIDIA</strong> — RTX PRO 6000 Blackwell Max-Q. Sincere thanks.</div>
-          <div>Houdini access supported by <strong>SideFX</strong>. Sincere thanks.</div>
+          <div>Rendered on <strong>NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation Edition</strong>. Sincere thanks to NVIDIA.</div>
+          <div>Houdini access generously supported by <strong>SideFX</strong>. Thank you for the partnership.</div>
         </div>
       </div>
     `;
