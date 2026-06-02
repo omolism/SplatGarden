@@ -4980,7 +4980,14 @@ body:has(#asset-hover-card.pinned) .lil-gui.root:hover {
   top: 50%;
   left: 50%;
   transform: translate(-50%, calc(-50% + 24px));
-  width: min(520px, calc(100vw - 32px));
+  /* Bumped 520 → 680px so the two sponsor-thanks footer lines
+     ("Rendered on NVIDIA RTX PRO 6000 Blackwell Max-Q Workstation
+     Edition. Sincere thanks to NVIDIA." + the SideFX line) each fit
+     on a single visual line on desktop / iPad. The `min(…, 100vw-32)`
+     clamp keeps mid-width tablets from overflowing; the dedicated
+     phone media query at line ~7686 still overrides to 100vw-24
+     so portrait phones aren't affected. */
+  width: min(680px, calc(100vw - 32px));
   max-height: calc(100vh - 80px);
   z-index: 1100;
   display: flex;
@@ -5135,6 +5142,12 @@ body:has(#asset-hover-card.pinned) .lil-gui.root:hover {
   color: var(--text-dim);
   text-align: center;
   letter-spacing: 0.02em;
+  /* Stacks the two sponsor lines (NVIDIA hardware + SideFX software
+     support) with a small breathing gap between them — both inner
+     divs read as parallel acknowledgements, neither dominates. */
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 #credits .cr-hw-thanks strong {
   color: var(--text-mid);
