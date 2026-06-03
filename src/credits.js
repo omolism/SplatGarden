@@ -30,6 +30,7 @@ const SPECIAL_THANKS = [
   { name: "Munkhtsetseg Nandigjav",            url: "https://www.linkedin.com/in/munkhtsetseg-nandigjav" },
   { name: "Erin O'Leary",                      url: "https://www.linkedin.com/in/erinleeoleary/" },
   { name: "NVIDIA Omniverse and OpenUSD team", url: "https://www.linkedin.com/showcase/nvidia-omniverse/" },
+  { name: "SideFX",                            url: "https://www.sidefx.com/" },
 ];
 
 // Software — commercial / production DCC tools the team authored in.
